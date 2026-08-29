@@ -21,7 +21,9 @@ from app.schemas.curriculum_plans import (
     parse_json_string_list,
     time_slot_sort_key,
 )
+from app.services.enrollments import curriculum_for_plan, ensure_enrollment
 from app.services.pacing import PacingEngine, PacingError
+from app.services.school_year import require_operational_school_year
 
 
 class CurriculumPlanApplyError(ValueError):
@@ -152,10 +154,22 @@ def apply_curriculum_plan(
     if not assignments:
         raise CurriculumPlanApplyError("the plan has no assignments to schedule")
 
-    db.add_all(assignments)
-    db.flush()
-    scheduled = [item.scheduled_date for item in assignments]
-    db.commit()
+    try:
+        year = require_operational_school_year(db)
+        curriculum = curriculum_for_plan(db, plan)
+        ensure_enrollment(
+            db,
+            student_id=student.id,
+            curriculum_id=curriculum.id,
+            school_year_id=year.id,
+        )
+        db.add_all(assignments)
+        db.flush()
+        scheduled = [item.scheduled_date for item in assignments]
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return CurriculumPlanApplyRead(
         plan_id=plan.id,
         student_id=student.id,

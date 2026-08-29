@@ -1,4 +1,4 @@
-"""Login, registration, demo tokens, student PIN logins, and user switching."""
+"""Login, registration, demo tokens, student PIN logins, capture tokens, and user switching."""
 
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -13,6 +13,7 @@ from app.core.security import (
     CurrentUser,
     get_current_user,
     hash_password,
+    require_parent,
     verify_password,
 )
 from app.db import get_admin_db, get_tenant_db, open_tenant_session, provision_tenant
@@ -21,6 +22,8 @@ from app.models import Student
 from app.models.admin import InviteKey, User
 from app.models.mixins import utcnow
 from app.schemas.auth import (
+    CaptureTokenIssued,
+    CaptureTokenStatusRead,
     RegisterRequest,
     StudentHouseholdChildRead,
     StudentHouseholdRead,
@@ -30,6 +33,11 @@ from app.schemas.auth import (
     SwitchUserRequest,
     Token,
     TokenUserRead,
+)
+from app.services.capture_tokens import (
+    active_capture_token,
+    issue_capture_token,
+    revoke_active_capture_tokens,
 )
 from app.services.child_accounts import (
     authenticate_child_pin,
@@ -94,11 +102,11 @@ def _token_user_read(user: CurrentUser, tenant_db: Session) -> TokenUserRead:
     )
 
 
-@router.post("/register", response_model=TokenUserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_user(
     payload: RegisterRequest,
     admin_db: Session = Depends(get_admin_db),
-) -> TokenUserRead:
+) -> Token:
     invite = _unused_invite(admin_db, payload.invite_key)
     existing = admin_db.query(User).filter(User.email == payload.email).one_or_none()
     if existing is not None:
@@ -130,15 +138,7 @@ def register_user(
             detail="Email already registered",
         ) from error
     admin_db.refresh(user)
-    return TokenUserRead(
-        email=user.email,
-        tenant_uuid=user.tenant_uuid,
-        is_demo=False,
-        is_admin=False,
-        role=UserRole.PARENT.value,
-        student_id=None,
-        display_name="",
-    )
+    return token_payload(user)
 
 
 @router.post("/token", response_model=Token)
@@ -236,6 +236,62 @@ def student_login(
         )
     authenticate_child_pin(admin_db, child, payload.pin)
     return token_payload(child)
+
+
+@router.get("/capture-token", response_model=CaptureTokenStatusRead)
+def read_capture_token_status(
+    user: CurrentUser = Depends(require_parent),
+    admin_db: Session = Depends(get_admin_db),
+) -> CaptureTokenStatusRead:
+    if user.is_demo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Capture tokens are not available in demo mode",
+        )
+    row = active_capture_token(admin_db, user.tenant_uuid)
+    if row is None:
+        return CaptureTokenStatusRead(active=False)
+    return CaptureTokenStatusRead(
+        active=True,
+        created_at=row.created_at,
+        expires_at=row.expires_at,
+    )
+
+
+@router.post("/capture-token", response_model=CaptureTokenIssued, status_code=status.HTTP_201_CREATED)
+def create_capture_token(
+    user: CurrentUser = Depends(require_parent),
+    admin_db: Session = Depends(get_admin_db),
+) -> CaptureTokenIssued:
+    if user.is_demo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Capture tokens are not available in demo mode",
+        )
+    token, row = issue_capture_token(
+        admin_db,
+        tenant_uuid=user.tenant_uuid,
+        created_by_user_id=user.user_id,
+    )
+    return CaptureTokenIssued(
+        access_token=token,
+        expires_at=row.expires_at,
+        created_at=row.created_at,
+    )
+
+
+@router.delete("/capture-token", response_model=CaptureTokenStatusRead)
+def revoke_capture_token(
+    user: CurrentUser = Depends(require_parent),
+    admin_db: Session = Depends(get_admin_db),
+) -> CaptureTokenStatusRead:
+    if user.is_demo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Capture tokens are not available in demo mode",
+        )
+    revoke_active_capture_tokens(admin_db, user.tenant_uuid)
+    return CaptureTokenStatusRead(active=False)
 
 
 @router.get("/switchable-users", response_model=list[SwitchableUserRead])

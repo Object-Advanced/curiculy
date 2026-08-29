@@ -72,10 +72,17 @@ class TestSchoolYearSettings:
 
         stored = db.query(HouseholdSettings).one()
         assert stored.weekdays == "0,2,4"
+        assert stored.start_date == date(2026, 8, 3)
+        assert stored.end_date == date(2027, 6, 4)
         year = db.get(SchoolYear, body["school_year_id"])
         assert year is not None
         assert year.start_date == date(2026, 8, 3)
         assert year.end_date == date(2027, 6, 4)
+
+        named = client.get(f"/api/school-years/{body['school_year_id']}")
+        assert named.status_code == 200
+        assert named.json()["start_date"] == "2026-08-03"
+        assert named.json()["end_date"] == "2027-06-04"
 
         again = client.get("/api/settings/school-year")
         assert again.json() == body
@@ -90,6 +97,70 @@ class TestSchoolYearSettings:
             },
         )
         assert response.status_code == 422
+
+    def test_settings_dates_are_not_the_read_source_when_a_year_exists(
+        self, client: TestClient, db: Session
+    ) -> None:
+        household = _household(db)
+        year = SchoolYear(
+            household_id=household.id,
+            name="2026-2027",
+            start_date=date(2026, 8, 10),
+            end_date=date(2027, 5, 28),
+        )
+        db.add(year)
+        db.add(
+            HouseholdSettings(
+                household_id=household.id,
+                start_date=date(2025, 8, 1),
+                end_date=date(2026, 6, 30),
+                weekdays="0,2,4",
+            )
+        )
+        db.commit()
+
+        response = client.get("/api/settings/school-year")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["start_date"] == "2026-08-10"
+        assert body["end_date"] == "2027-05-28"
+        assert body["school_year_id"] == year.id
+        assert body["weekdays"] == [0, 2, 4]
+
+        stored = db.query(HouseholdSettings).one()
+        db.refresh(stored)
+        assert stored.start_date == date(2026, 8, 10)
+        assert stored.end_date == date(2027, 5, 28)
+        assert stored.weekdays == "0,2,4"
+
+    def test_legacy_settings_row_becomes_a_named_year(
+        self, client: TestClient, db: Session
+    ) -> None:
+        household = _household(db)
+        db.add(
+            HouseholdSettings(
+                household_id=household.id,
+                start_date=date(2026, 8, 3),
+                end_date=date(2027, 6, 4),
+                weekdays="5,6",
+            )
+        )
+        db.commit()
+        assert db.query(SchoolYear).count() == 0
+
+        response = client.get("/api/settings/school-year")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["start_date"] == "2026-08-03"
+        assert body["end_date"] == "2027-06-04"
+        assert body["weekdays"] == [5, 6]
+        assert body["school_year_id"] is not None
+
+        year = db.get(SchoolYear, body["school_year_id"])
+        assert year is not None
+        assert year.name == "2026-2027"
+        assert year.start_date == date(2026, 8, 3)
+        assert year.end_date == date(2027, 6, 4)
 
     def test_put_rejects_a_reversed_window(self, client: TestClient) -> None:
         response = client.put(

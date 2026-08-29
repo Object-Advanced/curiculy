@@ -24,6 +24,7 @@ from app.models import (
     CurriculumPageMapping,
     CurriculumResource,
     CurriculumUnit,
+    Enrollment,
     Household,
     Student,
     SubjectTaxonomy,
@@ -1294,6 +1295,7 @@ class TestCommitEndpoint:
         assert count(db, CurriculumPageMapping) == 0
         assert count(db, Assignment) == 0
         assert count(db, CurriculumResource) == 0
+        assert count(db, Enrollment) == 0
 
 
 class TestPreviewThenCommit:

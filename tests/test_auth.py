@@ -28,7 +28,9 @@ from app.models.admin import InviteKey, User
 @pytest.fixture
 def auth_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(settings, "dev_mode", False)
-    monkeypatch.setattr(settings, "jwt_secret", "test-secret")
+    monkeypatch.setattr(
+        settings, "jwt_secret", "pytest-auth-jwt-secret-not-used-in-production"
+    )
     monkeypatch.setattr(settings, "admin_database_url", f"sqlite:///{tmp_path / 'admin.db'}")
     monkeypatch.setattr(settings, "tenant_database_url", f"sqlite:///{tmp_path / 'tenant.db'}")
     return tmp_path
@@ -249,10 +251,12 @@ def test_register_with_invite_provisions_tenant(auth_client: TestClient, auth_di
     )
     assert response.status_code == 201
     body = response.json()
-    assert body["email"] == "new.family@example.com"
-    assert body["is_admin"] is False
-    assert body["is_demo"] is False
-    tenant_uuid = body["tenant_uuid"]
+    assert body["token_type"] == "bearer"
+    token = body["access_token"]
+    assert isinstance(token, str) and token
+    claims = decode_access_token(token)
+    assert claims["sub"] == "new.family@example.com"
+    tenant_uuid = claims["tenant_uuid"]
     assert (auth_dir / f"tenant_{tenant_uuid}.db").exists()
 
     session = open_admin_session()
@@ -266,7 +270,6 @@ def test_register_with_invite_provisions_tenant(auth_client: TestClient, auth_di
     finally:
         session.close()
 
-    token = _login(auth_client, "new.family@example.com", "password1")
     household = auth_client.get("/api/household", headers=bearer(token))
     assert household.status_code == 200
     created = auth_client.post(

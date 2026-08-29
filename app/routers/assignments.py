@@ -40,6 +40,7 @@ from app.schemas import (
     StudentCourseRead,
 )
 from app.services.assignments import AssignmentQuery, InvalidDateRangeError, resolve_window
+from app.services.child_accounts import is_child
 
 router = APIRouter(tags=["assignments"], dependencies=[Depends(get_current_user)])
 
@@ -207,14 +208,21 @@ def create_assignment(
 def update_assignment_status(
     assignment_id: int,
     payload: AssignmentStatusUpdate,
-    _user: CurrentUser = Depends(require_parent),
+    user: CurrentUser = Depends(get_current_user),
     tenant_db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
 ) -> Assignment:
-    """Mark an assignment complete (or move it to any other status) from the dashboard."""
+    """Mark an assignment complete (or move it to any other status).
+
+    Parents may do this for any household assignment and still sync a shared
+    group. A child may change status only on their own row, and never on a
+    sibling's copy.
+    """
     assignment = _load_assignment(tenant_db, catalog_db, assignment_id)
+    _require_assignment_access(user, assignment)
     assignment.status = payload.status
-    _sync_shared_group(tenant_db, assignment, sync_status=True)
+    if not is_child(user):
+        _sync_shared_group(tenant_db, assignment, sync_status=True)
     tenant_db.commit()
     return _load_assignment(tenant_db, catalog_db, assignment_id)
 

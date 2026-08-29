@@ -21,10 +21,12 @@ from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.config import reveal_secret, settings
+from app.enums import UserRole
 
 DEMO_TENANT_UUID = "DEMO"
 DEV_TENANT_UUID = "dev"
+CAPTURE_TOKEN_SCOPE = "evidence:write"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
@@ -46,6 +48,7 @@ class CurrentUser:
     is_admin: bool = False
     role: str = "parent"
     student_id: int | None = None
+    scope: str | None = None
 
 
 def hash_password(password: str) -> str:
@@ -81,14 +84,18 @@ def create_access_token(
     }
     if extra:
         payload.update(extra)
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        payload,
+        reveal_secret(settings.jwt_secret),
+        algorithm=settings.jwt_algorithm,
+    )
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(
             token,
-            settings.jwt_secret,
+            reveal_secret(settings.jwt_secret),
             algorithms=[settings.jwt_algorithm],
         )
     except ExpiredSignatureError as error:
@@ -125,6 +132,19 @@ def user_from_token(token: str | None) -> CurrentUser:
             except (TypeError, ValueError):
                 student_id = None
         role = str(payload.get("role") or "parent")
+        raw_scope = payload.get("scope")
+        scope = str(raw_scope) if raw_scope else None
+        if role == UserRole.EVIDENCE.value or scope == CAPTURE_TOKEN_SCOPE:
+            return CurrentUser(
+                email=str(subject),
+                tenant_uuid=tenant_uuid,
+                jti=str(payload["jti"]) if payload.get("jti") else None,
+                is_demo=False,
+                is_admin=False,
+                role=UserRole.EVIDENCE.value,
+                student_id=None,
+                scope=CAPTURE_TOKEN_SCOPE,
+            )
         return CurrentUser(
             email=str(subject),
             tenant_uuid=tenant_uuid,
@@ -133,6 +153,7 @@ def user_from_token(token: str | None) -> CurrentUser:
             is_admin=bool(payload.get("is_admin")),
             role=role,
             student_id=student_id,
+            scope=scope,
         )
     if settings.dev_mode:
         return CurrentUser(
@@ -148,6 +169,10 @@ def user_from_token(token: str | None) -> CurrentUser:
 from app.db import get_admin_db  # noqa: E402
 
 
+def is_capture_credential(user: CurrentUser) -> bool:
+    return user.role == UserRole.EVIDENCE.value or user.scope == CAPTURE_TOKEN_SCOPE
+
+
 def get_current_user(
     token: str | None = Depends(oauth2_scheme),
     admin_db: Session = Depends(get_admin_db),
@@ -156,6 +181,11 @@ def get_current_user(
     from app.models.admin import User
 
     user = user_from_token(token)
+    if is_capture_credential(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This credential can only upload evidence",
+        )
     if user.is_demo or user.tenant_uuid == DEV_TENANT_UUID:
         return user
     row = admin_db.query(User).filter(User.email == user.email).one_or_none()
@@ -165,21 +195,22 @@ def get_current_user(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    role = row.role or "parent"
+    role = row.role or UserRole.PARENT.value
     return CurrentUser(
         email=row.email,
         tenant_uuid=row.tenant_uuid,
         jti=user.jti,
         user_id=row.id,
         is_demo=False,
-        is_admin=bool(row.is_admin) and role != "child",
+        is_admin=bool(row.is_admin) and role != UserRole.CHILD.value,
         role=role,
         student_id=row.student_id,
+        scope=user.scope,
     )
 
 
 def require_parent(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-    if user.role == "child":
+    if user.role != UserRole.PARENT.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Parent access required",
@@ -188,9 +219,29 @@ def require_parent(user: CurrentUser = Depends(get_current_user)) -> CurrentUser
 
 
 def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-    if user.role == "child" or not user.is_admin:
+    if user.role != UserRole.PARENT.value or not user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
     return user
+
+
+def require_staging_upload(
+    token: str | None = Depends(oauth2_scheme),
+    admin_db: Session = Depends(get_admin_db),
+) -> CurrentUser:
+    """Parent session or a live capture credential. Nothing else."""
+    from app.services.capture_tokens import assert_capture_token_active
+
+    user = user_from_token(token)
+    if is_capture_credential(user):
+        assert_capture_token_active(admin_db, user)
+        return user
+    resolved = get_current_user(token, admin_db)
+    if resolved.role != UserRole.PARENT.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Parent access required",
+        )
+    return resolved

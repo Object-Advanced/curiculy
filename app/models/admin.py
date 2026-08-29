@@ -1,4 +1,4 @@
-"""Admin-database models: login accounts and invite keys.
+"""Admin-database models: login accounts, invite keys, and capture tokens.
 
 These live on ``admin.db``, not on a tenant file. ``AdminBase`` is declared
 next to the catalog and tenant bases in ``app.db``.
@@ -50,3 +50,21 @@ class InviteKey(TimestampMixin, AdminBase):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class CaptureToken(TimestampMixin, AdminBase):
+    """Revocable upload credential for the Chrome extension.
+
+    The secret is a JWT (``scope=evidence:write``). This row is the revocation
+    record: minting a new token for a household marks earlier rows revoked.
+    """
+
+    __tablename__ = "capture_tokens"
+    __table_args__ = (UniqueConstraint("jti", name="uq_capture_tokens_jti"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_uuid: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    jti: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -1,8 +1,8 @@
 """Curriculum catalog ISBN lookup.
 
 ``POST /catalog/lookup-isbn`` fills the Add curriculum form from a barcode.
-``POST /catalog/from-isbn`` then stores the program, its edition, and the
-resolved book together so Auto-schedule can pace against the page count.
+``POST /catalog/from-isbn`` is a one-shot API that stores library + edition +
+book together. The SPA does not call it; tests do. Keep it until callers move.
 """
 
 from collections.abc import AsyncIterator

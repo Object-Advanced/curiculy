@@ -89,25 +89,10 @@ class ExceptionKind(StrEnum):
     OTHER = "other"
 
 
-class ScheduleGrain(StrEnum):
-    DAY = "day"
-    WEEK = "week"
-    MONTH = "month"
-    QUARTER = "quarter"
-    YEAR = "year"
-
-
-class WorkStatus(StrEnum):
-    PLANNED = "planned"
-    DONE = "done"
-    SKIPPED = "skipped"
-
-
 class CalendarPeriod(StrEnum):
     """A named window the calendar can ask for, resolved against an anchor date.
 
-    Distinct from :class:`ScheduleGrain`, which says how a program is paced. This
-    says which slice of the calendar to render.
+    This says which slice of the calendar to render (today, this week, this month).
     """
 
     DAY = "day"
@@ -156,6 +141,8 @@ class PortfolioReportType(StrEnum):
 class UserRole(StrEnum):
     PARENT = "parent"
     CHILD = "child"
+    # JWT-only. Never stored on ``users.role``. Chrome capture credentials.
+    EVIDENCE = "evidence"
 
 
 class HomeworkHelpStatus(StrEnum):

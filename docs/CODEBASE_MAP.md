@@ -22,22 +22,25 @@ Application source was not changed for this map. Paths are relative to the repo 
 | `static/js/app.js` | Entire SPA | KEEP (split later only if needed) |
 | `static/css/app.css` | Styles | KEEP |
 | `index.html` | Shell, auth, modals | KEEP |
-| `sw.js` | PWA + outbox | KEEP; REFACTOR cache URLs |
-| `extension/` | Tab capture | KEEP; REFACTOR token; restore icons |
-| `alembic/` | Historical DDL | CONSOLIDATE with real schema process |
+| `sw.js` | PWA + outbox | KEEP |
+| `extension/` | Tab capture | KEEP |
+| `alembic/` | Historical DDL archive; `upgrade` refused | ARCHIVE |
+| `app/schema_patches.py` | Ordered create_all + ALTER runner | KEEP |
 | `tests/` | Pytest | KEEP; REFACTOR isolation coverage |
 | `Dockerfile` | Image | KEEP |
 | `docker-compose.yml` | Run | KEEP; secrets via `.env` |
+| `README.md` | Bootstrap: `.env`, port 3040, first invite, tests | KEEP |
+| `scripts/drop_legacy_tables.py` | COUNT then DROP empty leftover tables | KEEP; operator-run only |
 | `entrypoint.sh` | Schema + uvicorn | KEEP |
 | `requirements.txt` | Runtime deps | KEEP |
 | `requirements-dev.txt` | Pytest | KEEP |
 | `pytest.ini` | Pytest config | KEEP |
-| `alembic.ini` | Alembic (misleading url) | CONSOLIDATE |
+| `alembic.ini` | Unused url; Alembic not the runner | ARCHIVE |
 | `docs/` | Architecture docs | KEEP |
 | `.venv/`, `.pytest_cache/`, `data/` | Generated / runtime | Ignore as product source |
 | `.gitignore` | Ignores `data/`, `.env` | KEEP |
 
-Missing from tree but referenced: `static/curiculy-logo.png`, `extension/icons/*`.
+Served brand assets: `static/curiculy-logo.png`, `extension/icons/*`. Root `Curiculy Logo.png` is the same image, not referenced by the app.
 
 ---
 
@@ -45,14 +48,15 @@ Missing from tree but referenced: `static/curiculy-logo.png`, `extension/icons/*
 
 | Path | Exports / role | Disposition |
 |---|---|---|
-| `app/main.py` | `create_app()`, router mount, `/`, `/sw.js`, `/static`, `/evidence` | KEEP; REFACTOR unauthenticated `/evidence` |
-| `app/config.py` | `Settings` / env | KEEP; REFACTOR default JWT secret |
-| `app/db.py` | Three engines, tenant files, `init_databases`, `get_*_db` | KEEP isolation; REFACTOR schema patches |
+| `app/main.py` | `create_app()`, router mount, `/`, `/sw.js`, `/static` | KEEP |
+| `app/config.py` | `Settings` / env; fail closed on weak JWT in non-dev | KEEP |
+| `app/db.py` | Three engines, tenant files, `init_databases`, `get_*_db` | KEEP isolation; schema via `schema_patches` |
+| `app/schema_patches.py` | Idempotent ALTER lists after create_all | KEEP |
 | `app/enums.py` | Domain enums | KEEP |
 | `app/__init__.py` | Package docstring | KEEP |
-| `app/core/security.py` | JWT, `CurrentUser`, `require_parent`, `require_admin` | KEEP; REFACTOR scopes |
+| `app/core/security.py` | JWT, `CurrentUser`, `require_parent`, `require_admin`, `require_staging_upload` | KEEP |
 | `app/core/__init__.py` | Empty package | KEEP |
-| `app/evidence/__init__.py` | `store_capture` | KEEP |
+| `app/evidence/__init__.py` | `store_capture`, path resolve | KEEP |
 
 ---
 
@@ -61,12 +65,12 @@ Missing from tree but referenced: `static/curiculy-logo.png`, `extension/icons/*
 | Path | Tables / types | Disposition |
 |---|---|---|
 | `app/models/mixins.py` | `TimestampMixin` | KEEP |
-| `app/models/admin.py` | `User`, `InviteKey` | KEEP |
+| `app/models/admin.py` | `User`, `InviteKey`, `CaptureToken` | KEEP |
 | `app/models/curriculum.py` | Catalog books + tenant library + plans | KEEP |
 | `app/models/education.py` | `Assignment*`, `Attendance`, taxonomy | KEEP assignments/attendance; DEFER taxonomy |
 | `app/models/homework.py` | Help sessions, notifications | KEEP |
 | `app/models/evidence_staging.py` | Staging inbox | KEEP |
-| `app/models/__init__.py` | Household, Student, SchoolYear, Enrollment, Exception, **ScheduledWork**, **EvidenceCapture**, **Jurisdiction**, **CompliancePacket** | KEEP household/student/year/enrollment/exception; **REMOVE** scheduled_work + evidence_captures after data check; **DEFER** jurisdiction/packets |
+| `app/models/__init__.py` | Household, Student, SchoolYear, Enrollment, Exception, **Jurisdiction**, **CompliancePacket** | KEEP household/student/year/enrollment/exception; leftover `scheduled_work` / `evidence_captures` models removed (empty tables may remain on disk); **DEFER** jurisdiction/packets |
 
 ---
 
@@ -77,24 +81,24 @@ Mounted under `/api` from `app/main.py`.
 | Path | Prefix | Live SPA? | Disposition |
 |---|---|---|---|
 | `health.py` | `/health` | Yes | KEEP |
-| `auth.py` | `/auth` | Yes | KEEP; COMPLETE token-on-register |
+| `auth.py` | `/auth` | Yes | KEEP; capture token live; COMPLETE token-on-register |
 | `admin.py` | `/admin` | Yes (admins) | KEEP |
 | `household.py` | `/household` | Yes | KEEP |
-| `students.py` | `/students` | Yes | KEEP; COMPLETE child complete-work lives on assignments |
-| `school_years.py` | `/school-years` | Yes | CONSOLIDATE with settings year |
-| `enrollments.py` | `/enrollments` | Yes (settings) | COMPLETE auto-create from schedule |
-| `settings.py` | `/settings`, `/calendar/exceptions` | Yes | CONSOLIDATE exceptions with `exceptions.py` |
-| `exceptions.py` | `/exceptions` | Yes | CONSOLIDATE |
-| `catalog.py` | `/catalog` | lookup-isbn yes; from-isbn no | KEEP lookup; CONSOLIDATE from-isbn |
-| `books.py` | `/books` | No | CONSOLIDATE into catalog |
+| `students.py` | `/students` | Yes | KEEP |
+| `school_years.py` | `/school-years` | Yes | KEEP; canonical named year |
+| `enrollments.py` | `/enrollments` | Yes (settings) | KEEP; auto-create on schedule |
+| `settings.py` | `/settings`, `/calendar/exceptions` | Yes | KEEP; CONSOLIDATE later with `exceptions.py` |
+| `exceptions.py` | `/exceptions` | Yes | KEEP; CONSOLIDATE later |
+| `catalog.py` | `/catalog` | lookup-isbn yes; from-isbn no | KEEP lookup; KEEP from-isbn as API-only |
+| `books.py` | `/books` | No (tests yes) | KEEP as API-only; CONSOLIDATE later |
 | `curricula.py` | `/curricula` | Yes; import API unused | KEEP; import is API-only |
 | `curriculum_plans.py` | `/curriculum` | Yes | KEEP |
-| `assignments.py` | mixed paths | Yes | KEEP; COMPLETE child PATCH status |
+| `assignments.py` | mixed paths | Yes | KEEP |
 | `calendar.py` | `/calendar` | Yes (all students) | KEEP |
 | `attendance.py` | `/attendance` | Yes | KEEP |
 | `pacing.py` | `/pacing` | Yes | KEEP |
 | `recalibration.py` | `/recalibrate` | Yes | KEEP |
-| `evidence.py` | `/evidence` | Yes + extension | KEEP; REFACTOR file serving |
+| `evidence.py` | `/evidence` | Yes + extension | KEEP; files GET authenticated; staging POST accepts capture credential |
 | `dashboard.py` | `/dashboard` | Yes | KEEP |
 | `reports.py` | `/reports` | Yes | KEEP |
 | `portfolios.py` | `/portfolios` | Yes | KEEP |
@@ -108,7 +112,9 @@ Mounted under `/api` from `app/main.py`.
 | Path | Role | Disposition |
 |---|---|---|
 | `households.py` | Default household | KEEP |
+| `enrollments.py` | Ensure enrollment on schedule | KEEP |
 | `child_accounts.py` | PIN, switch, tokens | KEEP |
+| `capture_tokens.py` | Issue / revoke capture JWTs | KEEP |
 | `assignments.py` | Query, windows, catalog hydrate | KEEP |
 | `pacing.py` | Engine + commit | KEEP |
 | `ai_generator.py` | Page chunks (not LLM) | KEEP; rename when touched |
@@ -119,15 +125,16 @@ Mounted under `/api` from `app/main.py`.
 | `curriculum_structure.py` | Tree/resources load | KEEP |
 | `curriculum_plan_import.py` | CSV plans | KEEP |
 | `curriculum_plan_apply.py` | Plan → assignments | KEEP |
-| `ai_curriculum_worker.py` | PDF background parse | KEEP; REFACTOR session use |
+| `ai_curriculum_worker.py` | PDF background parse | KEEP (own tenant session) |
 | `pdf_parser.py` | PyMuPDF + OCR | KEEP |
-| `school_year.py` | Bounds, holidays, colors | CONSOLIDATE dates onto SchoolYear |
+| `school_year.py` | Bounds, holidays, colors | KEEP; dates from SchoolYear |
 | `portfolio.py` | Report + PDF + mail | KEEP |
 | `weekly_manifest.py` | Checklist PDF | KEEP |
 | `recalibration.py` | Shift leftover work | KEEP |
 | `homework_help.py` | Tutor + lock | KEEP |
 | `notifications.py` | In-app rows | KEEP |
 | `spark.py` | Short Ollama question | KEEP |
+| `legacy_tables.py` | Clear leftover `scheduled_work` / `evidence_captures` rows on delete | KEEP; does not DROP tables |
 | `compliance/__init__.py` | Stub | DEFER / do not call |
 | `parsing/__init__.py` | Stub | DEFER / do not call |
 
@@ -138,7 +145,6 @@ Mounted under `/api` from `app/main.py`.
 | Path | Role | Disposition |
 |---|---|---|
 | `app/schemas/*.py` | Request/response | KEEP |
-| `app/schemas/core.py` `ScheduledWorkRead` | Leftover | REMOVE with scheduled_work |
 | `app/templates/portfolio*.html`, `portfolio.css` | Evaluator PDF | KEEP |
 | `app/templates/weekly_manifest.html` | Printable week | KEEP |
 | `app/utils/isbn.py` | ISBN normalize | KEEP |
@@ -171,9 +177,9 @@ There is no component tree. Features are functions + `data-action` + hash routes
 | Path | Role | Disposition |
 |---|---|---|
 | `extension/manifest.json` | MV3, `activeTab`, `storage`, `scripting` | KEEP |
-| `extension/background.js` | Capture + upload | KEEP; REFACTOR auth header |
+| `extension/background.js` | Capture + upload | KEEP |
 | `extension/options.html` / `options.js` / `options.css` | Server URL + token | KEEP |
-| `extension/icons/` | Referenced, missing | COMPLETE assets |
+| `extension/icons/` | Toolbar + options PNGs | KEEP |
 
 ---
 
@@ -182,39 +188,43 @@ There is no component tree. Features are functions + `data-action` + hash routes
 | Module | What it protects | Gap vs target |
 |---|---|---|
 | `conftest.py` | In-memory unified DB | No real tenant files |
-| `test_auth.py`, `test_kid_auth.py` | JWT, PIN, demo | KEEP |
+| `test_auth.py`, `test_kid_auth.py`, `test_config.py`, `test_capture_token.py`, `test_child_assignment_status.py` | JWT, PIN, demo, capture credential, child complete | KEEP |
 | `test_students_api.py` | CRUD | KEEP |
 | `test_assignments_api.py` | Calendar, shared group | KEEP |
 | `test_pacing.py` | Preview/commit math | KEEP |
-| `test_curriculum_plans.py`, `test_curriculum_pdf_import.py` | Plans | KEEP |
+| `test_curriculum_plans.py`, `test_curriculum_pdf_import.py` | Plans + worker session isolation | KEEP |
 | `test_catalog_api.py`, `test_books_api.py`, `test_resolver.py`, `test_isbn.py`, `test_providers.py`, `test_metadata.py` | ISBN | CONSOLIDATE books vs catalog later |
-| `test_evidence_staging_api.py` | Inbox | Add file-auth when implemented |
+| `test_evidence_staging_api.py`, `test_evidence_files_api.py` | Inbox + authenticated file GET | KEEP |
 | `test_portfolios_api.py` | Reports | KEEP |
 | `test_attendance_api.py` | Attendance | KEEP |
 | `test_dashboard_api.py` | Stats | KEEP |
 | `test_school_year_settings.py` | Year + holidays | KEEP |
+| `test_school_years.py` | Named year CRUD + operational-year migrate | KEEP |
+| `test_enrollments.py` | Auto-enroll on commit/apply | KEEP |
 | `test_recalibration.py` | Shift | KEEP |
 | `test_homework_help.py` | Tutor | Thin — COMPLETE tests |
 | `test_spark.py` | Spark | KEEP |
 | `test_weekly_manifest.py` | PDF | KEEP |
 | `test_education.py` | Taxonomy models | DEFER product; tests document unused model |
-| `test_shell.py` | `/sw.js` | KEEP |
+| `test_shell.py` | `/`, `/sw.js`, cache lockstep, logo, extension icons | KEEP |
+| `test_schema.py` | Fresh/upgrade SQLite files; Alembic refused; leftover tables not mapped and not dropped | KEEP |
+| `test_legacy_tables.py` | Orphan-row SQL cleanup | KEEP |
 | `test_curricula_api.py`, `test_curriculum_import.py` | Library import | KEEP |
 
 ---
 
-## Alembic versions (historical)
+## Alembic versions (historical archive)
 
-These files describe an older single-DB shape. They are **not** the runtime schema.
+These files describe an older single-DB shape. They are **not** the runtime schema. `alembic upgrade` is refused.
 
 | Revision | Topic | vs live models |
 |---|---|---|
-| `0001_initial` | Household, old curricula.isbn, scheduled_work | Superseded |
-| `0002_curriculum_catalog` | Catalog tables | Partially reflected in models |
-| `0003_education_core` | Assignments | Live |
-| `0004`–`0012` | Shared group, color, attendance, plans, settings, colors, staging, status, time_slot | Live via create_all/ALTER |
+| `0001_initial` | Household, old curricula.isbn, scheduled_work | Unsafe to replay |
+| `0002_curriculum_catalog` | Catalog + tenant in one DB; FK to publishers | Not the three-file layout |
+| `0003_education_core` | Assignments + taxonomy; cross-DB FKs | Not live FK policy |
+| `0004`–`0012` | Shared group, color, attendance, plan ALTERs, settings, staging | Partial; 0007 ALTERs tables the chain never created |
 
-Treat as archaeology until Alembic actually runs.
+Treat as archaeology. Runtime is `create_all` + `app.schema_patches`.
 
 ---
 
@@ -222,13 +232,14 @@ Treat as archaeology until Alembic actually runs.
 
 Many features import these. Prefer additive changes.
 
-1. `app/db.py` — tenant routing and schema patches
-2. `app/core/security.py` — every request
-3. `app/models/education.py` — `Assignment`
-4. `app/services/assignments.py` — calendar reads
-5. `app/services/pacing.py` — writes many rows
-6. `static/js/app.js` — all UX
-7. `app/main.py` — mounts and router list
+1. `app/db.py` — tenant routing and `init_databases`
+2. `app/schema_patches.py` — additive schema on existing files
+3. `app/core/security.py` — every request
+4. `app/models/education.py` — `Assignment`
+5. `app/services/assignments.py` — calendar reads
+6. `app/services/pacing.py` — writes many rows
+7. `static/js/app.js` — all UX
+8. `app/main.py` — mounts and router list
 
 ---
 
@@ -236,7 +247,25 @@ Many features import these. Prefer additive changes.
 
 - `app/services/compliance/`
 - `app/services/parsing/`
-- `ScheduledWork` / `EvidenceCapture` write paths (only delete-cleanup today)
+- Leftover `scheduled_work` / `evidence_captures` tables on disk (clear rows on delete; do not DROP)
 - `POST /catalog/from-isbn` and `/books/*` unless you are consolidating APIs
 - Taxonomy CRUD (does not exist)
 - Alembic `upgrade()` as a deploy step (it does not migrate)
+
+---
+
+## Legacy cleanup classification
+
+Do not delete something merely because the SPA does not call it.
+
+| Candidate | Class | Why |
+|---|---|---|
+| `ScheduledWork` / `EvidenceCapture` ORM models, `ScheduledWorkRead`, `CurriculumUnitRead`, `TenantCurriculum`, `ScheduleGrain`, `WorkStatus` | SAFE TO REMOVE | No write path. Tree API uses `CurriculumUnitNode`. Available `data/` files had COUNT=0. |
+| Orphan SQLite tables `scheduled_work` / `evidence_captures` | DEPRECATE | Empty here; `create_all` does not drop them. DROP only after each operator COUNT=0. |
+| Alembic revisions 0001–0012 | KEEP | Historical archive. Replay is refused and unsafe. |
+| `POST /catalog/from-isbn`, `/books/*`, `POST /curricula/import` | KEEP | SPA unused; tests and API clients call them. |
+| Taxonomy models and `assignments.subject_taxonomy_id` | KEEP | Pacing, assignments, weekly manifest, and tests use them. No CRUD UI. |
+| `Jurisdiction` / `CompliancePacket` / `compliance/` / `parsing/` | KEEP (DEFER) | Empty stubs until a state form exists. Do not call. |
+| `/exceptions` and `/calendar/exceptions` | MIGRATE FIRST | SPA uses both prefixes on the same table. |
+| `ai_generator.py` module | KEEP | Arithmetic is the real generator. Comments corrected; rename later. |
+| Root `Curiculy Logo.png` | KEEP | Source asset; served copy is `static/curiculy-logo.png`. |

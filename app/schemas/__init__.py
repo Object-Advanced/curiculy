@@ -1,4 +1,11 @@
-from app.schemas.auth import InviteKeyRead, RegisterRequest, Token, TokenUserRead
+from app.schemas.auth import (
+    CaptureTokenIssued,
+    CaptureTokenStatusRead,
+    InviteKeyRead,
+    RegisterRequest,
+    Token,
+    TokenUserRead,
+)
 from app.schemas.catalog import (
     BookEditionRead,
     BookResolveRequest,
@@ -18,7 +25,6 @@ from app.schemas.core import (
     CalendarExceptionToggleRequest,
     CurriculumCreate,
     CurriculumRead,
-    CurriculumUnitRead,
     EnrollmentCreate,
     EnrollmentRead,
     ExceptionColorsRead,
@@ -32,7 +38,7 @@ from app.schemas.core import (
     SchoolYearRead,
     SchoolYearSettingsRead,
     SchoolYearSettingsUpdate,
-    ScheduledWorkRead,
+    SchoolYearUpdate,
     StudentCreate,
     StudentRead,
 )
@@ -139,6 +145,8 @@ __all__ = [
     "CalendarExceptionRead",
     "CalendarExceptionToggleRead",
     "CalendarExceptionToggleRequest",
+    "CaptureTokenIssued",
+    "CaptureTokenStatusRead",
     "CurriculumCreate",
     "CurriculumImportRequest",
     "CurriculumLessonRead",
@@ -156,7 +164,6 @@ __all__ = [
     "CurriculumTreeRead",
     "CurriculumUnitNode",
     "DashboardStatsRead",
-    "CurriculumUnitRead",
     "EnrollmentCreate",
     "EnrollmentRead",
     "EvidenceLinkRequest",
@@ -197,7 +204,7 @@ __all__ = [
     "SchoolYearRead",
     "SchoolYearSettingsRead",
     "SchoolYearSettingsUpdate",
-    "ScheduledWorkRead",
+    "SchoolYearUpdate",
     "StudentCreate",
     "StudentRead",
     "SubjectTaxonomyRead",

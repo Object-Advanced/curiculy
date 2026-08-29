@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
-from app.config import settings
+from app.config import settings, validate_runtime_configuration
 from app.evidence import evidence_root
 from app.routers import (
     admin,
@@ -49,6 +49,7 @@ class StaticRevalidateMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    validate_runtime_configuration()
     evidence_root()
     yield
 
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     application.include_router(books.router, prefix="/api")
     application.include_router(assignments.router, prefix="/api")
     application.include_router(evidence.router, prefix="/api")
+    application.include_router(evidence.files_router, prefix="/api")
     application.include_router(dashboard.router, prefix="/api")
     application.include_router(calendar.router, prefix="/api")
     application.include_router(pacing.router, prefix="/api")
@@ -92,13 +94,6 @@ def create_app() -> FastAPI:
     sw_path = Path(__file__).resolve().parent.parent / "sw.js"
     if static_dir.exists():
         application.mount("/static", StaticFiles(directory=static_dir), name="static")
-    # Created on startup by the lifespan; check_dir=False so tests that skip
-    # lifespan still construct the app without touching the evidence volume.
-    application.mount(
-        "/evidence",
-        StaticFiles(directory=settings.evidence_dir, check_dir=False),
-        name="evidence",
-    )
 
     @application.get("/", include_in_schema=False)
     def app_shell() -> FileResponse:

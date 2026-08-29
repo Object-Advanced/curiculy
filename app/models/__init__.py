@@ -1,15 +1,10 @@
-from datetime import date, datetime
+from datetime import date
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import TenantBase
-from app.enums import (
-    ExceptionKind,
-    ScheduleGrain,
-    WorkStatus,
-    enum_values,
-)
+from app.enums import ExceptionKind, enum_values
 from app.models.curriculum import (
     Author,
     BookEdition,
@@ -24,8 +19,6 @@ from app.models.curriculum import (
     Work,
     WorkAuthor,
 )
-
-TenantCurriculum = Curriculum
 from app.models.education import (
     Assignment,
     AssignmentEvidence,
@@ -117,10 +110,6 @@ class Student(TimestampMixin, TenantBase):
     calendar_exceptions: Mapped[list["CalendarException"]] = relationship(
         back_populates="student"
     )
-    scheduled_work: Mapped[list["ScheduledWork"]] = relationship(back_populates="student")
-    evidence_captures: Mapped[list["EvidenceCapture"]] = relationship(
-        back_populates="student"
-    )
     assignments: Mapped[list[Assignment]] = relationship(
         back_populates="student",
         foreign_keys="Assignment.student_id",
@@ -147,7 +136,11 @@ class SchoolYear(TimestampMixin, TenantBase):
 
 
 class HouseholdSettings(TimestampMixin, TenantBase):
-    """One row per household: school-year bounds and default class days.
+    """One row per household: class days and exception colors.
+
+    Operational school-year dates live on ``SchoolYear``. ``start_date`` and
+    ``end_date`` remain on this table as a write-through mirror so existing
+    tenant files keep their NOT NULL columns; they are not the read source.
 
     ``weekdays`` is a comma-separated list of Python weekday numbers
     (0 is Monday, 6 is Sunday), matching auto-schedule.
@@ -169,6 +162,11 @@ class HouseholdSettings(TimestampMixin, TenantBase):
 
 
 class Enrollment(TimestampMixin, TenantBase):
+    """This student is using this curriculum in this school year.
+
+    Created from Settings or as a side effect of pacing commit / plan apply.
+    Unique on student + curriculum + school year.
+    """
     __tablename__ = "enrollments"
     __table_args__ = (
         UniqueConstraint(
@@ -188,9 +186,6 @@ class Enrollment(TimestampMixin, TenantBase):
 
     student: Mapped[Student] = relationship(back_populates="enrollments")
     school_year: Mapped[SchoolYear] = relationship(back_populates="enrollments")
-    scheduled_work: Mapped[list["ScheduledWork"]] = relationship(
-        back_populates="enrollment"
-    )
 
 
 class CalendarException(TimestampMixin, TenantBase):
@@ -210,52 +205,6 @@ class CalendarException(TimestampMixin, TenantBase):
 
     household: Mapped[Household] = relationship(back_populates="calendar_exceptions")
     student: Mapped[Student | None] = relationship(back_populates="calendar_exceptions")
-
-
-class ScheduledWork(TimestampMixin, TenantBase):
-    __tablename__ = "scheduled_work"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    enrollment_id: Mapped[int] = mapped_column(ForeignKey("enrollments.id"), nullable=False)
-    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), nullable=False)
-    unit_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    grain: Mapped[ScheduleGrain] = mapped_column(
-        Enum(ScheduleGrain, native_enum=False, length=32, values_callable=enum_values),
-        nullable=False,
-    )
-    due_date: Mapped[date] = mapped_column(Date, nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[WorkStatus] = mapped_column(
-        Enum(WorkStatus, native_enum=False, length=32, values_callable=enum_values),
-        default=WorkStatus.PLANNED,
-        nullable=False,
-    )
-
-    enrollment: Mapped[Enrollment] = relationship(back_populates="scheduled_work")
-    student: Mapped[Student] = relationship(back_populates="scheduled_work")
-    evidence_captures: Mapped[list["EvidenceCapture"]] = relationship(
-        back_populates="scheduled_work"
-    )
-
-
-class EvidenceCapture(TimestampMixin, TenantBase):
-    __tablename__ = "evidence_captures"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), nullable=False)
-    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    subject: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    scheduled_work_id: Mapped[int | None] = mapped_column(
-        ForeignKey("scheduled_work.id"),
-        nullable=True,
-    )
-    file_path: Mapped[str] = mapped_column(String(1024), nullable=False)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-    student: Mapped[Student] = relationship(back_populates="evidence_captures")
-    scheduled_work: Mapped[ScheduledWork | None] = relationship(
-        back_populates="evidence_captures"
-    )
 
 
 class CompliancePacket(TimestampMixin, TenantBase):
@@ -296,7 +245,6 @@ __all__ = [
     "CurriculumResource",
     "CurriculumUnit",
     "Enrollment",
-    "EvidenceCapture",
     "EvidenceStaging",
     "HomeworkHelpMessage",
     "HomeworkHelpSession",
@@ -307,10 +255,8 @@ __all__ = [
     "Publisher",
     "ReportingCategory",
     "SchoolYear",
-    "ScheduledWork",
     "Student",
     "SubjectTaxonomy",
-    "TenantCurriculum",
     "Work",
     "WorkAuthor",
 ]

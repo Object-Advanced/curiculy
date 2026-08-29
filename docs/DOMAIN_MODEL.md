@@ -27,6 +27,7 @@ Do not put planner rows in `catalog.db`. Do not put ISBN cache in the tenant fil
 | **Parent** | Email/password user. Full planner. |
 | **Child user** | PIN user tied to one `student_id`. Sees My work only. |
 | **Invite key** | One-time registration gate. |
+| **Capture credential** | Long-lived JWT that may only `POST` evidence staging for one tenant. Revocable via `admin.db`. Not a parent session. |
 | **Demo** | Ephemeral in-memory tenant. Not a real family. |
 
 **Rule:** One tenant file = one family. Do not plan multi-household inside one file.
@@ -43,7 +44,7 @@ Do not put planner rows in `catalog.db`. Do not put ISBN cache in the tenant fil
 | **Class days** | `household_settings.weekdays` | Which weekdays count as school (0=Mon). |
 | **Exception** | `calendar_exceptions` | Days not to schedule: holiday, vacation, sick, appointment. Household-wide or one student. |
 
-**Target rule:** Dates of the current year live on `SchoolYear`. Weekdays and exception colors live on `HouseholdSettings`. Do not keep a second start/end on settings once consolidated.
+**Target rule:** Dates of the current year live on `SchoolYear`. Weekdays and exception colors live on `HouseholdSettings`. Settings still store start/end as a write-through mirror of the operational year so existing tenant files keep those columns; they are not a second source of truth.
 
 **Attendance** (`attendance`) is a log for reports: Present / Absent / Sick / Vacation. It is not the same as an exception. Exceptions change **whether work is generated**. Attendance records **what happened**.
 
@@ -92,9 +93,9 @@ A resource **may** point at a book edition by integer id. That is a cache link, 
 |---|---|---|
 | **Enrollment** | `enrollments` | This student is using this curriculum in this school year. |
 
-**Target:** Created automatically when a book is committed or a plan is applied to a student. Used by portfolio reading lists. Settings can still edit.
+**Target:** Created automatically when a book is committed or a plan is applied to a student. Used by portfolio reading lists. Settings can still edit. Duplicate student + curriculum + year is reused, not inserted twice.
 
-`curriculum_id` is an integer (no FK) because it was designed like catalog ids; it actually points at tenant `curricula`. Worth tightening when enrollments become automatic.
+`curriculum_id` is an integer (no FK) because it was designed like catalog ids; it actually points at tenant `curricula`. Plan-apply matches or creates that library row from the plan title.
 
 ---
 
@@ -109,7 +110,7 @@ A resource **may** point at a book edition by integer id. That is a cache link, 
 
 Statuses: assigned, in_progress, completed, skipped, excused.
 
-**Not in the target model:** `scheduled_work`, `WorkStatus` on that table, `ScheduleGrain` as a pacing grain for generated work. Grain/period enums that remain are for **calendar windows** (day/week/month), not for a second work table.
+**Not in the target model:** `scheduled_work`, `WorkStatus` on that table, `ScheduleGrain` as a pacing grain for generated work. Those models and enums are unmapped. Empty leftover tables may remain on older SQLite files until an operator COUNT=0 and DROP. Grain/period enums that remain are for **calendar windows** (day/week/month), not for a second work table.
 
 ---
 
@@ -122,7 +123,7 @@ Statuses: assigned, in_progress, completed, skipped, excused.
 
 Flow: screenshot → staging → parent links (or drag) onto a lesson. Direct upload on an assignment skips the inbox.
 
-**Not in the target model:** `evidence_captures` (legacy, tied to scheduled_work).
+**Not in the target model:** `evidence_captures` (legacy, tied to scheduled_work). Model unmapped. Empty tables may remain; do not DROP from boot.
 
 ---
 
@@ -192,12 +193,13 @@ Catalog sits beside this: `BookEdition` ← optional `CurriculumResource.book_ed
 
 ## Invariants worth enforcing
 
-1. A child JWT may only read/write assignments (and help) for `student_id` in the token.
+1. A child JWT may only read assignments (and homework help) for `student_id` in the token, and may change **status** on those assignments only.
 2. Pacing and plan-apply skip household exceptions and off weekdays; student-specific exceptions skip that child only.
 3. Shared-group members keep the same lesson identity; private assignments never appear on `/calendar`.
-4. Evidence files are tenant-prefixed; serving them requires the same tenant’s credential.
+4. Evidence files are tenant-prefixed; serving them requires the same tenant’s parent or child JWT. A child may only read files attached to their own assignments. A capture credential cannot read files.
 5. Demo data never writes `tenant_*.db`.
 6. Scheduling works if Ollama is down; PDF import and tutoring may fail closed.
+7. A capture credential identifies a tenant and may only stage evidence for that tenant. It is rejected by parent authentication.
 
 ---
 

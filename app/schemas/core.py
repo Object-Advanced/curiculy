@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import date
 from re import fullmatch
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.enums import CurriculumSource, ExceptionKind, ScheduleGrain, UnitKind, WorkStatus
+from app.enums import CurriculumSource, ExceptionKind
 
 _HEX_COLOR = r"^#[0-9A-Fa-f]{6}$"
 
@@ -97,6 +97,18 @@ class SchoolYearCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     start_date: date
     end_date: date
+
+
+class SchoolYearUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self) -> "SchoolYearUpdate":
+        if self.name is None and self.start_date is None and self.end_date is None:
+            raise ValueError("at least one field is required")
+        return self
 
 
 class SchoolYearRead(ORMModel):
@@ -259,28 +271,3 @@ class CalendarExceptionRead(ORMModel):
     start_date: date
     end_date: date
     notes: str | None
-
-
-class CurriculumUnitRead(ORMModel):
-    id: int
-    curriculum_edition_id: int
-    parent_id: int | None
-    kind: UnitKind
-    label: str | None
-    title: str
-    sort_order: int
-    depth: int
-    estimated_minutes: int | None
-    estimated_sessions: int | None
-
-
-class ScheduledWorkRead(ORMModel):
-    id: int
-    enrollment_id: int
-    student_id: int
-    unit_id: int | None
-    grain: ScheduleGrain
-    due_date: date
-    title: str
-    status: WorkStatus
-    created_at: datetime

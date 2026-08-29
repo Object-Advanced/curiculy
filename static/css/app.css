@@ -2064,6 +2064,24 @@ button.small.button {
     font-size: 1.15rem;
 }
 
+.calendar-shared-note {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.italic {
+    font-style: italic;
+}
+
+.text-gray-500 {
+    color: var(--text-secondary);
+}
+
+.text-xs {
+    font-size: 0.8rem;
+}
+
 .add-assignment {
     padding: 0.5rem 0.85rem;
 }
@@ -3695,7 +3713,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: #0c1220;
-    background-image: url("/static/night-mountains.jpg");
+    background-image: url("/static/night-mountains.jpg?v=20260829-register-copy");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -3836,6 +3854,18 @@ html[data-auth="required"] #auth-page {
 
 .invite-toolbar h2 {
     margin: 0;
+}
+
+.capture-token-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.capture-token-secret {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    flex: 1;
+    min-width: 0;
 }
 
 /* ---- Portfolio report builder ---- */

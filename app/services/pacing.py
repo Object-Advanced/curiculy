@@ -27,11 +27,14 @@ from app.enums import AssignmentStatus, MappingSource, UnitKind
 from app.models import (
     Assignment,
     BookEdition,
+    CurriculumEdition,
     CurriculumPageMapping,
     CurriculumResource,
     CurriculumUnit,
 )
 from app.schemas.pacing import PacingCommitRead, PacingCommitRequest
+from app.services.enrollments import enroll_students
+from app.services.school_year import require_operational_school_year
 
 
 class PacingError(ValueError):
@@ -339,6 +342,16 @@ class SyllabusCommitter:
                 source=MappingSource.AI_PARSED,
             )
             for lesson, unit in zip(lessons, units, strict=True)
+        )
+        edition = self._tenant_db.get(CurriculumEdition, payload.curriculum_edition_id)
+        if edition is None:
+            raise SyllabusCommitError("Curriculum edition not found")
+        year = require_operational_school_year(self._tenant_db)
+        enroll_students(
+            self._tenant_db,
+            student_ids,
+            edition.curriculum_id,
+            year.id,
         )
         self._tenant_db.flush()
 

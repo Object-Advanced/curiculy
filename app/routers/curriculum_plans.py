@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Qu
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.security import require_parent
+from app.core.security import CurrentUser, require_parent
 from app.db import get_tenant_db
 from app.enums import CurriculumPlanStatus
 from app.models import CurriculumLesson, CurriculumPlan, Student
@@ -194,6 +194,7 @@ async def import_curriculum_pdf(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_tenant_db),
+    user: CurrentUser = Depends(require_parent),
 ) -> CurriculumPlanPdfImportRead:
     """Accept a pacing-guide PDF and queue AI parsing in the background."""
     raw = await file.read()
@@ -210,7 +211,8 @@ async def import_curriculum_pdf(
         process_pdf_curriculum_background,
         plan.id,
         raw,
-        db,
+        user.tenant_uuid,
+        user.jti,
     )
     return CurriculumPlanPdfImportRead(
         plan_id=plan.id,

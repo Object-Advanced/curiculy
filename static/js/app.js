@@ -155,6 +155,8 @@ const state = {
   dashboardAssignments: [],
   dashboardCourses: [],
   inviteKeys: [],
+  captureTokenStatus: { active: false, created_at: null, expires_at: null },
+  captureTokenSecret: "",
   devMode: false,
   schoolYear: null,
   exceptionColors: null,
@@ -1005,6 +1007,23 @@ async function loadInviteKeys() {
   state.inviteKeys = await api("/admin/invites");
 }
 
+async function loadCaptureTokenStatus() {
+  state.captureTokenStatus = { active: false, created_at: null, expires_at: null };
+  if (currentUserIsChild() || tokenIsDemo()) {
+    return;
+  }
+  try {
+    const status = await api("/auth/capture-token");
+    state.captureTokenStatus = {
+      active: Boolean(status && status.active),
+      created_at: status && status.created_at ? status.created_at : null,
+      expires_at: status && status.expires_at ? status.expires_at : null,
+    };
+  } catch {
+    state.captureTokenStatus = { active: false, created_at: null, expires_at: null };
+  }
+}
+
 async function loadSettings() {
   const panel = settingsPanel();
   const extras = [loadExceptionColors()];
@@ -1028,7 +1047,7 @@ async function loadSettings() {
     await Promise.all(extras);
     return;
   }
-  extras.push(loadStudents());
+  extras.push(loadStudents(), loadCaptureTokenStatus());
   await Promise.all(extras);
 }
 
@@ -2340,7 +2359,9 @@ function updateCourseProgressUI(course) {
 async function toggleAssignmentComplete(assignmentId, completed) {
   const row = document.querySelector(`[data-checklist-id="${assignmentId}"]`);
   const checkbox = row?.querySelector("[data-action='toggle-complete']");
-  const previous = state.dashboardAssignments.find((entry) => entry.id === assignmentId);
+  const previous =
+    state.dashboardAssignments.find((entry) => entry.id === assignmentId) ||
+    (state.kidWork || []).find((entry) => entry.id === assignmentId);
   try {
     let item = await api(`/assignments/${assignmentId}/status`, {
       method: "PATCH",
@@ -2358,6 +2379,9 @@ async function toggleAssignmentComplete(assignmentId, completed) {
     state.dashboardAssignments = state.dashboardAssignments.map((entry) =>
       entry.id === item.id ? { ...entry, ...item } : entry
     );
+    state.kidWork = (state.kidWork || []).map((entry) =>
+      entry.id === item.id ? { ...entry, ...item } : entry
+    );
     if (wasComplete !== nowComplete) {
       updateCourseProgressUI(
         adjustCourseProgress(item.curriculum_id, nowComplete ? 1 : -1)
@@ -2365,6 +2389,9 @@ async function toggleAssignmentComplete(assignmentId, completed) {
     }
     const checklist = $("today-checklist");
     if (checklist) checklist.innerHTML = renderTodayChecklist(state.dashboardAssignments);
+    if (routeName() === "my-work") {
+      render();
+    }
     if (completed) {
       celebrateChecklistItem(document.querySelector(`[data-checklist-id="${assignmentId}"]`));
     }
@@ -2431,7 +2458,62 @@ function renderStudentSettings() {
         }
       </section>
     </div>
+    ${renderCaptureTokenSettings()}
   `;
+}
+
+function captureTokenExpiryLabel(value) {
+  if (!value) return "";
+  return String(value).slice(0, 10);
+}
+
+function renderCaptureTokenSettings() {
+  if (currentUserIsChild()) {
+    return "";
+  }
+  if (tokenIsDemo()) {
+    return `
+      <section class="card">
+        <h2>Chrome capture token</h2>
+        <p class="muted">Demo mode has no household lockbox, so capture tokens are not issued here.</p>
+      </section>`;
+  }
+  const status = state.captureTokenStatus || { active: false };
+  const secret = state.captureTokenSecret || "";
+  const until = captureTokenExpiryLabel(status.expires_at);
+  const summary = status.active
+    ? `A capture token is active${until ? ` until ${escapeHtml(until)}` : ""}. Generating a new one disconnects the old one on the student’s computer.`
+    : "No capture token is active. Generate one, then paste it into the Chrome extension on the student’s computer.";
+  return `
+    <section class="card">
+      <div class="invite-toolbar">
+        <div>
+          <h2>Chrome capture token</h2>
+          <p class="muted">${summary}</p>
+        </div>
+        <div class="form-actions">
+          <button type="button" data-action="generate-capture-token">
+            ${status.active ? "Generate new token" : "Generate token"}
+          </button>
+          ${
+            status.active
+              ? `<button type="button" class="ghost danger" data-action="revoke-capture-token">Revoke</button>`
+              : ""
+          }
+        </div>
+      </div>
+      ${
+        secret
+          ? `<label>Copy this token now. It is not shown again.
+              <span class="capture-token-row">
+                <input class="capture-token-secret" type="text" readonly
+                       value="${escapeHtml(secret)}" aria-label="Capture token">
+                <button type="button" class="ghost" data-action="copy-capture-token">Copy</button>
+              </span>
+            </label>`
+          : `<p class="muted">This token can only upload screenshots. It is not a parent login.</p>`
+      }
+    </section>`;
 }
 
 function renderStudentPinSettings(student) {
@@ -3273,10 +3355,11 @@ function openApplyPlan(planId) {
   const form = $("apply-plan-form");
   fillSelect(form.querySelector('[name="student_id"]'), state.students, (item) => item.name);
   form.querySelector('[name="start_date"]').value = todayISO();
+  const savedDays = classWeekdays().map(String);
   $("apply-plan-weekdays")
     .querySelectorAll("input")
     .forEach((box) => {
-      box.checked = Number(box.value) < 5;
+      box.checked = savedDays.includes(box.value);
     });
   lastFocused = document.activeElement;
   $("apply-plan-modal").hidden = false;
@@ -4237,7 +4320,14 @@ function renderAssignments() {
       </form>`
       }
       <div class="calendar-range">
-        <h2 id="calendar-range-label">Loading…</h2>
+        <div>
+          <h2 id="calendar-range-label">Loading…</h2>
+          ${
+            allStudents
+              ? `<p class="calendar-shared-note italic">Showing shared lessons only. Private lessons appear on individual student calendars.</p>`
+              : ""
+          }
+        </div>
         <p id="calendar-range-count" class="meta"></p>
       </div>
       <div id="calendar-body" class="calendar-body" aria-live="polite">
@@ -4330,11 +4420,11 @@ function groupStagingByDay(rows) {
 }
 
 function stagingThumbMarkup(row) {
-  const src = evidencePublicUrl(row.file_path);
   const captured = new Date(row.captured_at);
   const time = Number.isNaN(captured.getTime()) ? "" : SHORT_TIME.format(captured);
+  const fileAttr = `data-evidence-file="${escapeHtml(row.file_path || "")}"`;
   const image = isImagePath(row.file_path)
-    ? `<img src="${escapeHtml(src)}" alt="Screenshot${time ? ` from ${escapeHtml(time)}` : ""}" draggable="false">`
+    ? `<img ${fileAttr} alt="Screenshot${time ? ` from ${escapeHtml(time)}` : ""}" draggable="false">`
     : `<span class="evidence-inbox-file">${escapeHtml((row.file_path || "").split("/").pop() || "File")}</span>`;
   return `
     <figure class="evidence-inbox-thumb" draggable="true" data-evidence-id="${row.id}" role="listitem">
@@ -4373,7 +4463,10 @@ function syncEvidenceNavBadge() {
 
 function paintEvidenceInbox() {
   const body = $("evidence-inbox-body");
-  if (body) body.innerHTML = evidenceInboxBodyHtml(state.evidenceStaging || []);
+  if (body) {
+    body.innerHTML = evidenceInboxBodyHtml(state.evidenceStaging || []);
+    hydrateEvidenceImages(body);
+  }
   syncEvidenceNavBadge();
 }
 
@@ -4552,11 +4645,11 @@ function markAssignmentHasEvidence(assignmentId, record) {
     }
   }
   if (record?.file_path && isImagePath(record.file_path)) {
-    const src = evidencePublicUrl(record.file_path);
-    const mini = `<img class="cal-event-mini" src="${escapeHtml(src)}" alt="" draggable="false">`;
+    const mini = `<img class="cal-event-mini" data-evidence-file="${escapeHtml(record.file_path)}" alt="" draggable="false">`;
     const existing = tile.querySelector(".cal-event-mini");
     if (existing) existing.outerHTML = mini;
     else tile.insertAdjacentHTML("beforeend", mini);
+    hydrateEvidenceImages(tile);
   }
 }
 
@@ -5047,7 +5140,7 @@ function pacingWeekdays() {
 }
 
 function resetPacingWeekdays() {
-  const saved = (state.schoolYear?.weekdays || [0, 1, 2, 3, 4]).map(String);
+  const saved = classWeekdays().map(String);
   for (const box of $("pacing-weekdays").querySelectorAll("input")) {
     box.checked = saved.includes(box.value);
   }
@@ -5545,17 +5638,65 @@ function detailRows(item) {
     .join("")}</dl>`;
 }
 
-function evidencePublicUrl(filePath) {
+const evidenceBlobUrls = new Map();
+
+function evidenceRelativePath(filePath) {
   const normalized = String(filePath || "").replace(/\\/g, "/");
   let relative = normalized.replace(/^\/+/, "");
   if (relative.startsWith("data/evidence/")) {
     relative = relative.slice("data/evidence/".length);
   }
-  return `/evidence/${relative
+  const parts = relative.split("/").filter(Boolean);
+  if (parts.length !== 2 || parts.some((part) => part === "." || part === "..")) {
+    return "";
+  }
+  return parts.join("/");
+}
+
+function evidenceFileRequestPath(filePath) {
+  const relative = evidenceRelativePath(filePath);
+  if (!relative) return "";
+  return `/api/evidence/files/${relative
     .split("/")
-    .filter(Boolean)
     .map(encodeURIComponent)
     .join("/")}`;
+}
+
+async function evidenceObjectUrl(filePath) {
+  const relative = evidenceRelativePath(filePath);
+  if (!relative) return "";
+  if (evidenceBlobUrls.has(relative)) return evidenceBlobUrls.get(relative);
+  const token = getAuthToken();
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await fetch(evidenceFileRequestPath(relative), { headers });
+  if (!response.ok) return "";
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  evidenceBlobUrls.set(relative, url);
+  return url;
+}
+
+function clearEvidenceBlobs() {
+  for (const url of evidenceBlobUrls.values()) {
+    URL.revokeObjectURL(url);
+  }
+  evidenceBlobUrls.clear();
+}
+
+async function hydrateEvidenceImages(root = document) {
+  if (!root || typeof root.querySelectorAll !== "function") return;
+  const nodes = [...root.querySelectorAll("[data-evidence-file]")];
+  await Promise.all(
+    nodes.map(async (el) => {
+      const current = el.getAttribute("src") || el.getAttribute("href") || "";
+      if (current.startsWith("blob:")) return;
+      const url = await evidenceObjectUrl(el.getAttribute("data-evidence-file"));
+      if (!url) return;
+      if (el.tagName === "IMG") el.src = url;
+      if (el.tagName === "A") el.href = url;
+    })
+  );
 }
 
 function isImagePath(filePath) {
@@ -5564,16 +5705,15 @@ function isImagePath(filePath) {
 
 function evidenceThumb(record) {
   if (record.file_path) {
-    const src = evidencePublicUrl(record.file_path);
     const alt = record.notes || "Work sample";
+    const fileAttr = `data-evidence-file="${escapeHtml(record.file_path)}"`;
     if (isImagePath(record.file_path)) {
-      return `<a href="${escapeHtml(src)}" target="_blank" rel="noopener">
-        <img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">
+      return `<a ${fileAttr} target="_blank" rel="noopener">
+        <img ${fileAttr} alt="${escapeHtml(alt)}">
       </a>`;
     }
-    return `<a class="evidence-file" href="${escapeHtml(src)}" target="_blank" rel="noopener">${escapeHtml(
-      src.split("/").pop() || "File"
-    )}</a>`;
+    const name = String(record.file_path).split("/").pop() || "File";
+    return `<a class="evidence-file" ${fileAttr} target="_blank" rel="noopener">${escapeHtml(name)}</a>`;
   }
   if (record.url) {
     return `<a class="evidence-file" href="${escapeHtml(record.url)}" target="_blank" rel="noopener">${escapeHtml(
@@ -5661,6 +5801,7 @@ function renderDetail() {
   $("detail-body").innerHTML = detail.editing ? detailForm(item) : detailBody(item);
   $("detail-actions").innerHTML = detailActions();
   $("detail-actions").hidden = false;
+  if (!detail.editing) hydrateEvidenceImages($("detail-body"));
 }
 
 function openModal() {
@@ -6183,6 +6324,12 @@ function renderPortfolios() {
         .join("")
     : `<option value="">No school years yet</option>`;
   const ready = portfolioReady();
+  const enrollmentsForPreview = custom
+    ? state.enrollments || []
+    : (state.enrollments || []).filter(
+        (row) => row.student_id === studentId && row.school_year_id === yearId
+      );
+  const emptyReadingList = ready && !enrollmentsForPreview.length;
   return `
     <section id="portfolio-view">
       <div class="portfolio-toolbar">
@@ -6212,6 +6359,11 @@ function renderPortfolios() {
         </div>
       </div>
       ${custom ? portfolioCustomPanel() : ""}
+      ${
+        emptyReadingList
+          ? `<p class="text-gray-500 italic">Reading list is empty. <br><span class="text-xs">Note: Lessons scheduled prior to the auto-enrollment update will not automatically populate here. You can manually add books via Settings → Enrollments.</span></p>`
+          : ""
+      }
       <div class="a4-preview">
         <div id="portfolio-canvas" class="a4-canvas">
           <p class="empty">${
@@ -6243,6 +6395,7 @@ async function loadPortfolioReport() {
     });
     if (token !== portfolioRequest || !$("portfolio-canvas")) return;
     $("portfolio-canvas").innerHTML = preview.html || `<p class="empty">Nothing to preview.</p>`;
+    hydrateEvidenceImages($("portfolio-canvas"));
   } catch (error) {
     if (token !== portfolioRequest || !$("portfolio-canvas")) return;
     $("portfolio-canvas").innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
@@ -6572,6 +6725,7 @@ async function persistSchoolYearSettings() {
       body: JSON.stringify({ start_date: start, end_date: end, weekdays }),
     });
     state.schoolYear = saved;
+    await loadYears();
   } catch (error) {
     schoolYearError(error.message);
   }
@@ -6780,18 +6934,26 @@ function renderMyWork() {
     !items.length
       ? ""
       : `<section class="card"><h2>${escapeHtml(title)}</h2><div class="kid-work-list">${items
-          .map(
-            (item) => `
-        <button type="button" class="kid-work-card" data-action="open-kid-work" data-id="${item.id}">
-          <strong>${escapeHtml(item.title)}</strong>
-          <p class="meta">${escapeHtml(MEDIUM_DATE.format(parseISODate(item.scheduled_date)))} · ${escapeHtml(humanize(item.status))}</p>
-        </button>`
-          )
+          .map((item) => kidWorkRow(item))
           .join("")}</div></section>`;
   if (!upcoming.length) {
     return `<section class="card"><h2>My work</h2><p class="empty">Nothing on your list yet. A parent will add assignments here.</p></section>`;
   }
   return `${section("Today", todayItems)}${section("Coming up", later)}${section("Earlier", earlier)}`;
+}
+
+function kidWorkRow(item) {
+  const done = isCompleteStatus(item.status);
+  return `
+    <div class="checklist-item${done ? " is-complete" : ""}" data-checklist-id="${item.id}">
+      <input type="checkbox" data-action="toggle-complete" data-id="${item.id}"
+             ${done ? "checked" : ""} aria-label="Mark ${escapeHtml(item.title)} complete">
+      <button type="button" class="checklist-copy" data-action="open-kid-work" data-id="${item.id}">
+        <span class="checklist-title">${escapeHtml(item.title)}</span>
+        <span class="meta">${escapeHtml(MEDIUM_DATE.format(parseISODate(item.scheduled_date)))} · ${escapeHtml(humanize(item.status))}</span>
+      </button>
+      <span class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+    </div>`;
 }
 
 function renderKidAssignment(item, assignmentId) {
@@ -6821,6 +6983,7 @@ function renderKidAssignment(item, assignmentId) {
           </label>
           <button type="submit"${state.homework.busy ? " disabled" : ""}>Send</button>
         </form>`;
+  const done = isCompleteStatus(item.status);
   const start =
     session
       ? ""
@@ -6830,6 +6993,12 @@ function renderKidAssignment(item, assignmentId) {
     <section class="card">
       <h2>${escapeHtml(item.title)}</h2>
       <p class="meta">${escapeHtml(FULL_DATE.format(parseISODate(item.scheduled_date)))} · ${escapeHtml(humanize(item.status))}</p>
+      <div class="checklist-item${done ? " is-complete" : ""}" data-checklist-id="${assignmentId}">
+        <input type="checkbox" data-action="toggle-complete" data-id="${assignmentId}"
+               ${done ? "checked" : ""} aria-label="Mark ${escapeHtml(item.title)} complete">
+        <span class="checklist-title">Done</span>
+        <span class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      </div>
       ${notes}
     </section>
     <section class="card homework-chat">
@@ -7165,6 +7334,15 @@ async function handleClick(event) {
       break;
     case "generate-invite":
       await generateInviteKey();
+      break;
+    case "generate-capture-token":
+      await generateCaptureToken();
+      break;
+    case "revoke-capture-token":
+      await revokeCaptureToken();
+      break;
+    case "copy-capture-token":
+      await copyCaptureToken();
       break;
     case "unschedule-curriculum":
       await unscheduleCurriculum(Number(control.dataset.curriculumId));
@@ -7903,6 +8081,7 @@ function closeLoginModal() {
 }
 
 function handleUnauthorized() {
+  clearEvidenceBlobs();
   clearAuthToken();
   syncSessionChrome();
   if (state.devMode) return;
@@ -7930,6 +8109,8 @@ function resetWorkspaceState() {
   dashboardChartStats = null;
   destroyDashboardCharts();
   state.inviteKeys = [];
+  state.captureTokenStatus = { active: false, created_at: null, expires_at: null };
+  state.captureTokenSecret = "";
   state.schoolYear = null;
   state.exceptionColors = null;
   state.dashboardMonth = null;
@@ -8029,7 +8210,7 @@ async function submitRegister(form) {
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
   try {
-    await api("/auth/register", {
+    const result = await api("/auth/register", {
       method: "POST",
       skipAuth: true,
       body: JSON.stringify({
@@ -8038,7 +8219,9 @@ async function submitRegister(form) {
         invite_key: data.invite_key,
       }),
     });
-    await loginWithPassword(data.email, data.password);
+    setAuthToken(result.access_token);
+    window.location.hash = "#/dashboard";
+    await enterApp();
   } catch (error) {
     loginError(error.message);
   } finally {
@@ -8056,6 +8239,56 @@ async function generateInviteKey() {
     flash(`Invite key ${invite.key} created.`);
   } catch (error) {
     flash(error.message, true);
+  }
+}
+
+async function generateCaptureToken() {
+  flash("");
+  const status = state.captureTokenStatus || {};
+  if (status.active && !window.confirm(
+    "Generate a new capture token? The old one on the student’s computer will stop working."
+  )) {
+    return;
+  }
+  try {
+    const issued = await api("/auth/capture-token", { method: "POST" });
+    if (isOfflineQueued(issued)) return;
+    state.captureTokenSecret = issued && issued.access_token ? issued.access_token : "";
+    await loadCaptureTokenStatus();
+    render();
+    flash("Copy this token now and paste it into the Chrome extension. It will not be shown again.");
+  } catch (error) {
+    flash(error.message, true);
+  }
+}
+
+async function revokeCaptureToken() {
+  flash("");
+  if (!window.confirm(
+    "Revoke the capture token? The Chrome extension will stop uploading until you generate a new one."
+  )) {
+    return;
+  }
+  try {
+    const result = await api("/auth/capture-token", { method: "DELETE" });
+    if (isOfflineQueued(result)) return;
+    state.captureTokenSecret = "";
+    await loadCaptureTokenStatus();
+    render();
+    flash("Capture token revoked.");
+  } catch (error) {
+    flash(error.message, true);
+  }
+}
+
+async function copyCaptureToken() {
+  const token = state.captureTokenSecret || "";
+  if (!token) return;
+  try {
+    await navigator.clipboard.writeText(token);
+    flash("Capture token copied. Paste it into the Chrome extension.");
+  } catch {
+    flash("Select the token and copy it. It will not be shown again after you leave this page.", true);
   }
 }
 
@@ -8394,6 +8627,7 @@ async function unlockHomeworkHelp(assignmentId) {
 }
 
 function logout() {
+  clearEvidenceBlobs();
   clearAuthToken();
   syncSessionChrome();
   closeModal();

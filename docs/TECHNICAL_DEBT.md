@@ -10,7 +10,7 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 
 ### 1. SMTP credentials must stay out of git
 
-**CONFIRMED (fixed in tree).** Compose now interpolates `MAIL_USERNAME` and `MAIL_PASSWORD` from the environment. Copy `.env.example` to `.env` (gitignored).
+**CONFIRMED (fixed).** Compose interpolates `MAIL_USERNAME` and `MAIL_PASSWORD` from the environment. `app/config.py` has no dummy mailbox password; `mail_connection()` uses those settings as-is. Copy `.env.example` to `.env` (gitignored).
 
 **Why it matters:** Those values were previously committed. Rotate the mailbox password if this tree was ever copied or pushed before the rewrite.
 
@@ -20,7 +20,7 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 
 ### 2. `/evidence` is public StaticFiles
 
-**CONFIRMED.** `app/main.py` mounts the evidence directory with no JWT.
+**CONFIRMED (fixed).** `GET /api/evidence/files/{tenant}/{filename}` requires a JWT. Parents may read files in their household folder. Children may read only files attached to their own assignments. The public StaticFiles mount is gone.
 
 **Why it matters:** Work samples are the most sensitive family data after passwords. UUID filenames are not access control.
 
@@ -30,7 +30,7 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 
 ### 3. Weak JWT secret defaults
 
-**CONFIRMED.** `app/config.py` defaults `jwt_secret` to `insecure-dev-secret`. Compose uses a placeholder if `JWT_SECRET` is unset.
+**CONFIRMED (fixed).** Non-dev startup (`entrypoint.sh` and app lifespan) refuses a missing, placeholder, or short `JWT_SECRET`. Compose no longer supplies a fallback secret. `DEV_MODE=true` still allows an explicit local placeholder when `JWT_SECRET` is unset.
 
 **Why it matters:** Tokens are household keys (planner + evidence + children).
 
@@ -42,73 +42,73 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 
 ### 4. Schema evolution is informal
 
-**CONFIRMED.** Boot runs `create_all` plus `ALTER` lists in `app/db.py`. Alembic `env.py` does not replay revisions. Existing `tenant_*.db` files only gain columns if the ALTER list includes them.
+**RESOLVED (runner).** Boot runs `create_all` plus the ordered, idempotent lists in `app/schema_patches.py` for catalog, admin, and every `tenant_*.db`. Alembic `env.py` refuses to replay 0001–0012. Historical revision files are kept and are not authoritative.
 
-**Why it matters:** The next column added in a model will work on new tenants and silently miss old ones unless someone updates `_ensure_tenant_schema`.
+**Why it mattered:** The tree pretended Alembic was the source of truth while live files used ad-hoc ALTER. Replaying `0001` would be the wrong shape.
 
-**Target:** One process — real Alembic over catalog, admin, and every `tenant_*.db`, **or** a single documented patch module and no Alembic theater.
+**Target (met):** One process. Adding a column still requires a model change **and** a patch (create_all will not ALTER existing files). Tests cover fresh files, old files, a second apply, and no row loss.
 
-**Risk:** Replaying revision `0001` against live files would be wrong (old shape).
+**Remaining:** Forget the patch and old tenant files lag. That is patch discipline, not dual runners.
 
 ---
 
 ### 5. Extension stores a parent JWT
 
-**CONFIRMED.** Capture uses `Authorization: Bearer` with the options “device token.”
+**RESOLVED.** Capture uses `Authorization: Bearer` with a capture credential (`scope=evidence:write`). Parent login JWTs are rejected for everything except staging writes, and the extension is instructed to paste the capture token from Settings → Students.
 
-**Why it matters:** A school Chromebook token is a full parent session (calendar, students, mail trigger, etc.).
+**Why it mattered:** A school Chromebook token was a full parent session (calendar, students, mail trigger, etc.).
 
-**Target:** Token that can only `POST /api/evidence/staging` (and maybe GET health).
+**Target (met):** Token that can only `POST /api/evidence/staging`. Revocable on `admin.db`. Not accepted as a parent session.
 
 ---
 
 ### 6. Children cannot complete assignments
 
-**CONFIRMED.** `PATCH /api/assignments/{id}/status` uses `require_parent`. Kid UI has no complete checkbox that can succeed.
+**RESOLVED.** `PATCH /api/assignments/{id}/status` allows a parent (any household assignment, shared-group sync) or a child (own `student_id` only, no sibling sync). PUT/delete/grade/evidence stay parent-only. My Work has the same complete checkbox as the parent Kids checklist.
 
-**Why it matters:** “My work” is a viewer, not a checklist. Homeschool kids checking boxes is a core loop.
+**Why it mattered:** “My work” was a viewer, not a checklist. Homeschool kids checking boxes is a core loop.
 
-**Target:** Child may PATCH status (and only status) on their `student_id`.
+**Target (met):** Child may PATCH status (and only status) on their `student_id`.
 
 ---
 
 ### 7. Two school-year date sources
 
-**CONFIRMED.** `school_years` and `household_settings` both store start/end. Wizard writes years; the modal writes settings and then copies onto the latest year.
+**RESOLVED (columns remain).** Named `SchoolYear` rows are the read source for operational dates. `GET /settings/school-year` no longer prefers `household_settings` dates. Weekdays and exception colors stay on settings. Settings start/end are still written as a mirror and are not dropped.
 
-**Why it matters:** Pacing uses settings weekdays + dates; portfolios use `SchoolYear` ids. Drift = wrong window on evaluator PDFs vs generated lessons.
+**Why it mattered:** Pacing/grid used settings dates; portfolios used `SchoolYear` ids. Drift meant the PDF window and the generated lessons could disagree.
 
-**Target:** See `ARCHITECTURE.md` — year dates on `SchoolYear`; settings keep weekdays and colors.
+**Later:** Stop writing the settings date mirror, then drop those columns in a real schema pass. Do not drop them from live `tenant_*.db` files in this phase.
 
 ---
 
 ### 8. Enrollments not created when work is scheduled
 
-**CONFIRMED.** Pacing and plan-apply do not insert `enrollments`. Portfolios build reading lists from enrollments.
+**RESOLVED.** Pacing commit and plan-apply insert or reuse `enrollments` in the same transaction as the assignments. Preview does not. Settings POST still works and still 409s on duplicates.
 
-**Why it matters:** Parents who only auto-schedule get empty book lists on state logs.
+**Why it mattered:** Parents who only auto-schedule got empty book lists on state logs.
 
-**Target:** Insert enrollment on commit/apply; keep the settings form as override.
+**Later:** Optional backfill from historical assignments; UI copy that Settings is the override, not the primary path.
 
 ---
 
 ### 9. Service worker cache bust mismatch
 
-**CONFIRMED.** `sw.js` shells `app.js?v=20260828-widget-hug`; `index.html` loads `?v=20260828-pdf-ocr`.
+**RESOLVED.** `sw.js` declares `SHELL_VERSION`. `index.html` and `app.css` query strings use that same token. `SHELL_CACHE` is named from it, so a bump deletes the previous shell. Tests fail if the strings drift.
 
-**Why it matters:** After deploy, the SW may keep old JS while HTML asks for new (or the reverse), producing “fixed in code, not on the iPad” bugs.
+**Why it mattered:** After deploy, the SW could keep old JS while HTML asked for new (or the reverse), producing “fixed in code, not on the iPad” bugs.
 
-**Target:** One version string.
+**Target (met):** One version string for the application shell.
 
 ---
 
 ### 10. Missing brand and extension icons
 
-**CONFIRMED.** HTML and extension manifest reference PNG files not in the tree.
+**RESOLVED.** `static/curiculy-logo.png` is the served logo (same image as the root `Curiculy Logo.png` source). Extension toolbar sizes 16/32/48/128 and `extension/icons/logo.png` are present. Tests check the files exist and the app serves them.
 
-**Why it matters:** Broken favicon; Chrome may refuse or ugly-default the extension.
+**Why it mattered:** Broken favicon; Chrome may refuse or ugly-default the extension.
 
-**Target:** Add assets or remove references.
+**Target (met):** Add assets or remove references.
 
 ---
 
@@ -116,41 +116,41 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 
 ### 11. Dual exception HTTP APIs
 
-**CONFIRMED.** `/exceptions` vs `/calendar/exceptions` on the same table.
+**CONFIRMED (MIGRATE FIRST).** `/exceptions` vs `/calendar/exceptions` on the same table. The SPA uses both: settings list/create on `/exceptions`, year-grid dates/toggle/holidays on `/calendar/exceptions`.
 
 **Why it matters:** Two places to get toggle vs titled range wrong.
 
-**Target:** One router, two SPA screens.
+**Next step:** One router module with aliases for the current paths. Do not delete either prefix until `app.js` is updated.
 
 ---
 
 ### 12. PDF import reuses the request Session in a background task
 
-**CONFIRMED** by comments in `ai_curriculum_worker.py`.
+**RESOLVED.** `POST /curriculum/import-pdf` captures `tenant_uuid` and demo `jti`, then the worker calls `open_tenant_session` itself. It does not receive the request Session. Exceptions roll back that job session and mark `failed` on a second session. Success commits `ready` plus lessons on the job session. Both sessions are closed.
 
-**Why it matters:** FastAPI may close the yield-session when the request ends, depending on version/behavior. Failed or half-written plans.
+**Why it mattered:** FastAPI may close the yield-session when the request ends. Failed or half-written plans.
 
-**Target:** Open a new tenant session inside the worker from `tenant_uuid` / plan id.
+**Target (met):** Open a new tenant session inside the worker from `tenant_uuid` / plan id.
 
 ---
 
 ### 13. Dead parallel work/evidence tables
 
-**CONFIRMED.** `ScheduledWork`, `EvidenceCapture` are cleaned on delete but not written by pacing/UI. `ScheduledWorkRead` has no router.
+**RESOLVED (ORM).** `ScheduledWork` and `EvidenceCapture` models, unused read schemas, and `WorkStatus` / `ScheduleGrain` are gone. Available `data/` tenant files had COUNT=0 on both tables. Empty tables may still exist on disk; boot does not DROP them. Delete of a student or curriculum still clears leftover rows.
 
-**Why it matters:** Next feature may “complete” the old model by mistake.
+**Why it mattered:** Next feature may “complete” the old model by mistake.
 
-**Target:** After confirming empty tables in real DBs, drop models and delete-cleanup branches.
+**Target (met for code):** Stop mapping the old calendar. DROP TABLE later only after COUNT=0 on every real `tenant_*.db`.
 
 ---
 
 ### 14. Unused public endpoints
 
-**CONFIRMED.** SPA never calls `POST /catalog/from-isbn`, `/books/*`, `POST /curricula/import`.
+**CONFIRMED (API-only, keep).** SPA never calls `POST /catalog/from-isbn`, `/books/*`, `POST /curricula/import`. Tests and OpenAPI do. Architecture: do not delete because the SPA is quiet.
 
-**Why it matters:** Two ways to do ISBN → library. Tests keep books routes alive.
+**Why it matters:** Two ways to do ISBN → library. Confusing as two official UI paths; fine as API.
 
-**Target:** Document API-only vs canonical SPA path; eventually alias books under catalog.
+**Next step:** Point tests at `/catalog/lookup-isbn` + `POST /curricula`, then consider aliases or deprecation. Do not remove `/curricula/import` until a UI or a decision that tree-import is retired.
 
 ---
 
@@ -166,11 +166,11 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 
 ### 16. `ai_generator` name vs behavior
 
-**CONFIRMED.** Arithmetic page split. Comments still promise an LLM.
+**RESOLVED (comments).** Arithmetic page split. Module comments no longer promise an LLM on commit. Filename can wait.
 
-**Why it matters:** Future contributors will wire Ollama into commit and make scheduling depend on a daemon.
+**Why it mattered:** Future contributors will wire Ollama into commit and make scheduling depend on a daemon.
 
-**Target:** Keep math as default; LLM titles optional later.
+**Target (met for comments):** Keep math as default; LLM titles optional later.
 
 ---
 
@@ -196,15 +196,31 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 
 ### 20. Register does not return a JWT
 
-**CONFIRMED.** Extra login step.
+**RESOLVED.** `POST /auth/register` returns the same `{access_token, token_type}` body as login. The SPA stores it and enters the app without a second password submit.
+
+**Why it mattered:** Extra login step after a successful invite.
+
+**Target (met):** Issue a token on register.
+
+---
 
 ### 21. All Students calendar shows shared lessons only
 
-**CONFIRMED** by design. Debt is **documentation/copy**, not a merge of queries.
+**RESOLVED (copy).** The query is unchanged. The All Students calendar header now says private lessons are on individual calendars.
+
+**Why it mattered:** Parents could think siblings’ private work was missing.
+
+**Target (met):** Documentation/copy, not a merge of queries.
+
+---
 
 ### 22. No README / CI in repo
 
-**CONFIRMED.** Bootstrap of first admin + invite is tribal knowledge.
+**RESOLVED (README).** Root `README.md` covers `.env`, compose port 3040, first invite, and the test command. CI is still absent.
+
+**Why it mattered:** Bootstrap of first admin + invite was tribal knowledge.
+
+**Target:** README (met). CI later.
 
 ### 23. Homework-help test volume
 
@@ -213,6 +229,14 @@ Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
 ### 24. Cross-DB integer ids without FK
 
 **CONFIRMED** and **intentional**. Debt is operational: never delete catalog editions that tenants reference.
+
+### 25. Pacing commit is two engines, not one transaction
+
+**CONFIRMED.** `SyllabusCommitter` writes assignments, units, and enrollments on the tenant session and commits that first. It then commits the catalog session, which today only persists a book `page_count` bump from `_sync_page_count`. Plan-apply is a single tenant `commit()`.
+
+**Why it matters:** If the catalog commit failed after the tenant commit, the calendar would still be complete; only shared ISBN page-count could lag. Tests use one memory DB, so this split is invisible there. Not a torn assignment list.
+
+**Target:** Later session. Do not wrap catalog and tenant in one transaction (they are different SQLite files). Retry or accept catalog page-count drift.
 
 ---
 
@@ -234,4 +258,6 @@ These look messy in a generic audit and are **correct for Curiculy**:
 
 ## Suggested burn-down order
 
-See `docs/ROADMAP.md`. Do not mix a schema-engine rewrite with a UI redesign. Secrets and evidence auth first.
+See `docs/ROADMAP.md`. Do not mix a schema-engine rewrite with a UI redesign. Dual school-year dates and auto-enrollment on schedule are in place; empty-reading-list copy is next if still needed.
+
+

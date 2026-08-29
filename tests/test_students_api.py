@@ -3,6 +3,7 @@
 from datetime import date
 
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.enums import AssignmentStatus, AttendanceStatus, ExceptionKind
@@ -198,6 +199,61 @@ class TestStudentDelete:
         assert db.get(Enrollment, enrollment_id) is None
         assert db.get(CalendarException, exception_id) is None
         assert db.get(Attendance, attendance_id) is None
+
+    def test_delete_clears_orphan_scheduled_work_rows(
+        self, client: TestClient, db: Session
+    ) -> None:
+        student = _add_student(db, "Ada")
+        db.execute(
+            text(
+                """
+                CREATE TABLE scheduled_work (
+                    id INTEGER PRIMARY KEY,
+                    enrollment_id INTEGER NOT NULL,
+                    student_id INTEGER NOT NULL,
+                    title VARCHAR(255) NOT NULL
+                )
+                """
+            )
+        )
+        db.execute(
+            text(
+                """
+                CREATE TABLE evidence_captures (
+                    id INTEGER PRIMARY KEY,
+                    student_id INTEGER NOT NULL,
+                    scheduled_work_id INTEGER,
+                    path VARCHAR(255)
+                )
+                """
+            )
+        )
+        db.execute(
+            text(
+                "INSERT INTO scheduled_work (id, enrollment_id, student_id, title) "
+                "VALUES (1, 1, :student_id, 'legacy')"
+            ),
+            {"student_id": student.id},
+        )
+        db.execute(
+            text(
+                "INSERT INTO evidence_captures "
+                "(id, student_id, scheduled_work_id, path) "
+                "VALUES (1, :student_id, 1, 'old.webp')"
+            ),
+            {"student_id": student.id},
+        )
+        db.commit()
+
+        response = client.delete(f"/api/students/{student.id}")
+
+        assert response.status_code == 204
+        leftover_work = db.execute(text("SELECT COUNT(*) FROM scheduled_work")).scalar()
+        leftover_evidence = db.execute(
+            text("SELECT COUNT(*) FROM evidence_captures")
+        ).scalar()
+        assert leftover_work == 0
+        assert leftover_evidence == 0
 
     def test_an_unknown_student_is_a_404(self, client: TestClient) -> None:
         response = client.delete("/api/students/4242")

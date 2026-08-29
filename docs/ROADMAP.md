@@ -26,7 +26,7 @@ Make these explicitly. Reversing them later is expensive.
 
 8. **The SPA stays a FastAPI-served vanilla shell** until there is a second client. No framework migration as an architecture goal.
 
-9. **Schema changes have one runner** (real Alembic on all DBs, or documented patches only). Alembic files that never run are forbidden as the “source of truth.”
+9. **Schema changes have one runner** (`create_all` + `app.schema_patches` on all DBs). Alembic 0001–0012 are archive only; `alembic upgrade` is refused.
 
 10. **Compliance packets and taxonomy UIs wait** for a concrete state form. Portfolios are the printable-record product.
 
@@ -36,16 +36,16 @@ Make these explicitly. Reversing them later is expensive.
 
 These can leak data, lock families out, or destroy calendars.
 
-1. SMTP password was previously in compose — treat as leaked until rotated; keep it in `.env` only.
-2. Unauthenticated `/evidence` mount.
-3. Guessable/weak `JWT_SECRET` in production-like compose.
-4. Parent JWT on a child’s Chromebook (extension).
-5. Informal schema patches missing a column on old `tenant_*.db` files.
+1. SMTP password was previously in compose — treat as leaked until rotated; keep it in `.env` only (**env-only is in place**).
+2. Unauthenticated `/evidence` mount (**authenticated file GET is in place**).
+3. Guessable/weak `JWT_SECRET` in production-like compose (**fail-closed in non-dev is in place**).
+4. Parent JWT on a child’s Chromebook (extension) (**capture credential is in place**).
+5. Informal schema patches missing a column on old `tenant_*.db` files (**one patch module is in place**; forgetting a new ALTER is still the risk).
 6. Recalibrate / shared-group assignment updates (easy to desync siblings).
 7. Pacing/plan-apply writing hundreds of rows (partial commit = torn year).
-8. PDF worker using a request-scoped SQLAlchemy session after the HTTP response.
-9. Stale service worker serving old `app.js` (silent “bug that was already fixed”).
-10. Replaying historical Alembic `0001` against live databases (wrong shape).
+8. PDF worker using a request-scoped SQLAlchemy session after the HTTP response (**own tenant session is in place**).
+9. Stale service worker serving old `app.js` (silent “bug that was already fixed”) (**SHELL_VERSION lockstep is in place**).
+10. Replaying historical Alembic `0001` against live databases (wrong shape) (**`alembic upgrade` is refused**).
 
 ---
 
@@ -54,14 +54,14 @@ These can leak data, lock families out, or destroy calendars.
 Low blast radius, high clarity. Good first PRs.
 
 1. Move mail (and JWT) secrets to environment; stop committing passwords. Rotate mail.
-2. Align `sw.js` and `index.html` cache-query versions (one token).
-3. Add missing logo / extension icons, or drop the `src`/`icons` entries.
-4. Document in UI that All Students shows **shared** lessons only.
-5. Return a JWT from `POST /auth/register` (additive).
-6. Auto-insert `enrollments` on pacing commit / plan apply (IntegrityError = already enrolled).
-7. Allow child `PATCH` status on own assignments (with tests).
-8. Rename comments on `ai_generator.py` so nobody wires Ollama into commit “to finish it.”
-9. Add README: compose port 3040, first invite, `JWT_SECRET`, optional Ollama.
+2. Align `sw.js` and `index.html` cache-query versions (one token) (**done**).
+3. Add missing logo / extension icons, or drop the `src`/`icons` entries (**done**; files were already on disk, now tested).
+4. Document in UI that All Students shows **shared** lessons only. (**done**)
+5. Return a JWT from `POST /auth/register` (additive). (**done**)
+6. Auto-insert `enrollments` on pacing commit / plan apply (IntegrityError = already enrolled) (**done**).
+7. Allow child `PATCH` status on own assignments (with tests) (**done**).
+8. Rename comments on `ai_generator.py` so nobody wires Ollama into commit “to finish it.” (**done**)
+9. Add README: compose port 3040, first invite, `JWT_SECRET`, optional Ollama. (**done**)
 10. Pytest: one test that provisions `tenant_{uuid}.db` and routes a JWT without overriding `get_tenant_db`.
 
 ---
@@ -78,7 +78,7 @@ Leave these alone until the critical/high items above are done — or until a pr
 - Merging `curricula` and `curriculum_plans` into one table
 - Merging attendance into exceptions (different meanings)
 - Deleting `/books/*` or `/catalog/from-isbn` before checking for external callers
-- Dropping `scheduled_work` tables before a `SELECT COUNT` on real tenant files
+- Dropping `scheduled_work` tables before a `SELECT COUNT` on real tenant files (models are already unmapped)
 - Changing `/calendar` to include private lessons without a product decision
 - Splitting the monolith into microservices
 - GraphQL
@@ -95,10 +95,10 @@ Phases are sequential. Do not start phase 3 while phase 1 secrets are still in g
 
 | Work | Domain |
 |---|---|
-| Rotate mail credentials; env-only secrets | Deployment |
-| Require strong `JWT_SECRET` when `DEV_MODE` is false | Auth |
-| Authenticate evidence file reads; keep write paths | Evidence |
-| SW / HTML cache version lockstep | Offline |
+| Rotate mail credentials; env-only secrets | Deployment — **done** (rotate the mailbox if it was ever committed) |
+| Require strong `JWT_SECRET` when `DEV_MODE` is false | Auth — **done** |
+| Authenticate evidence file reads; keep write paths | Evidence — **done** |
+| SW / HTML cache version lockstep | Offline — **done** |
 
 **Exit:** No secrets in compose; work samples not publicly fetchable; deploys actually update JS.
 
@@ -106,20 +106,20 @@ Phases are sequential. Do not start phase 3 while phase 1 secrets are still in g
 
 | Work | Domain |
 |---|---|
-| Child PATCH own assignment status | Assignments / Students |
-| Staging-only device token for extension | Auth / Extension |
-| Restore extension icons | Extension |
+| Child PATCH own assignment status | Assignments / Students — **done** |
+| Staging-only device token for extension | Auth / Extension — **done** |
+| Restore extension icons | Extension — **done** |
 
-**Exit:** Kid can check off today; Chromebook token cannot load `/admin` or email portfolios.
+**Exit:** Chromebook capture token cannot load `/admin` or email portfolios (**done**). Kid can check off today (**done**).
 
 ### Phase 2 — One school year, honest portfolios (week)
 
 | Work | Domain |
 |---|---|
-| Wizard + year modal write the same `SchoolYear` | School years |
-| Stop using settings as a second date range (weekdays/colors only) | School years |
-| Auto-enrollment on schedule/apply | Enrollments |
-| Copy/help on empty reading list if still no enrollment | Portfolios |
+| Wizard + year modal write the same `SchoolYear` | School years — **done** |
+| Stop using settings as a second date range (weekdays/colors only) | School years — **done** (date columns remain as a mirror) |
+| Auto-enrollment on schedule/apply | Enrollments — **done** |
+| Copy/help on empty reading list if still no enrollment | Portfolios — **done** |
 
 **Exit:** One year on the grid and on the PDF; scheduling a book fills the reading list.
 
@@ -127,10 +127,10 @@ Phases are sequential. Do not start phase 3 while phase 1 secrets are still in g
 
 | Work | Domain |
 |---|---|
-| Decide Alembic-real vs patches-only; document it | Database / Alembic |
-| Stamp existing DBs; never run 0001 on prod | Alembic |
-| Open a fresh Session in PDF background worker | AI / plans |
-| Optional: tenant-file integration test | Testing |
+| Decide Alembic-real vs patches-only; document it | Database / Alembic — **done (patches-only)** |
+| Stamp existing DBs; never run 0001 on prod | Alembic — **0001 cannot run** (`alembic upgrade` refused; no stamp) |
+| Open a fresh Session in PDF background worker | AI / plans — **done** |
+| Optional: tenant-file integration test | Testing — schema upgrade tests in `test_schema.py` |
 
 **Exit:** Adding a column has a checklist that updates every `tenant_*.db`.
 
@@ -140,7 +140,7 @@ Phases are sequential. Do not start phase 3 while phase 1 secrets are still in g
 |---|---|
 | One exceptions router; aliases for old paths | Exceptions / API |
 | Catalog as the ISBN HTTP name; books as alias | Catalog / Books |
-| Drop unused tables after COUNT=0 | Assignments leftover |
+| Drop unused tables after COUNT=0 | Assignments leftover (**models unmapped**; DROP TABLE later) |
 | Exception API module merge | API |
 
 **Exit:** Fewer ways to do the same write.
@@ -172,13 +172,13 @@ Only when invite-gated hosting is not enough:
 |---|---|---|
 | Authentication | REFACTOR | Critical / High |
 | Multi-tenancy | KEEP | — |
-| Students | KEEP | High (child complete) |
+| Students | KEEP | Child complete **done** |
 | Households | REFACTOR | Low |
-| School years | CONSOLIDATE | High |
-| Enrollments | COMPLETE | High |
+| School years | KEEP | Operational year **done**; drop settings date columns later |
+| Enrollments | KEEP | Auto-create on schedule **done** |
 | Curricula | KEEP | Low |
 | Curriculum resources | KEEP | Low |
-| Curriculum plans | KEEP | Medium (PDF worker) |
+| Curriculum plans | KEEP | PDF worker session **done** |
 | Assignments | KEEP | Critical (center) |
 | Pacing | KEEP | Low |
 | Calendar | KEEP | Low |
@@ -195,8 +195,8 @@ Only when invite-gated hosting is not enough:
 | Chrome extension | KEEP + REFACTOR | High |
 | Compliance | DEFER | Low |
 | Taxonomy | DEFER | Low |
-| Database architecture | REFACTOR process | High |
-| Alembic | CONSOLIDATE | High |
+| Database architecture | REFACTOR process | Patch runner **done**; engines unchanged |
+| Alembic | ARCHIVE | Not the runner; 0001–0012 kept |
 | Frontend | KEEP + REFACTOR edges | High (assets) / Low (split) |
 | API | KEEP + REFACTOR dupes | Medium |
 | Testing | REFACTOR | Medium |

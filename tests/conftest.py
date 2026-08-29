@@ -9,6 +9,16 @@ stay on one session; production binds each metadata to its own SQLite file.
 """
 
 from collections.abc import Iterator
+import os
+
+# Isolate tests from a host .env. Set before importing app.config.Settings.
+os.environ["DEV_MODE"] = "false"
+os.environ.setdefault(
+    "JWT_SECRET",
+    "pytest-local-jwt-secret-not-used-in-production",
+)
+
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,7 +28,7 @@ from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401  (registers every mapper before create_all)
 import app.models.admin  # noqa: F401
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_staging_upload
 from app.db import AdminBase, CatalogBase, TenantBase, get_admin_db, get_catalog_db, get_tenant_db
 from app.main import create_app
 
@@ -54,7 +64,7 @@ def db(engine: Engine) -> Iterator[Session]:
 
 
 @pytest.fixture
-def client(db: Session) -> Iterator[TestClient]:
+def client(db: Session, engine: Engine) -> Iterator[TestClient]:
     # Instantiated without the context manager so the app lifespan, which
     # provisions evidence directories on disk, stays out of the test run.
     application = create_app()
@@ -62,7 +72,17 @@ def client(db: Session) -> Iterator[TestClient]:
     application.dependency_overrides[get_tenant_db] = lambda: db
     application.dependency_overrides[get_admin_db] = lambda: db
     application.dependency_overrides[get_current_user] = _test_user
+    application.dependency_overrides[require_staging_upload] = _test_user
+    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def _background_tenant_session(tenant_uuid: str, demo_key: str | None = None) -> Session:
+        return factory()
+
     try:
-        yield TestClient(application)
+        with patch(
+            "app.services.ai_curriculum_worker.open_tenant_session",
+            side_effect=_background_tenant_session,
+        ):
+            yield TestClient(application)
     finally:
         application.dependency_overrides.clear()
