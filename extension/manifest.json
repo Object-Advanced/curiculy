@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Curiculy Capture",
+  "description": "Screenshot this tab and send it to Curiculy as student evidence.",
+  "version": "1.0.0",
+  "action": {
+    "default_title": "Send this page to Curiculy",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["http://*/*", "https://*/*"]
+}

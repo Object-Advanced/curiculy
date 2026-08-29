@@ -1,0 +1,49 @@
+services:
+  api:
+    build:
+      context: .
+      target: base
+    container_name: curiculy_api
+    ports:
+      - "3040:80"
+    environment:
+      CATALOG_DATABASE_URL: sqlite:////data/catalog.db
+      TENANT_DATABASE_URL: sqlite:////data/tenant.db
+      ADMIN_DATABASE_URL: sqlite:////data/admin.db
+      EVIDENCE_DIR: /data/evidence
+      INDEX_HTML_PATH: /app/index.html
+      STATIC_DIR: /app/static
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_long_random_string_like_a_password}
+      DEV_MODE: "false"
+      MAIL_SERVER: ${MAIL_SERVER:-smtp-relay.brevo.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM:-portfolios@curiculy.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Curiculy}
+      MAIL_STARTTLS: "true"
+      MAIL_SSL_TLS: "false"
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/data # NVMe drive for SQLite databases
+      - /datalake/projects/curiculy/evidence:/data/evidence # 30TB array for photos
+      - ./app:/app/app
+      - ./static:/app/static
+      - ./index.html:/app/index.html
+      - ./sw.js:/app/sw.js
+    restart: unless-stopped
+
+  tests:
+    build:
+      context: .
+      target: dev
+    profiles: ["dev"]
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+      - ./sw.js:/app/sw.js
+    command: ["pytest"]

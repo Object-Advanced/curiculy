@@ -1,0 +1,87 @@
+@page { size: A4; margin: 18mm 16mm; }
+
+.portfolio-doc {
+  font-family: "DejaVu Sans", sans-serif;
+  color: #1a1a1a;
+  font-size: 11pt;
+  line-height: 1.45;
+}
+.portfolio-doc .meta {
+  color: #64748b;
+  font-size: 9.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.portfolio-doc h1 {
+  font-size: 20pt;
+  margin: 4pt 0 2pt;
+  color: #2f6f4e;
+}
+.portfolio-doc h2 {
+  font-size: 13pt;
+  margin: 16pt 0 8pt;
+  color: #2f6f4e;
+  border-bottom: 1px solid #d9e2dc;
+  padding-bottom: 4pt;
+}
+.portfolio-doc h3 {
+  font-size: 11.5pt;
+  margin: 0 0 2pt;
+}
+.portfolio-doc .empty { color: #64748b; }
+.portfolio-doc header.sheet-head {
+  margin-bottom: 18pt;
+  padding-bottom: 10pt;
+  border-bottom: 2px solid #2f6f4e;
+}
+.portfolio-doc .student-sheet.page-break {
+  page-break-before: always;
+  break-before: page;
+}
+.portfolio-doc .entries,
+.portfolio-doc .log {
+  padding-left: 18pt;
+  margin: 0;
+}
+.portfolio-doc li { margin: 0 0 12pt; }
+.portfolio-doc .gallery { margin-top: 6pt; }
+.portfolio-doc .gallery img {
+  max-width: 48%;
+  max-height: 70mm;
+  margin: 0 6pt 6pt 0;
+  border: 1px solid #d9e2dc;
+}
+.portfolio-doc table.summary,
+.portfolio-doc table.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 12pt;
+  font-size: 10pt;
+}
+.portfolio-doc table.summary th,
+.portfolio-doc table.summary td,
+.portfolio-doc table.log-table th,
+.portfolio-doc table.log-table td {
+  border: 1px solid #d9e2dc;
+  padding: 6pt 8pt;
+  text-align: left;
+}
+.portfolio-doc table.summary th,
+.portfolio-doc table.log-table th {
+  background: #eef6f1;
+  color: #2f6f4e;
+}
+.portfolio-doc table.summary td { text-align: center; font-weight: 700; }
+.portfolio-doc .status {
+  display: inline-block;
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+}
+.portfolio-doc .notes {
+  margin: 4pt 0 0;
+  white-space: pre-wrap;
+}
+.portfolio-doc .book-group { margin: 0 0 12pt; }
+.portfolio-doc .book-group h3 { margin-bottom: 6pt; }

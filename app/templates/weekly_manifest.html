@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ student.name }} · Weekly Checklist</title>
+  <style>
+    @page { size: letter; margin: 0.5in; }
+    body { font-family: 'Times New Roman', serif; color: #000; background: #fff; line-height: 1.3; }
+    h1 { font-family: Arial, sans-serif; font-size: 18pt; border-bottom: 1px solid #000; margin-bottom: 5px; }
+    .week-range { font-size: 11pt; margin: 0 0 8px; }
+    .day-header { font-size: 14pt; font-weight: bold; margin-top: 15px; border-bottom: 1px dashed #666; }
+    .assignment-row { display: flex; align-items: flex-start; margin-bottom: 8px; font-size: 11pt; }
+    .checkbox { width: 14px; height: 14px; border: 1px solid #000; display: inline-block; margin-right: 10px; margin-top: 2px; flex-shrink: 0; }
+    .assignment-copy { flex: 1; min-width: 0; }
+    .assignment-meta { font-size: 10pt; }
+    .empty { font-size: 11pt; margin: 6px 0 0; }
+  </style>
+</head>
+<body>
+  <h1>Weekly Checklist</h1>
+  <p class="week-range">{{ student.name }}{% if student.grade %} · Grade {{ student.grade }}{% endif %} · {{ week_label }}</p>
+  {% for day in days %}
+  <div class="day-header">{{ day.heading }}</div>
+  {% if day.assignments %}
+  {% for item in day.assignments %}
+  <div class="assignment-row">
+    <span class="checkbox"></span>
+    <div class="assignment-copy">
+      <div>{{ item.title }}</div>
+      {% if item.detail %}
+      <div class="assignment-meta">{{ item.detail }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="empty">No assignments</p>
+  {% endif %}
+  {% endfor %}
+</body>
+</html>

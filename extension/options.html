@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Curiculy Capture</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="card">
+    <header class="brand">
+      <img class="brand-mark" src="icons/logo.png" alt="" width="72" height="72">
+      <p class="product">Curiculy</p>
+      <h1>Capture settings</h1>
+      <p class="lede">Set this once on the student’s computer. They only click the toolbar icon.</p>
+    </header>
+
+    <p id="status" class="banner" hidden></p>
+
+    <form id="options-form">
+      <label>
+        Homeschool Web Address (URL)
+        <input
+          id="server-url"
+          name="serverUrl"
+          type="url"
+          required
+          spellcheck="false"
+          autocomplete="url"
+          placeholder="https://your-family.curiculy.com"
+          aria-describedby="server-url-hint"
+        >
+      </label>
+      <p id="server-url-hint" class="hint">The web address you use to log into Curiculy.</p>
+
+      <label>
+        Device Token
+        <span class="token-row">
+          <input
+            id="device-token"
+            name="deviceToken"
+            type="password"
+            required
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="Paste your household token here"
+            aria-describedby="device-token-hint"
+          >
+          <button type="button" class="ghost" id="toggle-token" aria-pressed="false">Show</button>
+        </span>
+      </label>
+      <p id="device-token-hint" class="hint">A one-time connection key from your parent settings. Students do not need to sign in.</p>
+
+      <button type="submit">Save</button>
+    </form>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

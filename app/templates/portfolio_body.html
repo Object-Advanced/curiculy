@@ -1,0 +1,194 @@
+<div class="portfolio-doc">
+{% for section in report.students %}
+  <article class="student-sheet{% if not loop.first %} page-break{% endif %}">
+    <header class="sheet-head">
+      <p class="meta">{{ label }}</p>
+      <h1>{{ section.student.name }}</h1>
+      <p>
+        {% if section.student.grade %}Grade {{ section.student.grade }}{% else %}Grade not set{% endif %}
+        · {{ report.period_label }}
+      </p>
+    </header>
+
+    {% if report.include_attendance %}
+    <section class="block">
+      <h2>Attendance</h2>
+      {% if section.attendance %}
+      <table class="summary">
+        <thead>
+          <tr>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Sick</th>
+            <th>Vacation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ section.attendance.present }}</td>
+            <td>{{ section.attendance.absent }}</td>
+            <td>{{ section.attendance.sick }}</td>
+            <td>{{ section.attendance.vacation }}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% if section.attendance.log %}
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for day in section.attendance.log %}
+          <tr>
+            <td>{{ day.date | report_date }}</td>
+            <td>{{ day.status | humanize }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% else %}
+      <p class="empty">No attendance recorded in this period.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if report.include_lessons %}
+    <section class="block">
+      {% if custom %}<h2>Lessons &amp; Completed Activity</h2>{% endif %}
+      {% if section.lessons %}
+      <ol class="entries">
+        {% for item in section.lessons %}
+        <li>
+          <h3>{{ item.title }}</h3>
+          <p class="meta">
+            {{ item.scheduled_date | report_date }}
+            {% if item.subject_name or item.resource_title %}
+              · {{ item.subject_name or item.resource_title }}
+            {% endif %}
+          </p>
+          {% if not custom and report.include_attachments and item.evidence %}
+          <div class="gallery">
+            {% for record in item.evidence %}
+              {% set src = evidence_src(record.file_path) %}
+              {% if src %}
+                <img src="{{ src }}" alt="{{ record.notes or item.title }}">
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="empty">No completed assignments in this period.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if report.include_assignments %}
+    <section class="block">
+      <h2>Assignments</h2>
+      {% if section.assignments %}
+      <ol class="entries">
+        {% for item in section.assignments %}
+        <li>
+          <h3>{{ item.title }}</h3>
+          <p class="meta">
+            {{ item.scheduled_date | report_date }}
+            · <span class="status">{{ item.status | humanize }}</span>
+            {% if item.subject_name or item.resource_title %}
+              · {{ item.subject_name or item.resource_title }}
+            {% endif %}
+          </p>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="empty">No assignments in this period.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if include_books %}
+    <section class="block">
+      <h2>Books / Reading Log</h2>
+      {% if section.books %}
+        {% for progress, heading in [
+          ('completed', 'Completed'),
+          ('in_progress', 'In Progress'),
+          ('incomplete', 'Incomplete')
+        ] %}
+          {% set group = section.books | selectattr('progress', 'equalto', progress) | list %}
+          {% if group %}
+          <div class="book-group">
+            <h3>{{ heading }}</h3>
+            <ol class="log">
+              {% for book in group %}
+              <li>
+                <strong>{{ book.title }}</strong>
+                {% if book.publisher_name or book.subject %}
+                  <span class="meta">
+                    {% if book.subject %}{{ book.subject }}{% endif %}
+                    {% if book.subject and book.publisher_name %} · {% endif %}
+                    {% if book.publisher_name %}{{ book.publisher_name }}{% endif %}
+                  </span>
+                {% endif %}
+                <p class="meta">{{ book.completed_assignments }} of {{ book.total_assignments }} lessons complete</p>
+              </li>
+              {% endfor %}
+            </ol>
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+      <p class="empty">No books in the selected progress groups.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if custom and report.include_attachments %}
+    <section class="block">
+      <h2>Photos / Attachments</h2>
+      {% set ns = namespace(count=0) %}
+      <div class="gallery">
+        {% for item in section.attachments %}
+          {% for record in item.evidence %}
+            {% set src = evidence_src(record.file_path) %}
+            {% if src %}
+              {% set ns.count = ns.count + 1 %}
+              <img src="{{ src }}" alt="{{ record.notes or item.title }}">
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+      {% if ns.count == 0 %}
+      <p class="empty">No work samples attached in this period.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if report.include_notes %}
+    <section class="block">
+      <h2>Lesson &amp; Assignment Notes</h2>
+      {% if section.notes %}
+      <ol class="entries">
+        {% for item in section.notes %}
+        <li>
+          <h3>{{ item.title }}</h3>
+          <p class="meta">{{ item.scheduled_date | report_date }}</p>
+          <p class="notes">{{ item.notes }}</p>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="empty">No notes in this period.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+  </article>
+{% endfor %}
+</div>

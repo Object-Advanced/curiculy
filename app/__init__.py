@@ -1,0 +1,1 @@
+"""Curiculy homeschool scheduling application."""

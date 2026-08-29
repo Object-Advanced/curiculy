@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curiculy</title>
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem("theme") === "dark") {
+                    document.documentElement.setAttribute("data-theme", "dark");
+                }
+                if (!localStorage.getItem("auth_token")) {
+                    document.documentElement.setAttribute("data-auth", "required");
+                }
+            } catch (error) {
+                document.documentElement.setAttribute("data-auth", "required");
+            }
+        })();
+    </script>
+    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20260826-new-logo">
+    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20260826-new-logo">
+    <link rel="stylesheet" href="/static/css/app.css?v=20260828-pdf-ocr">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="auth-page">
+        <section class="auth-card" aria-labelledby="auth-title-signin">
+            <header class="auth-brand">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260826-new-logo" alt="" width="72" height="72" aria-hidden="true">
+                <p class="auth-product">Curiculy</p>
+            </header>
+            <p id="login-error" class="banner error" hidden></p>
+
+            <div id="login-view" class="auth-view">
+                <h1 id="auth-title-signin">Sign In</h1>
+                <form id="login-form" class="login-form" data-form="login">
+                    <label>Email
+                        <input name="username" type="email" required maxlength="255"
+                               autocomplete="username" placeholder="you@example.com">
+                    </label>
+                    <label>Password
+                        <input name="password" type="password" required maxlength="255"
+                               autocomplete="current-password">
+                    </label>
+                    <button type="submit">Log In</button>
+                </form>
+                <p class="auth-divider">or</p>
+                <div class="auth-secondary-stack">
+                    <button type="button" class="auth-secondary" data-action="login-mode"
+                            data-mode="student">I'm a student</button>
+                    <button type="button" class="auth-secondary" data-action="login-mode"
+                            data-mode="register">Create Account</button>
+                    <button type="button" id="try-demo" class="auth-secondary"
+                            data-action="try-demo">Try Demo</button>
+                </div>
+            </div>
+
+            <div id="student-view" class="auth-view" style="display: none;">
+                <h1 id="auth-title-student">Student sign in</h1>
+                <form id="student-household-form" class="login-form" data-form="student-household">
+                    <label>Household email
+                        <input name="email" type="email" required maxlength="255"
+                               autocomplete="username" placeholder="parent@example.com">
+                    </label>
+                    <button type="submit">Find my name</button>
+                </form>
+                <form id="student-pin-form" class="login-form" data-form="student-pin" hidden>
+                    <p class="muted" id="student-pick-hint">Tap your name, then enter your PIN.</p>
+                    <div id="student-name-chips" class="student-name-chips"></div>
+                    <input type="hidden" name="student_id" id="student-pick-id">
+                    <label>PIN
+                        <input name="pin" type="password" inputmode="numeric" pattern="[0-9]*"
+                               minlength="4" maxlength="8" required autocomplete="off">
+                    </label>
+                    <button type="submit">Log In</button>
+                </form>
+                <p class="auth-switch">
+                    <button type="button" class="link" data-action="login-mode"
+                            data-mode="signin">Back to parent sign in</button>
+                </p>
+            </div>
+
+            <div id="register-view" class="auth-view" style="display: none;">
+                <h1 id="auth-title-register">Create Account</h1>
+                <form id="register-form" class="login-form" data-form="register">
+                    <label>Email
+                        <input name="email" type="email" required maxlength="255"
+                               autocomplete="email" placeholder="you@example.com">
+                    </label>
+                    <label>Create Password
+                        <input name="password" type="password" required minlength="8" maxlength="72"
+                               autocomplete="new-password">
+                    </label>
+                    <label>Verify Password
+                        <input name="password_verify" type="password" required minlength="8" maxlength="72"
+                               autocomplete="new-password">
+                    </label>
+                    <label>Invite Key
+                        <input name="invite_key" required minlength="8" maxlength="64"
+                               autocomplete="off" spellcheck="false" placeholder="8-character key">
+                    </label>
+                    <button type="submit">Create Account</button>
+                </form>
+                <p class="auth-switch">
+                    <button type="button" class="link" data-action="login-mode"
+                            data-mode="signin">Back to Sign In</button>
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260826-new-logo" alt="" width="40" height="40">
+                <div>
+                    <strong>Curiculy</strong>
+                    <p>Homeschool planner</p>
+                    <span id="demo-badge" class="tag" hidden>DEMO</span>
+                </div>
+            </div>
+            <nav class="nav" aria-label="Main">
+                <a href="#/my-work" data-route="my-work" class="nav-kid" hidden>My work</a>
+                <a href="#/dashboard" data-route="dashboard" class="nav-parent">Home</a>
+                <a href="#/assignments" data-route="assignments" class="nav-parent">Calendar</a>
+                <a href="#/evidence" data-route="evidence" class="nav-parent">
+                    Evidence
+                    <span id="evidence-nav-count" class="nav-count" hidden>0</span>
+                </a>
+                <a href="#/students" data-route="students" class="nav-parent">Kids</a>
+                <a href="#/curricula" data-route="curricula" class="nav-parent">Curriculum catalog</a>
+                <a href="#/portfolios" data-route="portfolios" class="nav-parent">Portfolios</a>
+                <button type="button" data-action="open-school-year-settings"
+                        class="nav-parent"
+                        aria-haspopup="dialog" aria-controls="school-year-modal">
+                    <svg class="nav-gear-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.1 7.1 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.59.22-1.14.53-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.81 8.48a.5.5 0 0 0 .12.64L4.96 10.7c-.04.31-.06.63-.06.94s.02.63.06.94L2.93 14.16a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.43.34.68.22l2.39-.96c.49.41 1.04.72 1.63.94l.36 2.54c.05.24.26.42.49.42h3.8c.23 0 .44-.18.49-.42l.36-2.54c.59-.22 1.14-.53 1.63-.94l2.39.96c.25.12.54.02.68-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>
+                    </svg>
+                    School year
+                </button>
+            </nav>
+            <div class="sidebar-user">
+                <button type="button" id="user-profile" class="user-profile" data-action="toggle-user-menu"
+                        aria-haspopup="menu" aria-controls="user-menu" aria-expanded="false">
+                    <span id="user-avatar" class="user-avatar" aria-hidden="true">C</span>
+                    <span class="user-copy">
+                        <strong id="household-label">Household</strong>
+                    </span>
+                </button>
+                <div id="user-menu" class="user-menu" role="menu" hidden>
+                    <button type="button" role="menuitem" data-action="switch-user">Switch user</button>
+                    <a href="#/settings" role="menuitem" class="nav-parent">Settings</a>
+                    <a href="#/settings/students" role="menuitem" class="nav-parent">Manage Students</a>
+                    <a href="#/settings/exceptions" role="menuitem" class="nav-parent">Calendar Exceptions</a>
+                    <a href="#/settings/school-years" role="menuitem" class="nav-parent">School Years</a>
+                    <a href="#/settings/enrollments" role="menuitem" class="nav-parent">Enrollments</a>
+                    <a href="#/settings/admin" role="menuitem" id="admin-menu-item" hidden>Admin</a>
+                    <button type="button" role="menuitem" data-action="logout">Log out</button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main">
+            <header class="topbar">
+                <h1 id="page-title">Home</h1>
+                <div class="topbar-status">
+                    <div id="notify-wrap" class="notify-wrap nav-parent">
+                        <button type="button" id="notify-bell" class="icon-button notify-bell"
+                                data-action="toggle-notifications" aria-label="Notifications"
+                                aria-haspopup="true" aria-expanded="false" aria-controls="notify-panel">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+                                <path fill="currentColor" d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22zm6.7-6.2V11a6.7 6.7 0 0 0-5.2-6.5V3.8a1.5 1.5 0 1 0-3 0v.7A6.7 6.7 0 0 0 5.3 11v4.8L3.8 17.3V18h16.4v-.7l-1.5-1.5z"/>
+                            </svg>
+                            <span id="notify-count" class="notify-count" hidden>0</span>
+                        </button>
+                        <div id="notify-panel" class="notify-panel" hidden>
+                            <header class="notify-head">
+                                <strong>Notifications</strong>
+                                <button type="button" class="ghost small" data-action="mark-notifications-read">Mark all read</button>
+                            </header>
+                            <div id="notify-list" class="notify-list"></div>
+                        </div>
+                    </div>
+                    <span id="offline-pill" class="pill offline" hidden role="status">
+                        <svg class="offline-pill-icon" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill="currentColor" d="M12.4 10.1A3.4 3.4 0 0 0 9.1 5.2 4.1 4.1 0 0 0 1.9 7.4 2.7 2.7 0 0 0 2.9 12.6h8.4a2.5 2.5 0 0 0 1.1-2.5z"/>
+                            <path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M2.2 13.6 13.8 2.4"/>
+                        </svg>
+                        Offline
+                    </span>
+                    <span id="health-pill" class="pill">Checking…</span>
+                </div>
+            </header>
+            <p id="flash" class="flash" hidden></p>
+            <main id="view"></main>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-action="close-modal"></div>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+            <header class="modal-head">
+                <div>
+                    <p id="detail-eyebrow" class="meta"></p>
+                    <h2 id="detail-title">Assignment</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-modal" aria-label="Close assignment detail">&times;</button>
+            </header>
+            <div id="detail-body" class="modal-body"></div>
+            <footer id="detail-actions" class="modal-actions" hidden></footer>
+        </section>
+    </div>
+
+    <!-- Auto-schedule runs in two steps in one dialog: configure, then approve the
+         generated syllabus. Both panels stay in the DOM so going back to change a
+         setting does not lose what was typed. -->
+    <div id="pacing-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-action="close-pacing"></div>
+        <section class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="pacing-title">
+            <header class="modal-head">
+                <div>
+                    <p class="meta">Auto-schedule</p>
+                    <h2 id="pacing-title">Schedule a book</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-pacing" aria-label="Close auto-schedule">&times;</button>
+            </header>
+
+            <div class="modal-body">
+                <!-- The page flash sits behind the backdrop, so this dialog reports
+                     its own errors where they can actually be read. -->
+                <p id="pacing-error" class="banner error" hidden></p>
+
+                <form id="pacing-form" class="pacing-form" data-form="pacing-preview">
+                    <fieldset class="detail-fieldset">
+                        <legend>Students</legend>
+                        <div id="pacing-students" class="weekday-row"></div>
+                    </fieldset>
+                    <label>Curriculum<select name="curriculum_id" required></select></label>
+                    <label>Book<select name="book_id" required disabled></select></label>
+                    <p id="pacing-edition" class="meta"></p>
+                    <div class="field-row">
+                        <label>Start page<input name="start_page" type="number" min="1" step="1" required value="1"></label>
+                        <label>End page<input name="end_page" type="number" min="1" step="1" required></label>
+                    </div>
+                    <p class="muted">This defaults to the book's total page count. Please adjust the start and end pages to exclude non-lesson material like table of contents, glossaries, or appendices to ensure accurate pacing.</p>
+                    <fieldset class="detail-fieldset">
+                        <legend>Pacing method</legend>
+                        <input type="hidden" name="pacing_method" value="deadline">
+                        <div class="segmented" role="group" aria-label="Pacing method">
+                            <button type="button" class="active" data-action="pacing-method" data-method="deadline" aria-pressed="true">By Deadline</button>
+                            <button type="button" data-action="pacing-method" data-method="pace" aria-pressed="false">By Pace</button>
+                        </div>
+                    </fieldset>
+                    <div class="field-row">
+                        <label>First school day<input name="start_date" type="date" required></label>
+                        <div id="deadline-fields">
+                            <label>Finish by<input name="target_completion_date" type="date" required></label>
+                            <label>Lessons
+                                <select name="target_lessons">
+                                    <option value="">One a day</option>
+                                    <option value="2">2 per day</option>
+                                    <option value="3">3 per day</option>
+                                    <option value="4">4 per day</option>
+                                    <option value="5">5 per day</option>
+                                    <option value="6">6 per day</option>
+                                    <option value="7">7 per day</option>
+                                    <option value="8">8 per day</option>
+                                    <option value="9">9 per day</option>
+                                    <option value="10">10 per day</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div id="pace-fields" hidden>
+                            <label>Pages per day
+                                <input name="pages_per_day" type="number" min="1" step="1" value="10">
+                            </label>
+                        </div>
+                    </div>
+                    <fieldset class="detail-fieldset">
+                        <legend>School days</legend>
+                        <div id="pacing-weekdays" class="weekday-row">
+                            <label class="weekday-toggle"><input type="checkbox" value="0" checked>Mon</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="1" checked>Tue</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="2" checked>Wed</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="3" checked>Thu</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="4" checked>Fri</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="5">Sat</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="6">Sun</label>
+                        </div>
+                        <p id="pacing-weekdays-help" class="muted">One a day places a lesson on every school day. Higher counts stack extra lessons on each of those days.</p>
+                    </fieldset>
+                    <div class="form-actions">
+                        <button type="submit">Generate preview</button>
+                        <button type="button" class="ghost" data-action="close-pacing">Cancel</button>
+                    </div>
+                </form>
+
+                <div id="pacing-preview" class="pacing-preview" hidden>
+                    <p id="pacing-warning" class="banner warn" role="alert" hidden></p>
+                    <dl id="pacing-math" class="detail-grid"></dl>
+                    <p id="pacing-calculated-finish" class="muted" hidden></p>
+                    <label>Course name<input id="pacing-course-title" maxlength="255" required></label>
+                    <div class="preview-scroll">
+                        <table class="preview-table">
+                            <thead>
+                                <tr><th class="preview-seq">#</th><th>Lesson title</th><th>Pages</th><th>Scheduled</th></tr>
+                            </thead>
+                            <tbody id="pacing-rows"></tbody>
+                        </table>
+                    </div>
+                    <p class="muted">Edit any title before committing. Nothing is written until you commit.</p>
+                </div>
+            </div>
+
+            <footer id="pacing-actions" class="modal-actions" hidden>
+                <button type="button" class="ghost" data-action="pacing-back">Change settings</button>
+                <button type="button" data-action="commit-pacing">Commit to schedule</button>
+            </footer>
+        </section>
+    </div>
+
+    <div id="onboarding-wizard" class="modal wizard" hidden>
+        <div class="modal-backdrop"></div>
+        <section class="modal-card wizard-card" role="dialog" aria-modal="true"
+                 aria-labelledby="wizard-title-1">
+            <div class="wizard-progress" aria-hidden="true">
+                <span class="wizard-dot is-active" data-wizard-dot="1"></span>
+                <span class="wizard-dot" data-wizard-dot="2"></span>
+                <span class="wizard-dot" data-wizard-dot="3"></span>
+            </div>
+            <p id="wizard-error" class="banner error" hidden></p>
+
+            <div class="wizard-step is-active" data-wizard-step="1">
+                <header class="wizard-head">
+                    <p class="meta">Getting started</p>
+                    <h2 id="wizard-title-1">Welcome to Curiculy</h2>
+                </header>
+                <p class="muted">A short setup so you can start planning the school year.</p>
+                <ol class="wizard-points">
+                    <li>
+                        <strong>Build your Catalog</strong>
+                        <span>Add the books and curricula you teach.</span>
+                    </li>
+                    <li>
+                        <strong>Auto-schedule lessons</strong>
+                        <span>Turn a book into a daily plan that fits your calendar.</span>
+                    </li>
+                    <li>
+                        <strong>Check off work &amp; attach evidence</strong>
+                        <span>Mark lessons done and keep photos or PDFs of the work.</span>
+                    </li>
+                </ol>
+                <footer class="modal-actions">
+                    <button type="button" data-action="wizard-next">Next</button>
+                </footer>
+            </div>
+
+            <form class="wizard-step" data-wizard-step="2" data-form="wizard-year" id="wizard-year-form">
+                <header class="wizard-head">
+                    <p class="meta">Step 2 of 3</p>
+                    <h2 id="wizard-title-2">Set your School Year</h2>
+                </header>
+                <p class="muted">Lessons and the calendar sit inside these dates.</p>
+                <label>Name<input name="name" required maxlength="128" placeholder="2026-2027" autocomplete="off"></label>
+                <div class="field-row">
+                    <label>Start date<input name="start_date" type="date" required></label>
+                    <label>End date<input name="end_date" type="date" required></label>
+                </div>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="wizard-back">Back</button>
+                    <button type="submit">Next</button>
+                </footer>
+            </form>
+
+            <form class="wizard-step" data-wizard-step="3" data-form="wizard-student" id="wizard-student-form">
+                <header class="wizard-head">
+                    <p class="meta">Step 3 of 3</p>
+                    <h2 id="wizard-title-3">Add your Students</h2>
+                </header>
+                <p class="muted">Start with one child. You can add the rest later in Settings.</p>
+                <label>Name<input name="name" required maxlength="255" placeholder="First and last name" autocomplete="name"></label>
+                <label>Grade<input name="grade" maxlength="64" placeholder="3rd, Grade 4, K…" autocomplete="off"></label>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="wizard-back">Back</button>
+                    <button type="submit">Finish</button>
+                </footer>
+            </form>
+        </section>
+    </div>
+
+    <datalist id="subject-suggestions">
+        <option value="Math"></option>
+        <option value="Reading"></option>
+        <option value="Language Arts"></option>
+        <option value="Science"></option>
+        <option value="History"></option>
+        <option value="Art"></option>
+        <option value="Music"></option>
+    </datalist>
+
+    <div id="email-evaluator-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-action="close-email-evaluator"></div>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="email-evaluator-title">
+            <header class="modal-head">
+                <div>
+                    <p class="meta">Portfolios</p>
+                    <h2 id="email-evaluator-title">Email Evaluator</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-email-evaluator"
+                        aria-label="Close email evaluator">&times;</button>
+            </header>
+            <form id="email-evaluator-form" class="modal-body" data-form="email-evaluator">
+                <label>Evaluator email
+                    <input name="evaluator_email" type="email" required maxlength="255"
+                           autocomplete="email" placeholder="evaluator@example.com">
+                </label>
+                <label>Subject
+                    <input name="subject" required maxlength="200" value="Student Portfolio Log">
+                </label>
+                <label>Message
+                    <textarea name="message" rows="5" maxlength="10000"
+                              placeholder="A short note to include with the PDF"></textarea>
+                </label>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="close-email-evaluator">Cancel</button>
+                    <button type="submit">Send email</button>
+                </footer>
+            </form>
+        </section>
+    </div>
+
+    <div id="lesson-plan-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-action="close-lesson-builder"></div>
+        <section class="modal-card builder-card" role="dialog" aria-modal="true"
+                 aria-labelledby="lesson-builder-title">
+            <header class="modal-head">
+                <div>
+                    <p class="meta">Structured Pacing Guides</p>
+                    <h2 id="lesson-builder-title">Create Lesson Plan</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-lesson-builder"
+                        aria-label="Close lesson plan builder">&times;</button>
+            </header>
+            <p id="lesson-builder-error" class="banner error" hidden></p>
+            <form id="lesson-builder-form" class="lesson-builder-form">
+                <div class="lesson-builder-header field-row">
+                    <label>Title
+                        <input name="title" required maxlength="255" placeholder="Saxon Math 3">
+                    </label>
+                    <label>Subject
+                        <input name="subject" list="subject-suggestions" maxlength="128" autocomplete="off">
+                    </label>
+                    <label>Grade Level
+                        <input name="grade_level" maxlength="64" placeholder="3rd, Grade 4, K…">
+                    </label>
+                    <label>Frequency
+                        <select name="frequency_days" data-action="lesson-builder-grid">
+                            <option value="1">1 day per week</option>
+                            <option value="2">2 days per week</option>
+                            <option value="3">3 days per week</option>
+                            <option value="4">4 days per week</option>
+                            <option value="5" selected>5 days per week</option>
+                            <option value="6">6 days per week</option>
+                            <option value="7">7 days per week</option>
+                        </select>
+                    </label>
+                    <label>Weeks
+                        <input name="total_weeks" type="number" min="1" max="52" value="36"
+                               data-action="lesson-builder-grid">
+                    </label>
+                </div>
+                <div class="segmented catalog-kind-tabs" role="tablist" aria-label="Lesson plan sections">
+                    <button type="button" role="tab" data-action="lesson-builder-tab" data-tab="assignments"
+                            class="active" aria-selected="true">Assignments</button>
+                    <button type="button" role="tab" data-action="lesson-builder-tab" data-tab="notes"
+                            aria-selected="false">Notes</button>
+                    <button type="button" role="tab" data-action="lesson-builder-tab" data-tab="grading"
+                            aria-selected="false">Grading &amp; Resources</button>
+                </div>
+                <div id="lesson-builder-panel" class="lesson-builder-panel"></div>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="close-lesson-builder">Cancel</button>
+                    <button type="button" class="ghost" data-action="save-lesson-draft">Save Draft</button>
+                    <button type="button" data-action="save-lesson-close">Save and Close</button>
+                </footer>
+            </form>
+        </section>
+    </div>
+
+    <div id="apply-plan-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-action="close-apply-plan"></div>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="apply-plan-title">
+            <header class="modal-head">
+                <div>
+                    <p class="meta">Structured Pacing Guides</p>
+                    <h2 id="apply-plan-title">Apply this lesson plan</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-apply-plan"
+                        aria-label="Close apply lesson plan">&times;</button>
+            </header>
+            <p id="apply-plan-error" class="banner error" hidden></p>
+            <form id="apply-plan-form" class="modal-body" data-form="apply-lesson-plan">
+                <p id="apply-plan-copy" class="muted"></p>
+                <label>Student
+                    <select name="student_id" required></select>
+                </label>
+                <label>Start date
+                    <input name="start_date" type="date" required>
+                </label>
+                <fieldset class="detail-fieldset">
+                    <legend>School days</legend>
+                    <div id="apply-plan-weekdays" class="weekday-row">
+                        <label class="weekday-toggle"><input type="checkbox" value="0" checked>Mon</label>
+                        <label class="weekday-toggle"><input type="checkbox" value="1" checked>Tue</label>
+                        <label class="weekday-toggle"><input type="checkbox" value="2" checked>Wed</label>
+                        <label class="weekday-toggle"><input type="checkbox" value="3" checked>Thu</label>
+                        <label class="weekday-toggle"><input type="checkbox" value="4" checked>Fri</label>
+                        <label class="weekday-toggle"><input type="checkbox" value="5">Sat</label>
+                        <label class="weekday-toggle"><input type="checkbox" value="6">Sun</label>
+                    </div>
+                </fieldset>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="close-apply-plan">Cancel</button>
+                    <button type="submit">Apply to calendar</button>
+                </footer>
+            </form>
+        </section>
+    </div>
+
+    <div id="recalibrate-modal" class="modal wizard" hidden>
+        <div class="modal-backdrop" data-action="close-recalibrate"></div>
+        <section class="modal-card wizard-card recalibrate-card" role="dialog" aria-modal="true"
+                 aria-labelledby="recalibrate-title-1">
+            <header class="modal-head">
+                <div>
+                    <p class="meta">Life Happens</p>
+                    <h2 id="recalibrate-heading">Recalibrate Schedule</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-recalibrate"
+                        aria-label="Close recalibrate schedule">&times;</button>
+            </header>
+            <div class="wizard-progress" aria-hidden="true">
+                <span class="wizard-dot is-active" data-recalibrate-dot="1"></span>
+                <span class="wizard-dot" data-recalibrate-dot="2"></span>
+                <span class="wizard-dot" data-recalibrate-dot="3"></span>
+            </div>
+            <p id="recalibrate-error" class="banner error" hidden></p>
+
+            <div class="wizard-step is-active" data-recalibrate-step="1">
+                <header class="wizard-head">
+                    <p class="meta">Step 1 of 3</p>
+                    <h2 id="recalibrate-title-1">Overdue work</h2>
+                </header>
+                <p id="recalibrate-overdue-copy" class="muted">Checking the calendar…</p>
+                <div id="recalibrate-overdue-stat" class="recalibrate-stat" hidden>
+                    <strong id="recalibrate-overdue-count">0</strong>
+                    <span id="recalibrate-overdue-label">overdue assignments</span>
+                </div>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="close-recalibrate">Cancel</button>
+                    <button type="button" id="recalibrate-next" data-action="recalibrate-next" disabled>Next</button>
+                </footer>
+            </div>
+
+            <div class="wizard-step" data-recalibrate-step="2">
+                <header class="wizard-head">
+                    <p class="meta">Step 2 of 3</p>
+                    <h2 id="recalibrate-title-2">Choose a recovery plan</h2>
+                </header>
+                <p class="muted">Completed work stays on its original dates. Only leftover assignments move.</p>
+                <div class="recalibrate-choices" role="radiogroup" aria-label="Recovery strategy">
+                    <label class="recalibrate-choice">
+                        <input type="radio" name="recalibrate-strategy" value="extend_year" checked>
+                        <strong>Push Schedule Forward (Extends the end of the year)</strong>
+                        <span id="recalibrate-extend-copy">Uncompleted work starts again from today on the usual class days.</span>
+                    </label>
+                    <label class="recalibrate-choice">
+                        <input type="radio" name="recalibrate-strategy" value="add_weekends">
+                        <strong>Include Saturdays (Temporarily catch up on weekends)</strong>
+                        <span id="recalibrate-weekends-copy">Saturday becomes a class day until the original cadence is caught up.</span>
+                    </label>
+                </div>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="recalibrate-back">Back</button>
+                    <button type="button" data-action="recalibrate-next">Next</button>
+                </footer>
+            </div>
+
+            <div class="wizard-step" data-recalibrate-step="3">
+                <header class="wizard-head">
+                    <p class="meta">Step 3 of 3</p>
+                    <h2 id="recalibrate-title-3">Confirm recalibration</h2>
+                </header>
+                <p id="recalibrate-confirm-copy" class="muted"></p>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="recalibrate-back">Back</button>
+                    <button type="button" id="recalibrate-confirm" data-action="confirm-recalibrate">
+                        Confirm Recalibration
+                    </button>
+                </footer>
+            </div>
+        </section>
+    </div>
+
+    <div id="school-year-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-action="close-school-year"></div>
+        <section class="modal-card year-wide" role="dialog" aria-modal="true"
+                 aria-labelledby="school-year-title">
+            <header class="modal-head">
+                <div>
+                    <p class="meta">Settings</p>
+                    <h2 id="school-year-title">School Year &amp; Vacations</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-school-year"
+                        aria-label="Close school year settings">&times;</button>
+            </header>
+            <div class="modal-body">
+                <p id="school-year-error" class="banner error" hidden></p>
+                <div class="sy-toolbar">
+                    <div class="sy-bounds">
+                        <label>First Day
+                            <input id="school-year-start" type="date" required>
+                        </label>
+                        <label>Last Day
+                            <input id="school-year-end" type="date" required>
+                        </label>
+                        <p class="sy-total">
+                            <span>Total school days</span>
+                            <strong id="school-year-total">0</strong>
+                        </p>
+                    </div>
+                    <fieldset class="detail-fieldset">
+                        <legend>Class days</legend>
+                        <div id="school-year-weekdays" class="weekday-row">
+                            <label class="weekday-toggle"><input type="checkbox" value="0" checked>Mon</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="1" checked>Tue</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="2" checked>Wed</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="3" checked>Thu</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="4" checked>Fri</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="5">Sat</label>
+                            <label class="weekday-toggle"><input type="checkbox" value="6">Sun</label>
+                        </div>
+                    </fieldset>
+                    <div class="sy-holidays">
+                        <label>Holiday import
+                            <select id="school-year-holiday-region"></select>
+                        </label>
+                        <button type="button" data-action="apply-holidays">Apply Holidays</button>
+                    </div>
+                    <p id="school-year-status" class="muted" hidden></p>
+                </div>
+                <div id="school-year-grid" class="sy-year" aria-live="polite"></div>
+            </div>
+        </section>
+    </div>
+
+    <div id="switch-user-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-action="close-switch-user"></div>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="switch-user-title">
+            <header class="modal-head">
+                <div>
+                    <p class="meta">Household</p>
+                    <h2 id="switch-user-title">Switch user</h2>
+                </div>
+                <button type="button" class="icon-button" data-action="close-switch-user" aria-label="Close switch user">&times;</button>
+            </header>
+            <div class="modal-body">
+                <p id="switch-user-error" class="banner error" hidden></p>
+                <p class="muted" id="switch-user-hint"></p>
+                <div id="switch-user-list" class="switch-user-list"></div>
+                <form id="switch-user-form" class="login-form" data-form="switch-user" hidden>
+                    <label>Parent password
+                        <input name="parent_password" type="password" required maxlength="255"
+                               autocomplete="current-password">
+                    </label>
+                    <button type="submit">Switch</button>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <input type="file" id="evidence-upload-input" accept="image/*,application/pdf" hidden>
+    <input type="file" id="curriculum-csv-input" accept=".csv,text/csv" hidden>
+    <input type="file" id="curriculum-pdf-input" accept="application/pdf" hidden>
+    <div id="toast-container" aria-live="polite" aria-relevant="additions text"></div>
+    <script src="/static/js/app.js?v=20260828-pdf-ocr"></script>
+</body>
+</html>
