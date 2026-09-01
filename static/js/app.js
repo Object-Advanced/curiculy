@@ -1,7 +1,6 @@
 const TITLES = {
   dashboard: "Home",
   assignments: "Calendar",
-  evidence: "Unsorted Evidence",
   students: "My day",
   curricula: "Curriculum catalog",
   portfolios: "Portfolios",
@@ -113,6 +112,7 @@ const SHORT_TIME = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 const EVIDENCE_DRAG_TYPE = "application/x-curiculy-evidence";
+const EVIDENCE_INBOX_COLLAPSED_KEY = "evidence-inbox-collapsed";
 const PAPERCLIP_ICON = `<svg class="cal-event-clip-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 1 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 1 1-2.83-2.83l8.49-8.48"/></svg>`;
 
 function emptyPortfolioCustom() {
@@ -145,10 +145,7 @@ const state = {
   currentAnchorDate: null,
   calendarStudentId: null,
   calendar: null,
-  evidencePeriod: "week",
-  evidenceAnchorDate: null,
   evidenceStaging: [],
-  evidenceCalendar: null,
   curriculumFilter: "unscheduled",
   catalogKind: "books",
   curriculumPlans: [],
@@ -864,16 +861,84 @@ function yearName(id) {
   return item ? item.name : `Year #${id}`;
 }
 
+const HOUSEHOLD_ICONS = [
+  { id: "letter", label: "Letter from name" },
+  { id: "apple", emoji: "🍎", label: "Apple" },
+  { id: "books", emoji: "📚", label: "Books" },
+  { id: "pencil", emoji: "✏️", label: "Pencil" },
+  { id: "backpack", emoji: "🎒", label: "Backpack" },
+  { id: "school", emoji: "🏫", label: "Schoolhouse" },
+  { id: "notebook", emoji: "📝", label: "Notebook" },
+  { id: "cap", emoji: "🎓", label: "Graduation cap" },
+  { id: "crayon", emoji: "🖍️", label: "Crayon" },
+  { id: "globe", emoji: "🌍", label: "Globe" },
+  { id: "abacus", emoji: "🧮", label: "Abacus" },
+  { id: "telescope", emoji: "🔭", label: "Telescope" },
+  { id: "tree", emoji: "🌳", label: "Tree" },
+];
+
 function householdInitial(name) {
-  const letter = String(name || "").trim().charAt(0);
+  const words = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "C";
+  const start = words[0].toLowerCase() === "the" && words.length > 1 ? 1 : 0;
+  const letter = words[start].charAt(0);
   return letter ? letter.toUpperCase() : "C";
 }
 
+function householdIconId(household) {
+  const id = String(household?.icon || "letter").trim().toLowerCase();
+  return HOUSEHOLD_ICONS.some((item) => item.id === id) ? id : "letter";
+}
+
+function householdAvatarGlyph(household) {
+  const id = householdIconId(household);
+  if (id !== "letter") {
+    const match = HOUSEHOLD_ICONS.find((item) => item.id === id);
+    if (match?.emoji) return match.emoji;
+  }
+  return household?.letter || householdInitial(household?.name);
+}
+
+function paintHouseholdChrome(household) {
+  state.household = household;
+  if (currentUserIsChild()) return;
+  const name = household?.name || "Household";
+  const label = $("household-label");
+  if (label) {
+    label.textContent = name;
+    label.title = name;
+  }
+  const avatar = $("user-avatar");
+  if (avatar) {
+    const glyph = householdAvatarGlyph(household);
+    avatar.textContent = glyph;
+    avatar.classList.toggle("is-emoji", householdIconId(household) !== "letter");
+  }
+}
+
 async function loadHousehold() {
-  state.household = await api("/household");
-  if (!currentUserIsChild()) {
-    $("household-label").textContent = state.household.name;
-    $("user-avatar").textContent = householdInitial(state.household.name);
+  paintHouseholdChrome(await api("/household"));
+}
+
+async function setHouseholdIcon(icon) {
+  const id = String(icon || "letter").trim().toLowerCase();
+  try {
+    const result = await api("/household", {
+      method: "PATCH",
+      body: JSON.stringify({ icon: id }),
+    });
+    if (isOfflineQueued(result)) {
+      paintHouseholdChrome({
+        ...(state.household || {}),
+        icon: id === "letter" ? null : id,
+      });
+    } else {
+      paintHouseholdChrome(result);
+    }
+    render();
+    flash("Saved.");
+  } catch (error) {
+    flash(error.message, true);
   }
 }
 
@@ -883,7 +948,13 @@ async function loadStudents() {
 
 let planStatusPollTimer = 0;
 let pdfImportBusy = false;
+let paperTemplateBusy = false;
+let paperImportBusy = false;
+let paperImportPhase = "";
+let paperImportPlanId = 0;
+let paperImportPollTimer = 0;
 const PLAN_STATUS_POLL_MS = 4000;
+const PAPER_IMPORT_POLL_MS = 2500;
 
 function stopPlanStatusPolling() {
   if (planStatusPollTimer) {
@@ -905,6 +976,7 @@ function planStatusSnapshot(plans) {
 function notifyPlanStatusChanges(previousPlans, nextPlans) {
   const previous = new Map((previousPlans || []).map((plan) => [plan.id, plan.status]));
   for (const plan of nextPlans || []) {
+    if (plan.id === paperImportPlanId) continue;
     if (previous.get(plan.id) !== "processing") continue;
     if (plan.status === "ready") {
       const count = Number(plan.lesson_count) || 0;
@@ -1026,7 +1098,7 @@ async function loadCaptureTokenStatus() {
 
 async function loadSettings() {
   const panel = settingsPanel();
-  const extras = [loadExceptionColors()];
+  const extras = [loadHousehold(), loadExceptionColors()];
   if (panel === SETTINGS_PANELS.admin) {
     extras.push(loadInviteKeys());
     await Promise.all(extras);
@@ -1073,7 +1145,11 @@ async function showRoute() {
       history.replaceState(null, "", "#/my-work");
     }
   }
-  const [name] = routeSegments();
+  let [name] = routeSegments();
+  if (name === "evidence") {
+    history.replaceState(null, "", "#/assignments");
+    name = "assignments";
+  }
   if (SETTINGS_ALIASES[name]) {
     history.replaceState(null, "", SETTINGS_ALIASES[name]);
   }
@@ -2571,13 +2647,15 @@ function renderCatalogKindTabs() {
 
 function pacingPlanStatusBadge(item) {
   if (item.status === "processing") {
+    const paper = item.title === "Paper Import" || item.id === paperImportPlanId;
     return `<span class="tag plan-processing" aria-live="polite">
       <span class="plan-spinner" aria-hidden="true"></span>
-      Parsing with AI
+      ${paper ? "Transcribing handwriting" : "Parsing with AI"}
     </span>`;
   }
   if (item.status === "failed") {
-    return `<span class="tag plan-failed">AI parsing failed</span>`;
+    const paper = item.title === "Paper Import";
+    return `<span class="tag plan-failed">${paper ? "Handwriting failed" : "AI parsing failed"}</span>`;
   }
   return "";
 }
@@ -2597,13 +2675,18 @@ function pacingPlanCard(item) {
   const weeks = Number(item.total_weeks) || 36;
   const processing = item.status === "processing";
   const failed = item.status === "failed";
+  const paper = item.title === "Paper Import" || item.id === paperImportPlanId;
   const disabledAttrs = processing
     ? ' disabled aria-disabled="true" title="Wait for AI processing to finish"'
     : "";
   const meta = processing
-    ? "The AI is reading this PDF. Edit and Apply unlock when it finishes."
+    ? paper
+      ? "Transcribing handwriting with Ollama. Edit and Apply unlock when it finishes."
+      : "The AI is reading this PDF. Edit and Apply unlock when it finishes."
     : failed
-      ? "Parsing did not find lessons. You can edit the plan by hand or delete it."
+      ? paper
+        ? "Handwriting extraction failed. You can edit the plan by hand or try another photo."
+        : "Parsing did not find lessons. You can edit the plan by hand or delete it."
       : `${publisher} · ${subject} · ${grade} · ${lessonLabel} · ${days} day${days === 1 ? "" : "s"}/week · ${weeks} week${weeks === 1 ? "" : "s"}`;
   const rowClass = processing ? " is-processing" : failed ? " is-failed" : "";
   return `
@@ -2636,12 +2719,27 @@ function pendingPdfImportCard() {
     </div>`;
 }
 
+function pendingPaperImportCard() {
+  const scanning = paperImportPhase === "scanning";
+  return `
+    <div class="list-row is-processing">
+      <span class="tag plan-processing" aria-live="polite">
+        <span class="plan-spinner" aria-hidden="true"></span>
+        ${scanning ? "Scanning page" : "Reading handwriting"}
+      </span>
+      <strong>Paper import</strong>
+      <p class="meta">${scanning ? "Scanning page geometry..." : "Transcribing handwriting with Ollama..."}</p>
+    </div>`;
+}
+
 function renderPacingGuidesCatalog() {
   const plans = state.curriculumPlans || [];
+  const showPendingPdf = pdfImportBusy;
+  const showPendingPaper = paperImportBusy && paperImportPhase === "scanning";
   const listHtml =
-    plans.length || pdfImportBusy
-      ? `<div class="list">${pdfImportBusy ? pendingPdfImportCard() : ""}${plans.map(pacingPlanCard).join("")}</div>`
-      : `<p class="empty">No pacing guides yet. Create a lesson plan, import a CSV, or import a PDF.</p>`;
+    plans.length || showPendingPdf || showPendingPaper
+      ? `<div class="list">${showPendingPdf ? pendingPdfImportCard() : ""}${showPendingPaper ? pendingPaperImportCard() : ""}${plans.map(pacingPlanCard).join("")}</div>`
+      : `<p class="empty">No pacing guides yet. Create a lesson plan, import a CSV, import a PDF, or photograph a paper template.</p>`;
   return `
     <section class="card">
       <div class="card-heading">
@@ -2656,6 +2754,14 @@ function renderPacingGuidesCatalog() {
           <button type="button" class="ghost small" data-action="import-curriculum-pdf"
                   ${pdfImportBusy ? "disabled" : ""}>
             ${pdfImportBusy ? "Uploading PDF…" : "Import PDF (AI)"}
+          </button>
+          <button type="button" id="btn-download-paper-template" class="ghost small btn btn-secondary"
+                  data-action="download-paper-template" ${paperTemplateBusy ? "disabled" : ""}>
+            Download Paper Template
+          </button>
+          <button type="button" id="btn-import-paper" class="small btn btn-primary"
+                  data-action="import-paper" ${paperImportBusy ? "disabled" : ""}>
+            ${paperImportBusy ? "Importing paper…" : "Import from Paper"}
           </button>
         </div>
       </div>
@@ -3411,7 +3517,6 @@ async function submitApplyPlan() {
     closeApplyPlan();
     await refresh();
     if (routeName() === "assignments") await loadCalendar();
-    if (routeName() === "evidence") await loadEvidenceBoard();
     render();
     const from = MEDIUM_DATE.format(parseISODate(result.first_scheduled_date));
     const to = MEDIUM_DATE.format(parseISODate(result.last_scheduled_date));
@@ -3884,8 +3989,45 @@ function renderSettings() {
     [SETTINGS_PANELS.admin]: renderAdminSettings,
   };
   const dark = currentTheme() === "dark";
+  const householdName = String(state.household?.name || "").trim();
+  const householdValue =
+    householdName && householdName !== DEFAULT_HOUSEHOLD_NAME ? householdName : "";
+  const selectedIcon = householdIconId(state.household);
+  const letter = state.household?.letter || householdInitial(householdName);
   return `
     <section class="settings-hub">
+      <section class="card household-pref">
+        <div class="household-pref-top">
+          <div>
+            <h2>Household</h2>
+            <p class="muted">This name and icon appear in the sidebar on every page.</p>
+          </div>
+          <form class="household-name-form" data-form="household">
+            <label>Household name
+              <input name="name" required maxlength="255" value="${escapeHtml(householdValue)}"
+                     placeholder="The Rivera family" autocomplete="organization">
+            </label>
+            <button type="submit">Save name</button>
+          </form>
+        </div>
+        <fieldset class="household-icon-picker">
+          <legend>Sidebar icon</legend>
+          <p class="muted">The letter skips a leading “The”. Or pick a school icon.</p>
+          <div class="household-icon-grid" role="radiogroup" aria-label="Household icon">
+            ${HOUSEHOLD_ICONS.map((icon) => {
+              const selected = icon.id === selectedIcon;
+              const glyph = icon.id === "letter" ? letter : icon.emoji;
+              return `
+                <button type="button" class="household-icon-choice${selected ? " is-selected" : ""}"
+                        data-action="set-household-icon" data-icon="${icon.id}"
+                        aria-pressed="${selected}" title="${escapeHtml(icon.label)}"
+                        aria-label="${escapeHtml(icon.label)}">
+                  <span aria-hidden="true">${escapeHtml(glyph)}</span>
+                </button>`;
+            }).join("")}
+          </div>
+        </fieldset>
+      </section>
       <section class="card theme-pref">
         <div>
           <h2>Appearance</h2>
@@ -3971,17 +4113,9 @@ function isDispatchView() {
 }
 
 function calendarEventOptions() {
-  const period = routeName() === "evidence" ? state.evidencePeriod : state.currentPeriod;
   return {
-    showStudent: isAllStudentsView() && period !== "day",
+    showStudent: isAllStudentsView() && state.currentPeriod !== "day",
   };
-}
-
-function evidenceAnchorDate() {
-  if (!state.evidenceAnchorDate) {
-    state.evidenceAnchorDate = todayISO();
-  }
-  return state.evidenceAnchorDate;
 }
 
 function evidenceClipMarkup(count) {
@@ -4167,7 +4301,7 @@ function calendarGrid(data, { showStudent = false, showAttendance = true } = {})
   const hideWeekends = !hasWeekendAssignments(data.assignments);
   const columns = hideWeekends ? 5 : 7;
   const today = todayISO();
-  const period = data.period || (routeName() === "evidence" ? state.evidencePeriod : state.currentPeriod);
+  const period = data.period || state.currentPeriod;
   const cells = [];
 
   // The API returns the 1st of the month, which is rarely a Monday, so the grid
@@ -4330,8 +4464,15 @@ function renderAssignments() {
         </div>
         <p id="calendar-range-count" class="meta"></p>
       </div>
-      <div id="calendar-body" class="calendar-body" aria-live="polite">
-        <p class="empty">Loading assignments…</p>
+      <div class="${
+        period === "month"
+          ? "calendar-stage is-month"
+          : `calendar-stage${evidenceInboxIsCollapsed() ? " is-inbox-collapsed" : ""}`
+      }">
+        ${period === "month" ? "" : evidenceInboxPanelHtml()}
+        <div id="calendar-body" class="calendar-body" aria-live="polite">
+          <p class="empty">Loading assignments…</p>
+        </div>
       </div>
     </section>`;
 }
@@ -4374,21 +4515,24 @@ async function loadCalendar() {
       $("calendar-body").innerHTML = isDispatchView()
         ? dispatchBoard(data)
         : calendarGrid(data, { showStudent: true });
-      return;
+    } else {
+      $("calendar-body").innerHTML = period === "day" ? calendarList(data) : calendarGrid(data);
     }
-    $("calendar-body").innerHTML = period === "day" ? calendarList(data) : calendarGrid(data);
+    paintEvidenceInbox();
   } catch (error) {
     if (token !== calendarRequest || !$("calendar-body")) return;
     $("calendar-body").innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
     flash(error.message, true);
+    paintEvidenceInbox();
   }
 }
 
+async function loadAssignmentsPage() {
+  paintEvidenceInbox();
+  await Promise.all([loadCalendar(), loadEvidenceStaging()]);
+}
+
 async function refreshVisibleAssignmentBoard() {
-  if (routeName() === "evidence") {
-    await loadEvidenceBoard();
-    return;
-  }
   await loadCalendar();
 }
 
@@ -4405,7 +4549,7 @@ function stagingDayLabel(dayISO) {
   return SHORT_DATE.format(parseISODate(dayISO));
 }
 
-function groupStagingByDay(rows) {
+function groupStagingByDay(rows, { ascending = false } = {}) {
   const groups = new Map();
   for (const row of rows || []) {
     const day = capturedDayISO(row.captured_at);
@@ -4415,7 +4559,8 @@ function groupStagingByDay(rows) {
   }
   return [...groups.entries()].sort((left, right) => {
     if (left[0] === right[0]) return 0;
-    return left[0] < right[0] ? 1 : -1;
+    const cmp = left[0] < right[0] ? -1 : 1;
+    return ascending ? cmp : -cmp;
   });
 }
 
@@ -4433,13 +4578,52 @@ function stagingThumbMarkup(row) {
     </figure>`;
 }
 
-function evidenceInboxBodyHtml(rows) {
-  if (!rows.length) {
-    return `<p class="empty">No unsorted screenshots. Captures from the Chrome extension land here until you file them onto a lesson.</p>`;
+function calendarShowsEvidenceInbox() {
+  return state.currentPeriod === "day" || state.currentPeriod === "week";
+}
+
+function evidenceInboxIsCollapsed() {
+  try {
+    return localStorage.getItem(EVIDENCE_INBOX_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
   }
-  const groups = groupStagingByDay(rows);
+}
+
+function stagingRowsForVisibleWindow() {
+  if (!calendarShowsEvidenceInbox()) return [];
+  const window_ = calendarDateWindow(state.currentPeriod, anchorDate());
+  return (state.evidenceStaging || []).filter((row) => {
+    const day = capturedDayISO(row.captured_at);
+    if (!day) return true;
+    return day >= window_.start && day <= window_.end;
+  });
+}
+
+function evidenceInboxCountLabel(n) {
+  return n > 99 ? "99+" : String(n);
+}
+
+function evidenceInboxBodyHtml(rows) {
+  const period = state.currentPeriod;
+  if (!rows.length) {
+    const when = period === "day" ? "this day" : "this week";
+    const elsewhere = (state.evidenceStaging || []).length - rows.length;
+    const extra = elsewhere > 0
+      ? ` ${elsewhere} still unfiled on other days.`
+      : " Captures from the Chrome extension land here until you file them onto a lesson.";
+    return `<p class="empty">No unsorted screenshots for ${when}.${extra}</p>`;
+  }
+  const hint = `<p class="evidence-inbox-hint">Drag a screenshot onto a lesson to file it.</p>`;
+  if (period === "day") {
+    return `${hint}
+      <div class="evidence-inbox-thumbs" role="list">
+        ${rows.map(stagingThumbMarkup).join("")}
+      </div>`;
+  }
+  const groups = groupStagingByDay(rows, { ascending: true });
   return `
-    <p class="evidence-inbox-hint">Drag a screenshot onto a lesson to file it.</p>
+    ${hint}
     ${groups
       .map(
         ([day, items]) => `
@@ -4453,21 +4637,60 @@ function evidenceInboxBodyHtml(rows) {
       .join("")}`;
 }
 
-function syncEvidenceNavBadge() {
-  const badge = $("evidence-nav-count");
+function evidenceInboxPanelHtml() {
+  const collapsed = evidenceInboxIsCollapsed();
+  const visible = stagingRowsForVisibleWindow();
+  const n = visible.length;
+  return `
+    <aside class="evidence-inbox${collapsed ? " is-collapsed" : ""}" aria-labelledby="evidence-inbox-title">
+      <header class="evidence-inbox-head">
+        <h2 id="evidence-inbox-title">Unsorted Evidence</h2>
+        <span id="evidence-inbox-count" class="nav-count"${n ? "" : " hidden"}>${evidenceInboxCountLabel(n)}</span>
+        <button type="button" class="ghost evidence-inbox-toggle" data-action="toggle-evidence-inbox"
+                aria-expanded="${collapsed ? "false" : "true"}" aria-controls="evidence-inbox-body">
+          ${collapsed ? "Show" : "Hide"}
+        </button>
+      </header>
+      <div id="evidence-inbox-body" class="evidence-inbox-body">
+        ${evidenceInboxBodyHtml(visible)}
+      </div>
+    </aside>`;
+}
+
+function syncEvidenceInboxBadge() {
+  const badge = $("evidence-inbox-count");
   if (!badge) return;
-  const n = (state.evidenceStaging || []).length;
+  const n = stagingRowsForVisibleWindow().length;
   badge.hidden = n === 0;
-  badge.textContent = n > 99 ? "99+" : String(n);
+  badge.textContent = evidenceInboxCountLabel(n);
 }
 
 function paintEvidenceInbox() {
   const body = $("evidence-inbox-body");
   if (body) {
-    body.innerHTML = evidenceInboxBodyHtml(state.evidenceStaging || []);
+    body.innerHTML = evidenceInboxBodyHtml(stagingRowsForVisibleWindow());
     hydrateEvidenceImages(body);
   }
-  syncEvidenceNavBadge();
+  syncEvidenceInboxBadge();
+}
+
+function toggleEvidenceInbox() {
+  const aside = document.querySelector(".evidence-inbox");
+  const stage = document.querySelector(".calendar-stage");
+  if (!aside) return;
+  const collapsed = !aside.classList.contains("is-collapsed");
+  try {
+    localStorage.setItem(EVIDENCE_INBOX_COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // Private mode can refuse localStorage; the toggle still works for this view.
+  }
+  aside.classList.toggle("is-collapsed", collapsed);
+  stage?.classList.toggle("is-inbox-collapsed", collapsed);
+  const button = aside.querySelector("[data-action='toggle-evidence-inbox']");
+  if (button) {
+    button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    button.textContent = collapsed ? "Show" : "Hide";
+  }
 }
 
 async function loadEvidenceStaging() {
@@ -4477,153 +4700,22 @@ async function loadEvidenceStaging() {
   } catch (error) {
     if (error.status === 401) return;
     state.evidenceStaging = [];
-    syncEvidenceNavBadge();
     if ($("evidence-inbox-body")) {
       $("evidence-inbox-body").innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
     }
+    syncEvidenceInboxBadge();
     return;
   }
   paintEvidenceInbox();
 }
 
-function paintEvidenceDropBoard(data) {
-  const body = $("evidence-calendar-body");
-  if (!body) return;
-  const period = state.evidencePeriod;
-  const studentId = selectedStudentId();
-  const label = $("evidence-range-label");
-  const count = $("evidence-range-count");
-  if (label) label.textContent = rangeLabel(period, data.start_date, data.end_date);
-  if (count) {
-    count.textContent = data.count === 1 ? "1 assignment" : `${data.count} assignments`;
-  }
-  const tileOpts = { showStudent: isAllStudentsView() && period !== "day", showAttendance: false };
-  if (!studentId) {
-    body.innerHTML = `<p class="empty">Add a student in <a href="#/settings/students">Settings</a> to file these onto lessons.</p>`;
-    return;
-  }
-  if (studentId === ALL_STUDENTS) {
-    body.innerHTML =
-      period === "day"
-        ? dispatchBoard(data, { showAttendance: false })
-        : calendarGrid(data, tileOpts);
-    return;
-  }
-  body.innerHTML =
-    period === "day" ? calendarList(data, { showAttendance: false }) : calendarGrid(data, tileOpts);
-}
-
-let evidenceBoardRequest = 0;
-
-async function loadEvidenceBoard() {
-  const body = $("evidence-calendar-body");
-  const studentId = selectedStudentId();
-  if (!body) return;
-  if (!studentId) {
-    paintEvidenceDropBoard({ start_date: evidenceAnchorDate(), end_date: evidenceAnchorDate(), count: 0, assignments: [] });
-    return;
-  }
-  const period = state.evidencePeriod;
-  const token = (evidenceBoardRequest += 1);
-  const query = new URLSearchParams({ period, start_date: evidenceAnchorDate() });
-  try {
-    const assignmentPath =
-      studentId === ALL_STUDENTS
-        ? `/calendar?${query}`
-        : `/students/${studentId}/assignments?${query}`;
-    const data = await api(assignmentPath);
-    if (token !== evidenceBoardRequest || !$("evidence-calendar-body")) return;
-    state.evidenceCalendar = data;
-    paintEvidenceDropBoard(data);
-  } catch (error) {
-    if (token !== evidenceBoardRequest || !$("evidence-calendar-body")) return;
-    body.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
-    flash(error.message, true);
-  }
-}
-
-async function loadEvidencePage() {
-  await Promise.all([loadEvidenceStaging(), loadEvidenceBoard()]);
-}
-
-function renderEvidence() {
-  const studentId = selectedStudentId();
-  const period = state.evidencePeriod;
-  const allStudents = isAllStudentsView();
-  const studentSelect = state.students.length
-    ? `<label class="inline-field">Student
-        <select data-control="student">
-          <option value="${ALL_STUDENTS}"${allStudents ? " selected" : ""}>All Students</option>
-          ${state.students
-            .map(
-              (student) =>
-                `<option value="${student.id}"${student.id === studentId ? " selected" : ""}>${escapeHtml(student.name)}</option>`
-            )
-            .join("")}
-        </select>
-      </label>`
-    : "";
-  return `
-    <section class="evidence-page">
-      <header class="evidence-page-toolbar">
-        ${studentSelect}
-        <div class="segmented" role="group" aria-label="Evidence calendar period">
-          ${["day", "week"]
-            .map(
-              (value) => `
-            <button type="button" data-action="evidence-period" data-period="${value}"
-                    class="${value === period ? "active" : ""}" aria-pressed="${value === period}">
-              ${humanize(value)}
-            </button>`
-            )
-            .join("")}
-        </div>
-        <div class="calendar-nav">
-          <button type="button" class="ghost" data-action="evidence-prev" aria-label="Previous ${period}">&lsaquo; Previous</button>
-          <button type="button" class="ghost" data-action="evidence-today">Today</button>
-          <button type="button" class="ghost" data-action="evidence-next" aria-label="Next ${period}">Next &rsaquo;</button>
-        </div>
-      </header>
-      <div class="evidence-page-stage">
-        <aside class="evidence-inbox" aria-labelledby="evidence-inbox-title">
-          <header class="evidence-inbox-head">
-            <h2 id="evidence-inbox-title">Unsorted Evidence</h2>
-          </header>
-          <div id="evidence-inbox-body" class="evidence-inbox-body">
-            <p class="empty">Loading…</p>
-          </div>
-        </aside>
-        <section class="card evidence-drop-board">
-          <div class="calendar-range">
-            <h2 id="evidence-range-label">Loading…</h2>
-            <p id="evidence-range-count" class="meta"></p>
-          </div>
-          <div id="evidence-calendar-body" class="calendar-body" aria-live="polite">
-            <p class="empty">Loading assignments…</p>
-          </div>
-        </section>
-      </div>
-    </section>`;
-}
-
 function assignmentRowsForBoard() {
-  if (routeName() === "evidence") {
-    return state.evidenceCalendar ? state.evidenceCalendar.assignments : [];
-  }
   return state.calendar ? state.calendar.assignments : [];
 }
 
 function removeStagingThumb(evidenceId) {
   state.evidenceStaging = (state.evidenceStaging || []).filter((row) => row.id !== evidenceId);
-  const thumb = document.querySelector(`.evidence-inbox-thumb[data-evidence-id="${evidenceId}"]`);
-  const group = thumb?.closest(".evidence-inbox-day");
-  thumb?.remove();
-  if (group && !group.querySelector(".evidence-inbox-thumb")) group.remove();
-  const body = $("evidence-inbox-body");
-  if (body && !body.querySelector(".evidence-inbox-thumb")) {
-    body.innerHTML = evidenceInboxBodyHtml([]);
-  }
-  syncEvidenceNavBadge();
+  paintEvidenceInbox();
 }
 
 function markAssignmentHasEvidence(assignmentId, record) {
@@ -6013,6 +6105,135 @@ function importCurriculumPdf(event) {
     });
 }
 
+function stopPaperImportPolling() {
+  if (paperImportPollTimer) {
+    window.clearTimeout(paperImportPollTimer);
+    paperImportPollTimer = 0;
+  }
+}
+
+function finishPaperImportUi() {
+  stopPaperImportPolling();
+  paperImportBusy = false;
+  paperImportPhase = "";
+  paperImportPlanId = 0;
+}
+
+function pollPaperImportPlan(planId) {
+  stopPaperImportPolling();
+  paperImportPollTimer = window.setTimeout(async () => {
+    paperImportPollTimer = 0;
+    if (paperImportPlanId !== planId) return;
+    try {
+      const plan = await api(`/curriculum/plans/${planId}`);
+      if (plan.status === "ready") {
+        finishPaperImportUi();
+        flash("");
+        try {
+          state.curriculumPlans = await api("/curriculum/plans");
+        } catch {
+          /* catalog refresh is best-effort */
+        }
+        if (catalogKind() === "plans") render();
+        showToast("success", "Paper import is ready", "Review the lessons before applying them.");
+        await openLessonBuilderEdit(planId);
+        return;
+      }
+      if (plan.status === "failed") {
+        finishPaperImportUi();
+        flash("Handwriting extraction failed. You can edit the plan by hand or try another photo.", true);
+        try {
+          state.curriculumPlans = await api("/curriculum/plans");
+        } catch {
+          /* catalog refresh is best-effort */
+        }
+        if (catalogKind() === "plans") render();
+        showToast("error", "Handwriting extraction failed");
+        return;
+      }
+    } catch {
+      // Keep polling; the plan may still be processing.
+    }
+    if (paperImportPlanId === planId) pollPaperImportPlan(planId);
+  }, PAPER_IMPORT_POLL_MS);
+}
+
+async function downloadPaperTemplate() {
+  if (paperTemplateBusy) return;
+  paperTemplateBusy = true;
+  if (catalogKind() === "plans") render();
+  const token = getAuthToken();
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  try {
+    const res = await fetch("/api/curriculum/paper-template", { headers });
+    if (!res.ok) {
+      if (res.status === 401) handleUnauthorized();
+      let message = `Request failed (${res.status})`;
+      try {
+        const body = await res.json();
+        if (typeof body.detail === "string") message = body.detail;
+      } catch {
+        /* not JSON */
+      }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "curiculy_template.pdf";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    flash(error.message || "Could not download the paper template.", true);
+  } finally {
+    paperTemplateBusy = false;
+    if (catalogKind() === "plans") render();
+  }
+}
+
+function importPaperSheet(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  input.value = "";
+  if (!file) return;
+
+  const payload = new FormData();
+  payload.append("file", file);
+  paperImportBusy = true;
+  paperImportPhase = "scanning";
+  flash("Scanning page geometry...");
+  if (catalogKind() === "plans") render();
+  api("/curriculum/import-paper", { method: "POST", body: payload, skipOutbox: true })
+    .then(async (result) => {
+      if (isOfflineQueued(result)) {
+        finishPaperImportUi();
+        flash("");
+        return;
+      }
+      const planId = Number(result && result.id);
+      paperImportPhase = "transcribing";
+      paperImportPlanId = planId;
+      flash("Transcribing handwriting with Ollama...");
+      try {
+        state.curriculumPlans = await api("/curriculum/plans");
+      } catch {
+        /* the photo is already accepted */
+      }
+      if (catalogKind() === "plans") render();
+      pollPaperImportPlan(planId);
+    })
+    .catch((error) => {
+      finishPaperImportUi();
+      flash(error.message || "Could not scan the page. Check that all four corners are visible.", true);
+      if (catalogKind() === "plans") render();
+    });
+}
+
 function queueEvidenceUpload({ assignmentId, previous, payload, query }) {
   beginBackgroundJob("upload");
 
@@ -7054,7 +7275,6 @@ async function sendHomeworkHelp(content) {
 const VIEWS = {
   dashboard: renderDashboard,
   assignments: renderAssignments,
-  evidence: renderEvidence,
   students: renderStudents,
   curricula: renderCurricula,
   portfolios: renderPortfolios,
@@ -7066,8 +7286,7 @@ const VIEWS = {
 // entry hangs its loader here and patches its own container afterwards.
 const ACTIVATORS = {
   dashboard: loadDashboardStats,
-  assignments: loadCalendar,
-  evidence: loadEvidencePage,
+  assignments: loadAssignmentsPage,
   students: loadStudentDashboard,
   portfolios: loadPortfolioReport,
 };
@@ -7218,22 +7437,8 @@ async function handleClick(event) {
       state.currentAnchorDate = todayISO();
       loadCalendar();
       break;
-    case "evidence-period":
-      state.evidencePeriod = control.dataset.period;
-      render();
-      break;
-    case "evidence-prev":
-    case "evidence-next":
-      state.evidenceAnchorDate = shiftAnchor(
-        evidenceAnchorDate(),
-        state.evidencePeriod,
-        control.dataset.action === "evidence-next" ? 1 : -1
-      );
-      loadEvidenceBoard();
-      break;
-    case "evidence-today":
-      state.evidenceAnchorDate = todayISO();
-      loadEvidenceBoard();
+    case "toggle-evidence-inbox":
+      toggleEvidenceInbox();
       break;
     case "student-calendar":
       showCalendarFor(Number(control.dataset.studentId));
@@ -7261,6 +7466,9 @@ async function handleClick(event) {
       break;
     case "reset-exception-colors":
       await resetExceptionColors();
+      break;
+    case "set-household-icon":
+      await setHouseholdIcon(control.dataset.icon);
       break;
     case "edit-student":
       studentEditor.id = Number(control.dataset.studentId);
@@ -7325,6 +7533,12 @@ async function handleClick(event) {
     case "import-curriculum-pdf":
       if (catalogKind() !== "plans") break;
       $("curriculum-pdf-input")?.click();
+      break;
+    case "download-paper-template":
+      await downloadPaperTemplate();
+      break;
+    case "import-paper":
+      $("paper-import-input")?.click();
       break;
     case "settings-panel":
       window.location.hash = `#/settings/${control.dataset.panel}`;
@@ -7653,6 +7867,14 @@ async function handleSubmit(event) {
         });
       }
       studentEditor.id = null;
+    } else if (kind === "household") {
+      result = await api("/household", {
+        method: "PATCH",
+        body: JSON.stringify({ name: String(data.name || "").trim() }),
+      });
+      if (!isOfflineQueued(result) && result?.name) {
+        paintHouseholdChrome(result);
+      }
     } else if (kind === "curriculum") {
       const isbn = emptyToNull(data.isbn);
       const sku = emptyToNull(data.sku) || isbn;
@@ -7711,10 +7933,18 @@ async function handleSubmit(event) {
 
 /* ---- First-time setup wizard ---- */
 
-const onboarding = { step: 1, yearPosted: false };
+const DEFAULT_HOUSEHOLD_NAME = "Default household";
+const onboarding = { step: 1, yearPosted: false, householdOnly: false };
+const WIZARD_YEAR_STEP = 3;
+const WIZARD_STUDENT_STEP = 4;
 
 function needsOnboarding() {
   return state.students.length === 0 && state.years.length === 0;
+}
+
+function householdNeedsName(household = state.household) {
+  const name = String(household?.name || "").trim();
+  return !name || name === DEFAULT_HOUSEHOLD_NAME;
 }
 
 function isOnboardingOpen() {
@@ -7749,6 +7979,15 @@ function prefillWizardYear() {
   if (!form.elements.end_date.value) form.elements.end_date.value = defaults.end_date;
 }
 
+function prefillWizardHousehold() {
+  const form = $("wizard-household-form");
+  if (!form || form.elements.name.value) return;
+  const current = String(state.household?.name || "").trim();
+  if (current && current !== DEFAULT_HOUSEHOLD_NAME) {
+    form.elements.name.value = current;
+  }
+}
+
 function showWizardStep(step) {
   const wizard = $("onboarding-wizard");
   if (!wizard) return;
@@ -7764,10 +8003,25 @@ function showWizardStep(step) {
   const card = wizard.querySelector(".wizard-card");
   if (title && card) card.setAttribute("aria-labelledby", title.id);
   wizardError("");
+  syncWizardHouseholdMode();
   const focusTarget = wizard.querySelector(
     ".wizard-step.is-active input, .wizard-step.is-active button"
   );
   focusTarget?.focus();
+}
+
+function syncWizardHouseholdMode() {
+  const wizard = $("onboarding-wizard");
+  const form = $("wizard-household-form");
+  if (!wizard || !form) return;
+  const only = onboarding.householdOnly;
+  wizard.classList.toggle("household-only", only);
+  const meta = form.querySelector(".wizard-head .meta");
+  const submit = form.querySelector('button[type="submit"]');
+  const back = form.querySelector('[data-action="wizard-back"]');
+  if (meta) meta.textContent = only ? "Getting started" : "Step 2 of 4";
+  if (submit) submit.textContent = only ? "Save" : "Next";
+  if (back) back.hidden = only;
 }
 
 function setOnboardingLock(locked) {
@@ -7782,11 +8036,24 @@ function setOnboardingLock(locked) {
 function openOnboardingWizard() {
   const wizard = $("onboarding-wizard");
   if (!wizard) return;
+  onboarding.householdOnly = false;
   wizard.classList.remove("is-fading");
   wizard.hidden = false;
   setOnboardingLock(true);
+  prefillWizardHousehold();
   prefillWizardYear();
   showWizardStep(1);
+}
+
+function openHouseholdNameWizard() {
+  const wizard = $("onboarding-wizard");
+  if (!wizard) return;
+  onboarding.householdOnly = true;
+  wizard.classList.remove("is-fading");
+  wizard.hidden = false;
+  setOnboardingLock(true);
+  prefillWizardHousehold();
+  showWizardStep(2);
 }
 
 function fadeOutOnboardingWizard() {
@@ -7801,7 +8068,7 @@ function fadeOutOnboardingWizard() {
       if (settled) return;
       settled = true;
       wizard.hidden = true;
-      wizard.classList.remove("is-fading");
+      wizard.classList.remove("is-fading", "household-only");
       setOnboardingLock(false);
       resolve();
     };
@@ -7816,11 +8083,40 @@ function fadeOutOnboardingWizard() {
   });
 }
 
+async function submitWizardHousehold(form) {
+  wizardError("");
+  const name = String(formValues(form).name || "").trim();
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const result = await api("/household", {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    if (!isOfflineQueued(result) && result?.name) {
+      paintHouseholdChrome(result);
+    } else {
+      paintHouseholdChrome({ ...(state.household || {}), name });
+    }
+    if (onboarding.householdOnly) {
+      onboarding.householdOnly = false;
+      await fadeOutOnboardingWizard();
+      render();
+      return;
+    }
+    showWizardStep(WIZARD_YEAR_STEP);
+  } catch (error) {
+    wizardError(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function submitWizardYear(form) {
   wizardError("");
   const data = formValues(form);
   if (onboarding.yearPosted) {
-    showWizardStep(3);
+    showWizardStep(WIZARD_STUDENT_STEP);
     return;
   }
   const button = form.querySelector('button[type="submit"]');
@@ -7835,7 +8131,7 @@ async function submitWizardYear(form) {
       }),
     });
     onboarding.yearPosted = true;
-    showWizardStep(3);
+    showWizardStep(WIZARD_STUDENT_STEP);
   } catch (error) {
     wizardError(error.message);
   } finally {
@@ -7897,7 +8193,9 @@ function handleWizardSubmit(event) {
   const form = event.target.closest("form[data-form]");
   if (!form) return;
   event.preventDefault();
-  if (form.dataset.form === "wizard-year") {
+  if (form.dataset.form === "wizard-household") {
+    submitWizardHousehold(form);
+  } else if (form.dataset.form === "wizard-year") {
     submitWizardYear(form);
   } else if (form.dataset.form === "wizard-student") {
     finishOnboarding(form);
@@ -7990,7 +8288,6 @@ function syncSessionChrome() {
   );
   const kidLink = document.querySelector(".nav-kid");
   if (kidLink) kidLink.hidden = !currentUserIsChild();
-  syncEvidenceNavBadge();
 }
 
 function canUseApp() {
@@ -8100,10 +8397,7 @@ function resetWorkspaceState() {
   state.exceptions = [];
   state.attendance = [];
   state.calendar = null;
-  state.evidencePeriod = "week";
-  state.evidenceAnchorDate = null;
   state.evidenceStaging = [];
-  state.evidenceCalendar = null;
   state.dashboardAssignments = [];
   state.dashboardCourses = [];
   dashboardChartStats = null;
@@ -8127,6 +8421,7 @@ function resetWorkspaceState() {
   state.switchUsers = [];
   onboarding.step = 1;
   onboarding.yearPosted = false;
+  onboarding.householdOnly = false;
 }
 
 async function loadWorkspace() {
@@ -8142,6 +8437,8 @@ async function loadWorkspace() {
     await Promise.all([loadStudents(), loadYears()]);
     if (needsOnboarding()) {
       openOnboardingWizard();
+    } else if (householdNeedsName()) {
+      openHouseholdNameWizard();
     }
     await Promise.all([
       loadCurricula(),
@@ -8647,7 +8944,11 @@ function logout() {
   }
   $("view").innerHTML = "";
   $("household-label").textContent = "Household";
-  $("user-avatar").textContent = "C";
+  const avatar = $("user-avatar");
+  if (avatar) {
+    avatar.textContent = "C";
+    avatar.classList.remove("is-emoji");
+  }
   openLoginModal();
 }
 
@@ -8669,6 +8970,7 @@ async function boot() {
   $("evidence-upload-input").addEventListener("change", uploadEvidence);
   $("curriculum-csv-input").addEventListener("change", importCurriculumCsv);
   $("curriculum-pdf-input")?.addEventListener("change", importCurriculumPdf);
+  $("paper-import-input")?.addEventListener("change", importPaperSheet);
   $("detail-modal").addEventListener("submit", (event) => {
     if (!event.target.closest('form[data-form="assignment-edit"]')) return;
     event.preventDefault();

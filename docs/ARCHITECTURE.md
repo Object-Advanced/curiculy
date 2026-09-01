@@ -110,11 +110,11 @@ These are requirements, not optional style.
 
 ### Households — REFACTOR (small)
 
-**CURRENT:** `Household` row auto-created as “Default household.” `get_default_household` is first-by-id. `jurisdiction_id` unused.
+**CURRENT:** `Household` row auto-created as “Default household.” The first-run wizard PATCHes `/household` so the family names it. Families that already finished setup still get a one-step name prompt while the name is the default. Settings can rename it and pick a sidebar icon (letter skips a leading “The”, or a school emoji). `get_default_household` is first-by-id. `jurisdiction_id` unused.
 
 **PROBLEM:** Multi-household-per-file is implied by the schema but not a product. Jurisdiction is compliance leftover.
 
-**TARGET:** **One household per tenant file** is the product rule. Make that explicit in code comments and stop threading `jurisdiction_id` until a state pack exists. Optional later: rename household from the settings menu (display name already used in the chrome).
+**TARGET:** **One household per tenant file** is the product rule. Make that explicit in code comments and stop threading `jurisdiction_id` until a state pack exists. Wizard rename, Settings rename, and sidebar icon (letter or school emoji) are in place.
 
 **DEPENDENCIES:** Almost every tenant write uses the default household.
 

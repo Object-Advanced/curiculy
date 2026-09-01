@@ -69,6 +69,7 @@ class Household(TimestampMixin, TenantBase):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(32), nullable=True)
     jurisdiction_id: Mapped[int | None] = mapped_column(
         ForeignKey("jurisdictions.id"),
         nullable=True,

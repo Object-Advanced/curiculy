@@ -18,16 +18,16 @@
             }
         })();
     </script>
-    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20260829-register-copy">
-    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20260829-register-copy">
-    <link rel="stylesheet" href="/static/css/app.css?v=20260829-register-copy">
+    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20260831-paper-import">
+    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20260831-paper-import">
+    <link rel="stylesheet" href="/static/css/app.css?v=20260831-paper-import">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div id="auth-page">
         <section class="auth-card" aria-labelledby="auth-title-signin">
             <header class="auth-brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260829-register-copy" alt="" width="72" height="72" aria-hidden="true">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260831-paper-import" alt="" width="72" height="72" aria-hidden="true">
                 <p class="auth-product">Curiculy</p>
             </header>
             <p id="login-error" class="banner error" hidden></p>
@@ -113,7 +113,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260829-register-copy" alt="" width="40" height="40">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260831-paper-import" alt="" width="40" height="40">
                 <div>
                     <strong>Curiculy</strong>
                     <p>Homeschool planner</p>
@@ -124,21 +124,9 @@
                 <a href="#/my-work" data-route="my-work" class="nav-kid" hidden>My work</a>
                 <a href="#/dashboard" data-route="dashboard" class="nav-parent">Home</a>
                 <a href="#/assignments" data-route="assignments" class="nav-parent">Calendar</a>
-                <a href="#/evidence" data-route="evidence" class="nav-parent">
-                    Evidence
-                    <span id="evidence-nav-count" class="nav-count" hidden>0</span>
-                </a>
                 <a href="#/students" data-route="students" class="nav-parent">Kids</a>
                 <a href="#/curricula" data-route="curricula" class="nav-parent">Curriculum catalog</a>
                 <a href="#/portfolios" data-route="portfolios" class="nav-parent">Portfolios</a>
-                <button type="button" data-action="open-school-year-settings"
-                        class="nav-parent"
-                        aria-haspopup="dialog" aria-controls="school-year-modal">
-                    <svg class="nav-gear-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.1 7.1 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.59.22-1.14.53-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.81 8.48a.5.5 0 0 0 .12.64L4.96 10.7c-.04.31-.06.63-.06.94s.02.63.06.94L2.93 14.16a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.43.34.68.22l2.39-.96c.49.41 1.04.72 1.63.94l.36 2.54c.05.24.26.42.49.42h3.8c.23 0 .44-.18.49-.42l.36-2.54c.59-.22 1.14-.53 1.63-.94l2.39.96c.25.12.54.02.68-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>
-                    </svg>
-                    School year
-                </button>
             </nav>
             <div class="sidebar-user">
                 <button type="button" id="user-profile" class="user-profile" data-action="toggle-user-menu"
@@ -153,6 +141,11 @@
                     <a href="#/settings" role="menuitem" class="nav-parent">Settings</a>
                     <a href="#/settings/students" role="menuitem" class="nav-parent">Manage Students</a>
                     <a href="#/settings/exceptions" role="menuitem" class="nav-parent">Calendar Exceptions</a>
+                    <button type="button" role="menuitem" class="nav-parent"
+                            data-action="open-school-year-settings"
+                            aria-haspopup="dialog" aria-controls="school-year-modal">
+                        School year
+                    </button>
                     <a href="#/settings/school-years" role="menuitem" class="nav-parent">School Years</a>
                     <a href="#/settings/enrollments" role="menuitem" class="nav-parent">Enrollments</a>
                     <a href="#/settings/admin" role="menuitem" id="admin-menu-item" hidden>Admin</a>
@@ -328,6 +321,7 @@
                 <span class="wizard-dot is-active" data-wizard-dot="1"></span>
                 <span class="wizard-dot" data-wizard-dot="2"></span>
                 <span class="wizard-dot" data-wizard-dot="3"></span>
+                <span class="wizard-dot" data-wizard-dot="4"></span>
             </div>
             <p id="wizard-error" class="banner error" hidden></p>
 
@@ -336,7 +330,7 @@
                     <p class="meta">Getting started</p>
                     <h2 id="wizard-title-1">Welcome to Curiculy</h2>
                 </header>
-                <p class="muted">A short setup so you can start planning the school year.</p>
+                <p class="muted">Name your household, set the school year, then add a student so you can start planning.</p>
                 <ol class="wizard-points">
                     <li>
                         <strong>Build your Catalog</strong>
@@ -356,10 +350,23 @@
                 </footer>
             </div>
 
-            <form class="wizard-step" data-wizard-step="2" data-form="wizard-year" id="wizard-year-form">
+            <form class="wizard-step" data-wizard-step="2" data-form="wizard-household" id="wizard-household-form">
                 <header class="wizard-head">
-                    <p class="meta">Step 2 of 3</p>
-                    <h2 id="wizard-title-2">Set your School Year</h2>
+                    <p class="meta">Step 2 of 4</p>
+                    <h2 id="wizard-title-2">Name your Household</h2>
+                </header>
+                <p class="muted">This is how Curiculy labels your family in the sidebar.</p>
+                <label>Household name<input name="name" required maxlength="255" placeholder="The Rivera family" autocomplete="organization"></label>
+                <footer class="modal-actions">
+                    <button type="button" class="ghost" data-action="wizard-back">Back</button>
+                    <button type="submit">Next</button>
+                </footer>
+            </form>
+
+            <form class="wizard-step" data-wizard-step="3" data-form="wizard-year" id="wizard-year-form">
+                <header class="wizard-head">
+                    <p class="meta">Step 3 of 4</p>
+                    <h2 id="wizard-title-3">Set your School Year</h2>
                 </header>
                 <p class="muted">Lessons and the calendar sit inside these dates.</p>
                 <label>Name<input name="name" required maxlength="128" placeholder="2026-2027" autocomplete="off"></label>
@@ -373,10 +380,10 @@
                 </footer>
             </form>
 
-            <form class="wizard-step" data-wizard-step="3" data-form="wizard-student" id="wizard-student-form">
+            <form class="wizard-step" data-wizard-step="4" data-form="wizard-student" id="wizard-student-form">
                 <header class="wizard-head">
-                    <p class="meta">Step 3 of 3</p>
-                    <h2 id="wizard-title-3">Add your Students</h2>
+                    <p class="meta">Step 4 of 4</p>
+                    <h2 id="wizard-title-4">Add your Students</h2>
                 </header>
                 <p class="muted">Start with one child. You can add the rest later in Settings.</p>
                 <label>Name<input name="name" required maxlength="255" placeholder="First and last name" autocomplete="name"></label>
@@ -683,7 +690,8 @@
     <input type="file" id="evidence-upload-input" accept="image/*,application/pdf" hidden>
     <input type="file" id="curriculum-csv-input" accept=".csv,text/csv" hidden>
     <input type="file" id="curriculum-pdf-input" accept="application/pdf" hidden>
+    <input type="file" id="paper-import-input" accept="image/*" capture="environment" style="display: none;">
     <div id="toast-container" aria-live="polite" aria-relevant="additions text"></div>
-    <script src="/static/js/app.js?v=20260829-register-copy"></script>
+    <script src="/static/js/app.js?v=20260831-paper-import"></script>
 </body>
 </html>

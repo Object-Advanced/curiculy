@@ -79,9 +79,15 @@ def client(db: Session, engine: Engine) -> Iterator[TestClient]:
         return factory()
 
     try:
-        with patch(
-            "app.services.ai_curriculum_worker.open_tenant_session",
-            side_effect=_background_tenant_session,
+        with (
+            patch(
+                "app.services.ai_curriculum_worker.open_tenant_session",
+                side_effect=_background_tenant_session,
+            ),
+            patch(
+                "app.services.paper_vision_worker.open_tenant_session",
+                side_effect=_background_tenant_session,
+            ),
         ):
             yield TestClient(application)
     finally:

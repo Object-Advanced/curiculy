@@ -153,6 +153,8 @@ class TestUpgradeExistingFiles:
                     text("SELECT name FROM households WHERE id = 1")
                 ).one()
                 assert household[0] == "KeepMe"
+                household_columns = sqlite_table_columns(conn, "households")
+                assert "icon" in household_columns
             # create_all does not ALTER columns on tables that already exist.
             # This file's households row predates jurisdiction_id; patches do
             # not add that leftover. Fresh files are checked against models.

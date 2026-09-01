@@ -83,7 +83,7 @@ Mounted under `/api` from `app/main.py`.
 | `health.py` | `/health` | Yes | KEEP |
 | `auth.py` | `/auth` | Yes | KEEP; capture token live; COMPLETE token-on-register |
 | `admin.py` | `/admin` | Yes (admins) | KEEP |
-| `household.py` | `/household` | Yes | KEEP |
+| `household.py` | `/household` | Yes | KEEP; PATCH name from wizard |
 | `students.py` | `/students` | Yes | KEEP |
 | `school_years.py` | `/school-years` | Yes | KEEP; canonical named year |
 | `enrollments.py` | `/enrollments` | Yes (settings) | KEEP; auto-create on schedule |
@@ -111,7 +111,7 @@ Mounted under `/api` from `app/main.py`.
 
 | Path | Role | Disposition |
 |---|---|---|
-| `households.py` | Default household | KEEP |
+| `households.py` | Default household + rename | KEEP |
 | `enrollments.py` | Ensure enrollment on schedule | KEEP |
 | `child_accounts.py` | PIN, switch, tokens | KEEP |
 | `capture_tokens.py` | Issue / revoke capture JWTs | KEEP |
@@ -164,9 +164,9 @@ There is no component tree. Features are functions + `data-action` + hash routes
 | `#/students` | `renderStudents` | assignments, courses, spark, PATCH status |
 | `#/curricula` | `renderCurricula`, lesson builder, apply plan | `/curricula`, `/curriculum/*`, lookup-isbn |
 | `#/portfolios` | `renderPortfolios` | preview, email |
-| `#/settings/*` | students, exceptions, years, enrollments, admin | matching REST |
+| `#/settings/*` | students, exceptions, years, enrollments, admin, household name | matching REST + PATCH `/household` |
 | `#/my-work` | `renderMyWork`, homework help | assignments GET, `/homework-help/*` |
-| Modals | pacing, wizard, school-year grid, recalibrate | pacing, school-years, settings, recalibrate |
+| Modals | pacing, wizard (household/year/student), school-year grid, recalibrate | household, pacing, school-years, settings, recalibrate |
 
 `api()` is the only HTTP helper besides weekly-manifest `fetch`.
 

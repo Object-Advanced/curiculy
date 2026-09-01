@@ -131,6 +131,11 @@ def test_capture_credential_cannot_call_parent_apis(
     denied = [
         auth_client.get("/api/auth/me", headers=headers),
         auth_client.get("/api/household", headers=headers),
+        auth_client.patch(
+            "/api/household",
+            headers=headers,
+            json={"name": "Nope"},
+        ),
         auth_client.get("/api/students", headers=headers),
         auth_client.get("/api/evidence/staging", headers=headers),
         auth_client.post(

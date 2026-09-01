@@ -179,6 +179,14 @@ def test_child_cannot_access_parent_routes_or_siblings(auth_client: TestClient) 
     child = _child_token(auth_client, ada["id"])
     headers = bearer(child)
     assert auth_client.get("/api/household", headers=headers).status_code == 403
+    assert (
+        auth_client.patch(
+            "/api/household",
+            headers=headers,
+            json={"name": "Nope"},
+        ).status_code
+        == 403
+    )
     assert auth_client.get("/api/students", headers=headers).status_code == 403
     assert auth_client.get("/api/dashboard/stats", headers=headers).status_code == 403
     own = auth_client.get(f"/api/students/{ada['id']}/assignments", headers=headers)

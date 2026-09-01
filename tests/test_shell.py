@@ -104,6 +104,18 @@ def test_shell_urls_are_existing_files() -> None:
     assert missing == []
 
 
+def test_school_year_editor_lives_in_settings_menu() -> None:
+    html = INDEX_HTML.read_text(encoding="utf-8")
+    action = 'data-action="open-school-year-settings"'
+    assert action in html
+    nav_start = html.index('<nav class="nav"')
+    nav_end = html.index("</nav>", nav_start)
+    menu_start = html.index('id="user-menu"')
+    menu_end = html.index("</div>", menu_start)
+    assert action not in html[nav_start:nav_end]
+    assert action in html[menu_start:menu_end]
+
+
 def test_application_shell_loads(client: TestClient) -> None:
     version = _shell_version()
     response = client.get("/")

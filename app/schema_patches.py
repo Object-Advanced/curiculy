@@ -142,6 +142,11 @@ TENANT_COLUMN_PATCHES: tuple[ColumnPatch, ...] = (
         column="exception_colors",
         ddl="ALTER TABLE household_settings ADD COLUMN exception_colors TEXT",
     ),
+    ColumnPatch(
+        table="households",
+        column="icon",
+        ddl="ALTER TABLE households ADD COLUMN icon VARCHAR(32)",
+    ),
 )
 
 # admin.db: columns that create_all will not add to an older users table.
