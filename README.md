@@ -67,6 +67,14 @@ Restore a snapshot:
 Practice it occasionally on a scratch copy: copy a snapshot into an empty directory and run `python3 scripts/check_foreign_keys.py --data-dir <that directory>`; every file should report OK.
 
 ## 6. Optional operator scripts
+A parent who forgot their password (self-serve reset comes later):
+
+```
+docker compose exec api python scripts/reset_password.py parent@example.com
+```
+
+It prints a temporary password to give them. Kids sign in with PINs, which a parent changes in Settings → Students.
+
 Historical enrollments can be reconstructed when an assignment already proves student + curriculum + school year (stored `curriculum_id`, or a live curriculum resource/unit). Title-only week/day plan lessons are not guessed:
 
 ```
