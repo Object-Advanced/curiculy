@@ -6582,7 +6582,7 @@ function renderPortfolios() {
       ${custom ? portfolioCustomPanel() : ""}
       ${
         emptyReadingList
-          ? `<p class="text-gray-500 italic">Reading list is empty. <br><span class="text-xs">Note: Lessons scheduled prior to the auto-enrollment update will not automatically populate here. You can manually add books via Settings → Enrollments.</span></p>`
+          ? `<p class="text-gray-500 italic">Reading list is empty. <br><span class="text-xs">Note: Book auto-schedule from before auto-enrollment can be reconstructed with the operator backfill script (see README). Week/day plan lessons are not stored with a library link; add those books in Settings → Enrollments.</span></p>`
           : ""
       }
       <div class="a4-preview">
@@ -6980,7 +6980,7 @@ async function openSchoolYearSettings() {
   try {
     const [year, exceptions] = await Promise.all([
       api("/settings/school-year"),
-      api("/calendar/exceptions"),
+      api("/exceptions/dates"),
     ]);
     state.schoolYear = year;
     schoolYearEditor.start_date = year.start_date;
@@ -7024,7 +7024,7 @@ async function toggleSchoolYearDay(iso) {
   schoolYearEditor.pending.add(iso);
   schoolYearError("");
   try {
-    const result = await api("/calendar/exceptions/toggle", {
+    const result = await api("/exceptions/toggle", {
       method: "POST",
       body: JSON.stringify({ date: iso }),
     });
@@ -7055,7 +7055,7 @@ async function applyHolidays() {
   let dates = [...schoolYearEditor.exceptionDates];
   try {
     for (let year = startYear; year <= endYear; year += 1) {
-      const result = await api("/calendar/exceptions/import-holidays", {
+      const result = await api("/exceptions/import-holidays", {
         method: "POST",
         body: JSON.stringify({
           country,
@@ -8871,6 +8871,16 @@ async function openNotification(id) {
   closeNotifications();
   if (item?.assignment_id) {
     await openAssignment(item.assignment_id);
+  } else if (
+    item?.type === "curriculum_plan_ready" ||
+    item?.type === "curriculum_plan_failed"
+  ) {
+    state.catalogKind = "plans";
+    if (routeName() === "curricula") {
+      render();
+    } else {
+      window.location.hash = "#/curricula";
+    }
   }
   loadNotifications();
 }

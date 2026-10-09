@@ -30,6 +30,7 @@ class TestSchoolYearSettings:
         assert body["start_date"].endswith("-08-01")
         assert body["end_date"].endswith("-06-30")
         assert body["school_year_id"] is None
+        assert set(body) == {"start_date", "end_date", "weekdays", "school_year_id"}
 
     def test_falls_back_to_the_latest_school_year(
         self, client: TestClient, db: Session
@@ -72,8 +73,16 @@ class TestSchoolYearSettings:
 
         stored = db.query(HouseholdSettings).one()
         assert stored.weekdays == "0,2,4"
-        assert stored.start_date == date(2026, 8, 3)
-        assert stored.end_date == date(2027, 6, 4)
+        assert "start_date" not in HouseholdSettings.__table__.c
+        assert "end_date" not in HouseholdSettings.__table__.c
+        from sqlalchemy import inspect as sa_inspect
+
+        physical = {
+            column["name"]
+            for column in sa_inspect(db.get_bind()).get_columns("household_settings")
+        }
+        assert "start_date" not in physical
+        assert "end_date" not in physical
         year = db.get(SchoolYear, body["school_year_id"])
         assert year is not None
         assert year.start_date == date(2026, 8, 3)
@@ -112,8 +121,6 @@ class TestSchoolYearSettings:
         db.add(
             HouseholdSettings(
                 household_id=household.id,
-                start_date=date(2025, 8, 1),
-                end_date=date(2026, 6, 30),
                 weekdays="0,2,4",
             )
         )
@@ -129,19 +136,17 @@ class TestSchoolYearSettings:
 
         stored = db.query(HouseholdSettings).one()
         db.refresh(stored)
-        assert stored.start_date == date(2026, 8, 10)
-        assert stored.end_date == date(2027, 5, 28)
         assert stored.weekdays == "0,2,4"
+        assert "start_date" not in HouseholdSettings.__table__.c
+        assert "end_date" not in HouseholdSettings.__table__.c
 
-    def test_legacy_settings_row_becomes_a_named_year(
+    def test_weekdays_only_settings_do_not_invent_a_named_year(
         self, client: TestClient, db: Session
     ) -> None:
         household = _household(db)
         db.add(
             HouseholdSettings(
                 household_id=household.id,
-                start_date=date(2026, 8, 3),
-                end_date=date(2027, 6, 4),
                 weekdays="5,6",
             )
         )
@@ -151,16 +156,11 @@ class TestSchoolYearSettings:
         response = client.get("/api/settings/school-year")
         assert response.status_code == 200
         body = response.json()
-        assert body["start_date"] == "2026-08-03"
-        assert body["end_date"] == "2027-06-04"
         assert body["weekdays"] == [5, 6]
-        assert body["school_year_id"] is not None
-
-        year = db.get(SchoolYear, body["school_year_id"])
-        assert year is not None
-        assert year.name == "2026-2027"
-        assert year.start_date == date(2026, 8, 3)
-        assert year.end_date == date(2027, 6, 4)
+        assert body["school_year_id"] is None
+        assert body["start_date"].endswith("-08-01")
+        assert body["end_date"].endswith("-06-30")
+        assert db.query(SchoolYear).count() == 0
 
     def test_put_rejects_a_reversed_window(self, client: TestClient) -> None:
         response = client.put(
@@ -190,7 +190,7 @@ class TestCalendarExceptionDates:
         )
         db.commit()
 
-        response = client.get("/api/calendar/exceptions")
+        response = client.get("/api/exceptions/dates")
         assert response.status_code == 200
         assert response.json()["dates"] == [
             "2026-12-24",
@@ -219,14 +219,14 @@ class TestCalendarExceptionDates:
         )
         db.commit()
 
-        response = client.get("/api/calendar/exceptions")
+        response = client.get("/api/exceptions/dates")
         assert response.json()["dates"] == []
 
 
 class TestToggleException:
     def test_creates_then_removes_a_day(self, client: TestClient, db: Session) -> None:
         created = client.post(
-            "/api/calendar/exceptions/toggle", json={"date": "2026-10-12"}
+            "/api/exceptions/toggle", json={"date": "2026-10-12"}
         )
         assert created.status_code == 200
         assert created.json()["excepted"] is True
@@ -237,7 +237,7 @@ class TestToggleException:
         assert row.student_id is None
 
         removed = client.post(
-            "/api/calendar/exceptions/toggle", json={"date": "2026-10-12"}
+            "/api/exceptions/toggle", json={"date": "2026-10-12"}
         )
         assert removed.status_code == 200
         assert removed.json()["excepted"] is False
@@ -260,7 +260,7 @@ class TestToggleException:
         db.commit()
 
         response = client.post(
-            "/api/calendar/exceptions/toggle", json={"date": "2026-12-25"}
+            "/api/exceptions/toggle", json={"date": "2026-12-25"}
         )
         assert response.status_code == 200
         assert "2026-12-25" not in response.json()["dates"]
@@ -277,7 +277,7 @@ class TestToggleException:
 class TestImportHolidays:
     def test_imports_us_federal_holidays(self, client: TestClient) -> None:
         response = client.post(
-            "/api/calendar/exceptions/import-holidays",
+            "/api/exceptions/import-holidays",
             json={"country": "US", "year": 2026},
         )
         assert response.status_code == 200
@@ -303,7 +303,7 @@ class TestImportHolidays:
         db.commit()
 
         response = client.post(
-            "/api/calendar/exceptions/import-holidays",
+            "/api/exceptions/import-holidays",
             json={"country": "US", "subdiv": None, "year": 2026},
         )
         assert response.status_code == 200
@@ -321,7 +321,7 @@ class TestImportHolidays:
 
     def test_accepts_a_state_subdivision(self, client: TestClient) -> None:
         response = client.post(
-            "/api/calendar/exceptions/import-holidays",
+            "/api/exceptions/import-holidays",
             json={"country": "US", "subdiv": "FL", "year": 2026},
         )
         assert response.status_code == 200
@@ -329,7 +329,7 @@ class TestImportHolidays:
 
     def test_rejects_an_unknown_region(self, client: TestClient) -> None:
         response = client.post(
-            "/api/calendar/exceptions/import-holidays",
+            "/api/exceptions/import-holidays",
             json={"country": "ZZ", "year": 2026},
         )
         assert response.status_code == 400
@@ -371,3 +371,67 @@ class TestExceptionColors:
             json={"holiday": "red"},
         )
         assert response.status_code == 422
+
+
+class TestExceptionRecords:
+    def test_list_returns_full_records_not_a_date_envelope(
+        self, client: TestClient, db: Session
+    ) -> None:
+        household = _household(db)
+        db.add(
+            CalendarException(
+                household_id=household.id,
+                kind=ExceptionKind.VACATION,
+                title="Break",
+                start_date=date(2026, 12, 24),
+                end_date=date(2026, 12, 26),
+            )
+        )
+        db.commit()
+
+        listed = client.get("/api/exceptions")
+        assert listed.status_code == 200
+        body = listed.json()
+        assert isinstance(body, list)
+        assert body[0]["title"] == "Break"
+        assert body[0]["start_date"] == "2026-12-24"
+        assert body[0]["end_date"] == "2026-12-26"
+
+        dates = client.get("/api/exceptions/dates")
+        assert dates.json()["dates"] == [
+            "2026-12-24",
+            "2026-12-25",
+            "2026-12-26",
+        ]
+
+    def test_create_titled_range(self, client: TestClient) -> None:
+        response = client.post(
+            "/api/exceptions",
+            json={
+                "kind": "sick",
+                "title": "Flu",
+                "student_id": None,
+                "start_date": "2026-09-14",
+                "end_date": "2026-09-16",
+                "notes": None,
+            },
+        )
+        assert response.status_code == 201
+        body = response.json()
+        assert body["title"] == "Flu"
+        assert body["kind"] == "sick"
+        assert body["start_date"] == "2026-09-14"
+        assert body["end_date"] == "2026-09-16"
+        assert body["student_id"] is None
+
+        listed = client.get("/api/exceptions")
+        assert any(row["title"] == "Flu" for row in listed.json())
+
+    def test_old_calendar_exceptions_prefix_is_gone(self, client: TestClient) -> None:
+        assert client.get("/api/calendar/exceptions").status_code == 404
+        assert (
+            client.post(
+                "/api/calendar/exceptions/toggle", json={"date": "2026-10-12"}
+            ).status_code
+            == 404
+        )

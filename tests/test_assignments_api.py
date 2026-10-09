@@ -675,7 +675,7 @@ class TestCalendarPayload:
         assert tile["subject_name"] == "Reading"
         assert tile["resource_title"] == "Student Text"
         assert tile["unit_title"] == "Lesson 1: Sequences"
-        assert tile["curriculum_id"] == furnished.curriculum_id
+        assert tile["curriculum_id"] == furnished.resolved_curriculum_id()
         assert tile["grade"]["score_value"] == "18/20"
         assert tile["grade"]["score_type"] == "points"
         assert tile["evidence_count"] == 2

@@ -12,15 +12,15 @@ from __future__ import annotations
 
 import logging
 
-import ollama
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db import open_tenant_session
 from app.enums import CurriculumPlanStatus
 from app.models import CurriculumLesson, CurriculumPlan
 from app.schemas.curriculum_plans import AIParsedCurriculum, AIParsedLesson
 from app.services.curriculum_plan_import import plan_dimensions_from_rows
+from app.services.notifications import notify_curriculum_plan_processed
+from app.services.ollama_chat import chat_with_model_fallback
 from app.services.pdf_parser import extract_text_from_pdf, is_sparse_curriculum_text
 
 logger = logging.getLogger(__name__)
@@ -92,53 +92,21 @@ Replicate the timetable across Week 1, Days 1-5. Day 1 is shown in full; Days 2-
 }
 """.strip()
 
-OLLAMA_FALLBACK_MODEL = "mistral"
-
-
-def _message_content(response: object) -> str:
-    """Read chat content from a dict response or an ollama ChatResponse."""
-    try:
-        return response["message"]["content"]
-    except (TypeError, KeyError, AttributeError):
-        return response.message.content
-
-
-def _is_missing_model(error: BaseException) -> bool:
-    text = str(error).lower()
-    return "not found" in text or "does not exist" in text or "404" in text
-
 
 async def parse_text_with_ollama(raw_text: str) -> AIParsedCurriculum:
     """Ask the local model to turn PDF text into ``AIParsedCurriculum``."""
     if is_sparse_curriculum_text(raw_text):
         return AIParsedCurriculum(lessons=[])
 
-    client = ollama.AsyncClient(host=settings.ollama_host)
-    models = [settings.ollama_model]
-    if settings.ollama_model != OLLAMA_FALLBACK_MODEL:
-        models.append(OLLAMA_FALLBACK_MODEL)
-
-    last_error: BaseException | None = None
-    for model in models:
-        try:
-            response = await client.chat(
-                model=model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": raw_text},
-                ],
-                format=AIParsedCurriculum.model_json_schema(),
-                options={"temperature": 0.0},
-            )
-            return AIParsedCurriculum.model_validate_json(_message_content(response))
-        except Exception as error:
-            last_error = error
-            if not _is_missing_model(error):
-                raise
-            logger.warning("Ollama model %s is unavailable; trying fallback", model)
-
-    assert last_error is not None
-    raise last_error
+    content = await chat_with_model_fallback(
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": raw_text},
+        ],
+        format=AIParsedCurriculum.model_json_schema(),
+        options={"temperature": 0.0},
+    )
+    return AIParsedCurriculum.model_validate_json(content)
 
 
 def _mark_plan_status(
@@ -148,6 +116,8 @@ def _mark_plan_status(
     if plan is None:
         return
     plan.status = status
+    if status is CurriculumPlanStatus.FAILED:
+        notify_curriculum_plan_processed(db_session, title=plan.title, ready=False)
     db_session.commit()
 
 
@@ -200,6 +170,7 @@ def _persist_parsed_plan(
     if not rows:
         plan.status = CurriculumPlanStatus.FAILED
         plan.total_weeks = 1
+        notify_curriculum_plan_processed(db_session, title=plan.title, ready=False)
         db_session.commit()
         return
 
@@ -216,6 +187,7 @@ def _persist_parsed_plan(
     plan.frequency_days = frequency_days
     plan.total_weeks = total_weeks
     plan.status = CurriculumPlanStatus.READY
+    notify_curriculum_plan_processed(db_session, title=plan.title, ready=True)
     db_session.commit()
 
 

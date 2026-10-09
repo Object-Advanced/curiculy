@@ -162,6 +162,30 @@ class TestPacingCommitEnrolls:
         assert db.query(Enrollment).count() == 1
         assert db.query(Assignment).count() == 4
 
+    def test_settings_enrollment_is_reused_on_pacing_commit(
+        self, client: TestClient, db: Session
+    ) -> None:
+        student = seed_student(db)
+        edition = seed_curriculum_edition(db)
+        year = _year(client, "2026-2027", "2026-08-01", "2027-06-30")
+        created = client.post(
+            "/api/enrollments",
+            json={
+                "student_id": student.id,
+                "curriculum_id": edition.curriculum_id,
+                "school_year_id": year["id"],
+            },
+        )
+        assert created.status_code == 201
+        enrollment_id = created.json()["id"]
+
+        _commit(client, student, edition)
+
+        rows = db.query(Enrollment).all()
+        assert len(rows) == 1
+        assert rows[0].id == enrollment_id
+        assert db.query(Assignment).count() == 3
+
     def test_different_student_creates_separate_enrollment(
         self, client: TestClient, db: Session
     ) -> None:
@@ -281,6 +305,12 @@ class TestPlanApplyEnrolls:
         assert row.student_id == student.id
         assert row.curriculum_id == curriculum.id
         assert row.school_year_id == year["id"]
+        stamped = db.query(Assignment).filter_by(student_id=student.id).all()
+        assert stamped
+        assert {item.curriculum_id for item in stamped} == {curriculum.id}
+        assert all(item.student_id == student.id for item in stamped)
+        assert all(item.curriculum_resource_id is None for item in stamped)
+        assert all(item.curriculum_unit_id is None for item in stamped)
 
     def test_second_apply_does_not_duplicate_enrollment(
         self, client: TestClient, db: Session
@@ -466,4 +496,5 @@ class TestPortfolioFindsScheduledCurriculum:
         books = response.json()["students"][0]["books"]
         assert [book["title"] for book in books] == ["Abeka Arithmetic 3"]
         assert books[0]["progress"] == "incomplete"
-        assert books[0]["total_assignments"] == 0
+        assert books[0]["total_assignments"] == 2
+        assert books[0]["completed_assignments"] == 0

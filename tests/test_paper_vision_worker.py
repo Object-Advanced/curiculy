@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.enums import CurriculumPlanStatus
-from app.models import CurriculumLesson, CurriculumPlan
+from app.enums import CurriculumPlanStatus, ParentNotificationType
+from app.models import CurriculumLesson, CurriculumPlan, ParentNotification
 from app.services.paper_parser import MISSING_CORNERS
 from app.services.paper_vision_worker import (
     OLLAMA_VISION_MODEL,
@@ -78,6 +78,34 @@ def _seed_processing_plan(db: Session) -> int:
     return plan_id
 
 
+def _assert_one_plan_notification(
+    session: Session, *, ready: bool, plan_title: str
+) -> ParentNotification:
+    rows = session.query(ParentNotification).order_by(ParentNotification.id).all()
+    assert len(rows) == 1
+    note = rows[0]
+    expected = (
+        ParentNotificationType.CURRICULUM_PLAN_READY
+        if ready
+        else ParentNotificationType.CURRICULUM_PLAN_FAILED
+    )
+    other = (
+        ParentNotificationType.CURRICULUM_PLAN_FAILED
+        if ready
+        else ParentNotificationType.CURRICULUM_PLAN_READY
+    )
+    assert note.type == expected
+    assert note.student_id is None
+    assert note.assignment_id is None
+    assert plan_title in note.body
+    if ready:
+        assert note.title == "Curriculum plan is ready"
+    else:
+        assert note.title == "Curriculum plan processing failed"
+    assert session.query(ParentNotification).filter_by(type=other).count() == 0
+    return note
+
+
 class TestExtractHandwritingFromSlices:
     def test_inserts_lessons_and_marks_ready(
         self, engine: Engine, db: Session
@@ -125,6 +153,9 @@ class TestExtractHandwritingFromSlices:
             assert [lesson.day_number for lesson in lessons] == [1, 2, 3, 4, 5]
             assert all(lesson.week_number == 1 for lesson in lessons)
             assert all(lesson.time_slot == "Math" for lesson in lessons)
+            _assert_one_plan_notification(
+                verify, ready=True, plan_title="Paper Import"
+            )
         finally:
             verify.close()
 
@@ -159,6 +190,9 @@ class TestExtractHandwritingFromSlices:
             assert (
                 verify.query(CurriculumLesson).filter_by(plan_id=plan_id).count()
                 == 0
+            )
+            _assert_one_plan_notification(
+                verify, ready=False, plan_title="Paper Import"
             )
         finally:
             verify.close()
@@ -223,6 +257,11 @@ class TestImportPaperApi:
         assert plan is not None
         assert plan.title == "Paper Import"
         assert plan.status == CurriculumPlanStatus.PROCESSING
+        assert db.query(ParentNotification).count() == 0
+        inbox = client.get("/api/notifications")
+        assert inbox.status_code == 200
+        assert inbox.json()["unread_count"] == 0
+        assert inbox.json()["notifications"] == []
 
     def test_empty_upload_is_a_400(self, client: TestClient) -> None:
         response = client.post(

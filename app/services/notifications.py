@@ -1,4 +1,4 @@
-"""In-app notifications for the parent when a child uses homework help."""
+"""In-app notifications for homework help and curriculum-plan processing."""
 
 from sqlalchemy.orm import Session
 
@@ -67,3 +67,27 @@ def student_name(db: Session, student_id: int | None) -> str:
         return "A student"
     student = db.get(Student, student_id)
     return student.name if student is not None else "A student"
+
+
+def notify_curriculum_plan_processed(
+    db: Session, *, title: str | None, ready: bool
+) -> ParentNotification:
+    """Record that a PDF or paper plan left ``processing``. Caller commits."""
+    label = (title or "").strip() or "Curriculum plan"
+    if ready:
+        return create_notification(
+            db,
+            type=ParentNotificationType.CURRICULUM_PLAN_READY,
+            student_id=None,
+            assignment_id=None,
+            title="Curriculum plan is ready",
+            body=f"“{label}” finished processing and is ready to apply.",
+        )
+    return create_notification(
+        db,
+        type=ParentNotificationType.CURRICULUM_PLAN_FAILED,
+        student_id=None,
+        assignment_id=None,
+        title="Curriculum plan processing failed",
+        body=f"“{label}” could not be processed. You can try the upload again.",
+    )

@@ -1,8 +1,7 @@
 """Named school-year CRUD and the operational-year consolidation.
 
 SchoolYear is the canonical date range. HouseholdSettings keeps weekdays and
-exception colors, plus a write-through copy of the operational dates so old
-tenant files can keep their NOT NULL columns.
+exception colors only.
 """
 
 from datetime import date
@@ -19,6 +18,7 @@ from app.models import (
     Assignment,
     AssignmentEvidence,
     Household,
+    HouseholdSettings,
     SchoolYear,
     Student,
 )
@@ -75,6 +75,8 @@ class TestSchoolYearCRUD:
         stored = db.get(SchoolYear, year_id)
         assert stored is not None
         assert stored.name == "Our Year"
+        assert "start_date" not in HouseholdSettings.__table__.c
+        assert db.query(HouseholdSettings).count() == 0
 
     def test_create_rejects_a_reversed_window(self, client: TestClient) -> None:
         response = client.post(
@@ -246,7 +248,7 @@ class TestExceptionsUseSchoolYear:
         assert settings["end_date"] == year["end_date"]
 
         toggled = client.post(
-            "/api/calendar/exceptions/toggle",
+            "/api/exceptions/toggle",
             json={"date": year["start_date"]},
         )
         assert toggled.status_code == 200
@@ -312,7 +314,7 @@ class TestPortfolioUsesSchoolYearDates:
 
 
 class TestLegacyTenantInitialize:
-    def test_existing_settings_file_keeps_date_columns_and_backfills_a_year(
+    def test_existing_settings_file_backfills_a_year_and_drops_date_columns(
         self, tmp_path: Path
     ) -> None:
         db_path = tmp_path / "tenant_legacy.db"
@@ -363,11 +365,12 @@ class TestLegacyTenantInitialize:
             )
 
         _ensure_tenant_schema(engine)
+        _ensure_tenant_schema(engine)
 
         with engine.connect() as conn:
             columns = _sqlite_table_columns(conn, "household_settings")
-            assert "start_date" in columns
-            assert "end_date" in columns
+            assert "start_date" not in columns
+            assert "end_date" not in columns
             assert "weekdays" in columns
             assert "exception_colors" in columns
             tables = {
@@ -378,13 +381,18 @@ class TestLegacyTenantInitialize:
             }
             assert "school_years" in tables
             row = conn.execute(
+                text("SELECT weekdays FROM household_settings")
+            ).one()
+            assert row[0] == "0,2,4"
+            year = conn.execute(
                 text(
-                    "SELECT start_date, end_date, weekdays FROM household_settings"
+                    "SELECT name, start_date, end_date FROM school_years "
+                    "WHERE household_id = 1"
                 )
             ).one()
-            assert str(row[0]).startswith("2026-08-03")
-            assert str(row[1]).startswith("2027-06-04")
-            assert row[2] == "0,2,4"
+            assert year[0] == "2026-2027"
+            assert str(year[1]).startswith("2026-08-03")
+            assert str(year[2]).startswith("2027-06-04")
 
         factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
         session = factory()
@@ -397,6 +405,102 @@ class TestLegacyTenantInitialize:
             year = session.get(SchoolYear, year_id)
             assert year is not None
             assert year.name == "2026-2027"
+            settings = session.query(HouseholdSettings).one()
+            assert settings.weekdays == "0,2,4"
         finally:
             session.close()
             engine.dispose()
+
+    def test_divergent_settings_dates_do_not_overwrite_an_existing_year(
+        self, tmp_path: Path
+    ) -> None:
+        db_path = tmp_path / "tenant_divergent.db"
+        engine = create_engine(f"sqlite:///{db_path}")
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE households (
+                        id INTEGER PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL,
+                        created_at DATETIME,
+                        updated_at DATETIME
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE school_years (
+                        id INTEGER PRIMARY KEY,
+                        household_id INTEGER NOT NULL,
+                        name VARCHAR(128) NOT NULL,
+                        start_date DATE NOT NULL,
+                        end_date DATE NOT NULL,
+                        created_at DATETIME,
+                        updated_at DATETIME
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE household_settings (
+                        id INTEGER PRIMARY KEY,
+                        household_id INTEGER NOT NULL,
+                        start_date DATE NOT NULL,
+                        end_date DATE NOT NULL,
+                        weekdays VARCHAR(32) NOT NULL,
+                        created_at DATETIME,
+                        updated_at DATETIME
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO households (id, name, created_at, updated_at) "
+                    "VALUES (1, 'Family', '2026-01-01', '2026-01-01')"
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO school_years "
+                    "(id, household_id, name, start_date, end_date, "
+                    "created_at, updated_at) "
+                    "VALUES (1, 1, 'Named Year', '2026-08-10', '2027-05-28', "
+                    "'2026-01-01', '2026-01-01')"
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO household_settings "
+                    "(id, household_id, start_date, end_date, weekdays, "
+                    "created_at, updated_at) "
+                    "VALUES (1, 1, '2025-08-01', '2026-06-30', '0,2,4', "
+                    "'2026-01-01', '2026-01-01')"
+                )
+            )
+
+        _ensure_tenant_schema(engine)
+
+        with engine.connect() as conn:
+            columns = _sqlite_table_columns(conn, "household_settings")
+            assert "start_date" not in columns
+            assert "end_date" not in columns
+            year = conn.execute(
+                text("SELECT name, start_date, end_date FROM school_years")
+            ).one()
+            assert year[0] == "Named Year"
+            assert str(year[1]).startswith("2026-08-10")
+            assert str(year[2]).startswith("2027-05-28")
+            count = conn.execute(text("SELECT COUNT(*) FROM school_years")).scalar()
+            assert count == 1
+            weekdays = conn.execute(
+                text("SELECT weekdays FROM household_settings")
+            ).scalar()
+            assert weekdays == "0,2,4"
+
+        engine.dispose()

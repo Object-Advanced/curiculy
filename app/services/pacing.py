@@ -315,9 +315,13 @@ class SyllabusCommitter:
         group_uuids = [
             str(uuid4()) if len(student_ids) > 1 else None for _ in lessons
         ]
+        edition = self._tenant_db.get(CurriculumEdition, payload.curriculum_edition_id)
+        if edition is None:
+            raise SyllabusCommitError("Curriculum edition not found")
         assignments = [
             Assignment(
                 student_id=student_id,
+                curriculum_id=edition.curriculum_id,
                 curriculum_resource_id=resource.id,
                 curriculum_unit_id=unit.id,
                 subject_taxonomy_id=payload.subject_taxonomy_id,
@@ -343,9 +347,6 @@ class SyllabusCommitter:
             )
             for lesson, unit in zip(lessons, units, strict=True)
         )
-        edition = self._tenant_db.get(CurriculumEdition, payload.curriculum_edition_id)
-        if edition is None:
-            raise SyllabusCommitError("Curriculum edition not found")
         year = require_operational_school_year(self._tenant_db)
         enroll_students(
             self._tenant_db,

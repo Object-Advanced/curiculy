@@ -157,6 +157,8 @@ def apply_curriculum_plan(
     try:
         year = require_operational_school_year(db)
         curriculum = curriculum_for_plan(db, plan)
+        for item in assignments:
+            item.curriculum_id = curriculum.id
         ensure_enrollment(
             db,
             student_id=student.id,

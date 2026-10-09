@@ -1,11 +1,12 @@
 """Shared database and API fixtures.
 
-Each test gets a fresh in-memory schema. ``StaticPool`` keeps every connection
-pointing at the same memory database, which matters because the API runs request
-handlers on a worker thread while the test holds the session.
+Default ``client`` is a fast in-memory API harness: catalog, tenant, and admin
+tables share one StaticPool SQLite. That is intentional. It does **not**
+exercise JWT → admin ``users.tenant_uuid`` → ``tenant_{uuid}.db``.
 
-Catalog and tenant tables share that memory database in tests so mixed seeds
-stay on one session; production binds each metadata to its own SQLite file.
+Production file routing is ``auth_client`` in ``tests/test_auth.py`` (and tests
+that pull that fixture). Schema patches and leftover-table DROP use throwaway
+files under pytest ``tmp_path``, never ``./data``.
 """
 
 from collections.abc import Iterator
@@ -29,7 +30,7 @@ from sqlalchemy.pool import StaticPool
 import app.models  # noqa: F401  (registers every mapper before create_all)
 import app.models.admin  # noqa: F401
 from app.core.security import CurrentUser, get_current_user, require_staging_upload
-from app.db import AdminBase, CatalogBase, TenantBase, get_admin_db, get_catalog_db, get_tenant_db
+from app.db import AdminBase, CatalogBase, TenantBase, get_admin_db, get_catalog_db, get_staging_tenant_db, get_tenant_db
 from app.main import create_app
 
 
@@ -65,11 +66,15 @@ def db(engine: Engine) -> Iterator[Session]:
 
 @pytest.fixture
 def client(db: Session, engine: Engine) -> Iterator[TestClient]:
-    # Instantiated without the context manager so the app lifespan, which
-    # provisions evidence directories on disk, stays out of the test run.
+    """In-memory API client. Overrides tenant/admin routing and current user.
+
+    ``StaticPool`` keeps the TestClient worker thread on the same memory DB.
+    Use ``auth_client`` for JWT → physical ``tenant_{uuid}.db``.
+    """
     application = create_app()
     application.dependency_overrides[get_catalog_db] = lambda: db
     application.dependency_overrides[get_tenant_db] = lambda: db
+    application.dependency_overrides[get_staging_tenant_db] = lambda: db
     application.dependency_overrides[get_admin_db] = lambda: db
     application.dependency_overrides[get_current_user] = _test_user
     application.dependency_overrides[require_staging_upload] = _test_user
@@ -89,6 +94,6 @@ def client(db: Session, engine: Engine) -> Iterator[TestClient]:
                 side_effect=_background_tenant_session,
             ),
         ):
-            yield TestClient(application)
+            yield TestClient(application)  # no context manager: skip lifespan evidence mkdir
     finally:
         application.dependency_overrides.clear()

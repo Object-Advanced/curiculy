@@ -6,11 +6,9 @@ import logging
 from re import IGNORECASE
 from re import compile as regexp
 
-import ollama
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.enums import (
     HomeworkHelpMessageRole,
     HomeworkHelpStatus,
@@ -20,11 +18,11 @@ from app.models import Assignment, HomeworkHelpMessage, HomeworkHelpSession, Stu
 from app.models.mixins import utcnow
 from app.schemas.homework import TutorReply
 from app.services.notifications import create_notification
+from app.services.ollama_chat import chat_with_model_fallback
 
 logger = logging.getLogger(__name__)
 
 PUSH_LIMIT = 3
-OLLAMA_FALLBACK_MODEL = "mistral"
 
 SYSTEM_PROMPT = """
 You are a homeschool homework tutor for a child. Your only job is to help them
@@ -90,18 +88,6 @@ def append_assignment_note(assignment: Assignment, line: str) -> None:
         assignment.notes = entry
 
 
-def _message_content(response: object) -> str:
-    try:
-        return response["message"]["content"]
-    except (TypeError, KeyError, AttributeError):
-        return response.message.content
-
-
-def _is_missing_model(error: BaseException) -> bool:
-    text = str(error).lower()
-    return "not found" in text or "does not exist" in text or "404" in text
-
-
 async def tutor_with_ollama(
     *,
     assignment_title: str,
@@ -119,34 +105,27 @@ async def tutor_with_ollama(
         f"Assignment: {assignment_title}\n"
         "Help with this assignment without giving the complete answer."
     )
-    client = ollama.AsyncClient(host=settings.ollama_host)
-    models = [settings.ollama_model]
-    if settings.ollama_model != OLLAMA_FALLBACK_MODEL:
-        models.append(OLLAMA_FALLBACK_MODEL)
+    try:
+        content = await chat_with_model_fallback(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + prompt},
+                *transcript,
+            ],
+            format=TutorReply.model_json_schema(),
+            options={"temperature": 0.3},
+        )
+    except Exception as error:
+        logger.warning("Homework tutor unavailable: %s", error)
+        return TutorReply(mode="hint", message=_fallback_hint(), redirect=False)
 
-    last_error: BaseException | None = None
-    for model in models:
-        try:
-            response = await client.chat(
-                model=model,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + prompt}, *transcript],
-                format=TutorReply.model_json_schema(),
-                options={"temperature": 0.3},
-            )
-            return TutorReply.model_validate_json(_message_content(response))
-        except ValidationError:
-            raw = _message_content(response)
-            return TutorReply(mode="hint", message=raw.strip() or _fallback_hint(), redirect=False)
-        except Exception as error:
-            last_error = error
-            if not _is_missing_model(error):
-                logger.warning("Homework tutor failed: %s", error)
-                break
-            logger.warning("Ollama model %s is unavailable; trying fallback", model)
-
-    if last_error is not None:
-        logger.warning("Homework tutor unavailable: %s", last_error)
-    return TutorReply(mode="hint", message=_fallback_hint(), redirect=False)
+    try:
+        return TutorReply.model_validate_json(content)
+    except ValidationError:
+        return TutorReply(
+            mode="hint",
+            message=content.strip() or _fallback_hint(),
+            redirect=False,
+        )
 
 
 def _fallback_hint() -> str:

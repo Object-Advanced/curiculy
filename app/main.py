@@ -74,7 +74,6 @@ def create_app() -> FastAPI:
     application.include_router(catalog.router, prefix="/api")
     application.include_router(school_years.router, prefix="/api")
     application.include_router(settings_routes.router, prefix="/api")
-    application.include_router(settings_routes.calendar_exceptions_router, prefix="/api")
     application.include_router(enrollments.router, prefix="/api")
     application.include_router(exceptions.router, prefix="/api")
     application.include_router(attendance.router, prefix="/api")

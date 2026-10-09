@@ -160,3 +160,5 @@ class HomeworkHelpMessageRole(StrEnum):
 class ParentNotificationType(StrEnum):
     HOMEWORK_HELP_STARTED = "homework_help_started"
     HOMEWORK_HELP_REDIRECT = "homework_help_redirect"
+    CURRICULUM_PLAN_READY = "curriculum_plan_ready"
+    CURRICULUM_PLAN_FAILED = "curriculum_plan_failed"

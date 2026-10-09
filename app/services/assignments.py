@@ -223,6 +223,7 @@ class AssignmentQuery:
         """Curricula this student is enrolled in or has scheduled, with completion counts."""
         assignment_rows = self.db.execute(
             select(
+                Assignment.curriculum_id,
                 Assignment.curriculum_resource_id,
                 Assignment.curriculum_unit_id,
                 Assignment.status,
@@ -244,8 +245,8 @@ class AssignmentQuery:
 
         counts: dict[int, tuple[int, int]] = {}
         for row in assignment_rows:
-            curriculum_id = None
-            if row.curriculum_resource_id is not None:
+            curriculum_id = row.curriculum_id
+            if curriculum_id is None and row.curriculum_resource_id is not None:
                 curriculum_id = resource_to_curriculum.get(row.curriculum_resource_id)
             if curriculum_id is None and row.curriculum_unit_id is not None:
                 curriculum_id = unit_to_curriculum.get(row.curriculum_unit_id)

@@ -139,9 +139,8 @@ class SchoolYear(TimestampMixin, TenantBase):
 class HouseholdSettings(TimestampMixin, TenantBase):
     """One row per household: class days and exception colors.
 
-    Operational school-year dates live on ``SchoolYear``. ``start_date`` and
-    ``end_date`` remain on this table as a write-through mirror so existing
-    tenant files keep their NOT NULL columns; they are not the read source.
+    Operational school-year dates live only on ``SchoolYear``. This table does
+    not store a year window.
 
     ``weekdays`` is a comma-separated list of Python weekday numbers
     (0 is Monday, 6 is Sunday), matching auto-schedule.
@@ -154,8 +153,6 @@ class HouseholdSettings(TimestampMixin, TenantBase):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     household_id: Mapped[int] = mapped_column(ForeignKey("households.id"), nullable=False)
-    start_date: Mapped[date] = mapped_column(Date, nullable=False)
-    end_date: Mapped[date] = mapped_column(Date, nullable=False)
     weekdays: Mapped[str] = mapped_column(String(32), nullable=False, default="0,1,2,3,4")
     exception_colors: Mapped[str | None] = mapped_column(Text, nullable=True)
 

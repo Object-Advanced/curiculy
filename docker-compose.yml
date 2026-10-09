@@ -35,6 +35,7 @@ services:
       - ./data:/data # NVMe drive for SQLite databases
       - /datalake/projects/curiculy/evidence:/data/evidence # 30TB array for photos
       - ./app:/app/app
+      - ./scripts:/app/scripts
       - ./static:/app/static
       - ./index.html:/app/index.html
       - ./sw.js:/app/sw.js
@@ -47,6 +48,7 @@ services:
     profiles: ["dev"]
     volumes:
       - ./app:/app/app
+      - ./scripts:/app/scripts
       - ./tests:/app/tests
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
@@ -55,4 +57,5 @@ services:
       - ./static:/app/static
       - ./extension:/app/extension
       - ./README.md:/app/README.md
+      - ./.github:/app/.github
     command: ["pytest"]

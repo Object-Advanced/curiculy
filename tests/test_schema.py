@@ -25,7 +25,7 @@ from app.db import (
     _ensure_tenant_schema,
     _existing_tenant_file_urls,
 )
-from app.models import Curriculum, Household, Student
+from app.models import Curriculum, Household, HouseholdSettings, Student
 from app.schema_patches import (
     ADMIN_COLUMN_PATCHES,
     ALEMBIC_NOT_AUTHORITATIVE,
@@ -82,6 +82,11 @@ class TestFreshDatabases:
             names = set(inspect(engine).get_table_names())
             assert "scheduled_work" not in names
             assert "evidence_captures" not in names
+            with engine.connect() as conn:
+                settings_cols = sqlite_table_columns(conn, "household_settings")
+            assert "start_date" not in settings_cols
+            assert "end_date" not in settings_cols
+            assert "weekdays" in settings_cols
         finally:
             engine.dispose()
 
@@ -158,6 +163,59 @@ class TestUpgradeExistingFiles:
             # create_all does not ALTER columns on tables that already exist.
             # This file's households row predates jurisdiction_id; patches do
             # not add that leftover. Fresh files are checked against models.
+        finally:
+            engine.dispose()
+
+    def test_old_assignments_gain_curriculum_id_and_keep_rows(
+        self, tmp_path: Path
+    ) -> None:
+        engine = _file_engine(tmp_path / "tenant_assignments_legacy.db")
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE assignments (
+                            id INTEGER PRIMARY KEY,
+                            student_id INTEGER NOT NULL,
+                            title VARCHAR(255) NOT NULL,
+                            scheduled_date DATE NOT NULL,
+                            status VARCHAR(32) NOT NULL,
+                            created_at DATETIME,
+                            updated_at DATETIME
+                        )
+                        """
+                    )
+                )
+                conn.execute(
+                    text(
+                        "INSERT INTO assignments "
+                        "(id, student_id, title, scheduled_date, status, "
+                        "created_at, updated_at) "
+                        "VALUES (3, 1, 'Lesson A', '2026-09-01', 'assigned', "
+                        "'2026-01-01', '2026-01-01')"
+                    )
+                )
+
+            apply_tenant_schema(engine)
+            apply_tenant_schema(engine)
+
+            with engine.connect() as conn:
+                columns = sqlite_table_columns(conn, "assignments")
+                assert "curriculum_id" in columns
+                index_names = {
+                    row[1]
+                    for row in conn.execute(text("PRAGMA index_list(assignments)"))
+                }
+                assert "ix_assignments_curriculum_id" in index_names
+                row = conn.execute(
+                    text(
+                        "SELECT id, title, curriculum_id FROM assignments WHERE id = 3"
+                    )
+                ).one()
+                assert row[0] == 3
+                assert row[1] == "Lesson A"
+                assert row[2] is None
         finally:
             engine.dispose()
 
@@ -329,7 +387,7 @@ class TestIdempotencyAndSafety:
         finally:
             engine.dispose()
 
-    def test_household_settings_date_columns_are_not_dropped(
+    def test_household_settings_date_columns_are_dropped_on_fresh_files(
         self, tmp_path: Path
     ) -> None:
         engine = _file_engine(tmp_path / "tenant.db")
@@ -338,12 +396,115 @@ class TestIdempotencyAndSafety:
             apply_tenant_schema(engine)
             with engine.connect() as conn:
                 columns = sqlite_table_columns(conn, "household_settings")
-            assert "start_date" in columns
-            assert "end_date" in columns
+            assert "start_date" not in columns
+            assert "end_date" not in columns
             assert "weekdays" in columns
             assert "exception_colors" in columns
+            assert "start_date" not in HouseholdSettings.__table__.c
+            assert "end_date" not in HouseholdSettings.__table__.c
         finally:
             engine.dispose()
+
+    def test_legacy_settings_date_columns_are_dropped_after_year_backfill(
+        self, tmp_path: Path
+    ) -> None:
+        engine = _file_engine(tmp_path / "tenant_legacy.db")
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE households (
+                            id INTEGER PRIMARY KEY,
+                            name VARCHAR(255) NOT NULL,
+                            created_at DATETIME,
+                            updated_at DATETIME
+                        )
+                        """
+                    )
+                )
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE household_settings (
+                            id INTEGER PRIMARY KEY,
+                            household_id INTEGER NOT NULL,
+                            start_date DATE NOT NULL,
+                            end_date DATE NOT NULL,
+                            weekdays VARCHAR(32) NOT NULL,
+                            created_at DATETIME,
+                            updated_at DATETIME
+                        )
+                        """
+                    )
+                )
+                conn.execute(
+                    text(
+                        "INSERT INTO households (id, name, created_at, updated_at) "
+                        "VALUES (1, 'KeepMe', '2026-01-01', '2026-01-01')"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "INSERT INTO household_settings "
+                        "(id, household_id, start_date, end_date, weekdays, "
+                        "created_at, updated_at) "
+                        "VALUES (1, 1, '2026-08-03', '2027-06-04', '0,1,2,3,4', "
+                        "'2026-01-01', '2026-01-01')"
+                    )
+                )
+            apply_tenant_schema(engine)
+            apply_tenant_schema(engine)
+            with engine.connect() as conn:
+                columns = sqlite_table_columns(conn, "household_settings")
+                assert "start_date" not in columns
+                assert "end_date" not in columns
+                assert "weekdays" in columns
+                weekdays = conn.execute(
+                    text("SELECT weekdays FROM household_settings WHERE id = 1")
+                ).scalar()
+                assert weekdays == "0,1,2,3,4"
+                year = conn.execute(
+                    text(
+                        "SELECT name, start_date, end_date FROM school_years "
+                        "WHERE household_id = 1"
+                    )
+                ).one()
+                assert year[0] == "2026-2027"
+                assert str(year[1]).startswith("2026-08-03")
+                assert str(year[2]).startswith("2027-06-04")
+        finally:
+            engine.dispose()
+
+    def test_application_code_does_not_write_settings_year_dates(self) -> None:
+        assert "start_date" not in HouseholdSettings.__table__.c
+        assert "end_date" not in HouseholdSettings.__table__.c
+        service = (ROOT / "app" / "services" / "school_year.py").read_text()
+        assert "_mirror_dates_onto_settings" not in service
+        assert "row.start_date" not in service
+        assert "row.end_date" not in service
+        model = (ROOT / "app" / "models" / "__init__.py").read_text()
+        settings_block = model.split("class HouseholdSettings", 1)[1].split(
+            "class Enrollment", 1
+        )[0]
+        assert "start_date" not in settings_block
+        assert "end_date" not in settings_block
+
+    def test_application_python_does_not_pair_settings_table_with_year_dates(
+        self,
+    ) -> None:
+        allowed = {ROOT / "app" / "schema_patches.py"}
+        hits: list[str] = []
+        for path in (ROOT / "app").rglob("*.py"):
+            if path in allowed:
+                continue
+            for number, line in enumerate(path.read_text().splitlines(), 1):
+                lower = line.lower()
+                if "household_settings" not in lower:
+                    continue
+                if "start_date" in line or "end_date" in line:
+                    hits.append(f"{path.relative_to(ROOT)}:{number}:{line.strip()}")
+        assert hits == []
 
     def test_orm_rows_survive_second_schema_apply(self, tmp_path: Path) -> None:
         engine = _file_engine(tmp_path / "tenant.db")

@@ -329,7 +329,7 @@ def _books_for_student(
 ) -> list[PortfolioBookRead]:
     counts: dict[int, tuple[int, int]] = {}
     for item in assignments:
-        curriculum_id = item.curriculum_id
+        curriculum_id = item.resolved_curriculum_id()
         if curriculum_id is None:
             continue
         total, completed = counts.get(curriculum_id, (0, 0))

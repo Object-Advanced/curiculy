@@ -921,6 +921,10 @@ class TestCommitEndpoint:
         assert assignments[0].title == "Lesson 1: Saxon Math 3 (pp. 1-40)"
         assert all(item.curriculum_unit_id is not None for item in assignments)
         assert all(item.curriculum_resource_id is not None for item in assignments)
+        assert all(
+            item.curriculum_id == curriculum_edition.curriculum_id
+            for item in assignments
+        )
         assert all(item.shared_group_uuid is None for item in assignments)
 
     def test_student_ids_write_identical_lessons_tagged_with_a_group_uuid(

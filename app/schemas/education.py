@@ -86,6 +86,14 @@ class AssignmentRead(ORMModel):
     grade: AssignmentGradeRead | None
     evidence_count: int
 
+    @model_validator(mode="wrap")
+    @classmethod
+    def _fill_curriculum_id_from_provenance(cls, value, handler):
+        built = handler(value)
+        if built.curriculum_id is None and hasattr(value, "resolved_curriculum_id"):
+            built.curriculum_id = value.resolved_curriculum_id()
+        return built
+
 
 class AssignmentDetailRead(AssignmentRead):
     subject_taxonomy: SubjectTaxonomyRead | None

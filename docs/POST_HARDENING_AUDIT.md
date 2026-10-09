@@ -1,21 +1,63 @@
 # Curiculy post-hardening audit
 
-**Date:** 2026-08-29  
-**Scope:** Compare the running tree to `docs/ARCHITECTURE.md` after the architecture-hardening roadmap. Application source was not changed for this audit.
+This file has two layers. Do not mix them.
 
-**Method**
+1. **Historical (2026-08-29):** the fourteen hardening checks and the suite count **786**. That pass did not change application source. Those fourteen checks still hold.
+2. **Current:** `docs/IMPLEMENTATION_RECONCILIATION.md` re-verified the tree on 2026-09-01 (**821 passed**). Later consolidations, capture-token isolation, SchoolYear date-column retirement, enrollment backfill, leftover-table DROP, the shared Ollama AsyncClient helper, catalog/admin-only `/api/health` contract tests, GitHub Actions pytest, physical tenant persistence tests, PDF/paper plan processing notifications, and `assignments.curriculum_id` bring the suite to **892 passed, 0 failed, 0 skipped**. Architecture docs match source. The architecture-hardening / cleanup phase is **closed**. Several “unresolved” items in the historical sections below are **no longer unresolved**.
+
+**Authoritative current architecture:** `docs/ARCHITECTURE.md`  
+**Authoritative remaining debt:** `docs/TECHNICAL_DEBT.md` and `docs/ROADMAP.md`  
+**Independent item-by-item evidence:** `docs/IMPLEMENTATION_RECONCILIATION.md`
+
+---
+
+## Current state (2026-09-01)
+
+Hardening is complete in source. No reconciliation item is REGRESSED or DOCUMENTATION-ONLY.
+
+| Topic | Current fact |
+|---|---|
+| Suite | **892 passed**, 0 failed, 0 skipped |
+| README | Exists (`README.md`). Bootstrap, port 3040, `JWT_SECRET`, tests. Invite INSERT must include `tenant_uuid` (NOT NULL). |
+| Register token | `POST /api/auth/register` returns `{access_token, token_type}` (201). SPA stores it. |
+| All Students copy | Header states shared lessons only; private work is on individual calendars. Query unchanged. |
+| Logo / extension icons | `static/curiculy-logo.png` and `extension/icons/*` present and tested. |
+| Tenant-file JWT tests | `tests/test_auth.py` provisions `tenant_{uuid}.db` and routes a JWT without overriding `get_tenant_db`. Default `conftest.py` `client` stays in-memory on purpose. |
+| Paper intake | Live. `GET /api/curriculum/paper-template`, `POST /api/curriculum/import-paper`. OpenCV + `qrcode` + `numpy` on the request; Ollama vision in `paper_vision_worker.py` (own session; model `llama3.2-vision`). Lands on `curriculum_plans` then apply → assignments. |
+| SchoolYear dates | Named year is the only operational date store. `HouseholdSettings` has weekdays and colors. Leftover settings date columns are backfilled into `SchoolYear` when missing, then dropped on boot. |
+| Enrollments | Unique on student + curriculum + year. Auto-create on pacing commit and plan-apply. New writes stamp `assignments.curriculum_id`. Operator `scripts/backfill_enrollments.py` reconstructs proven rows (stored id or resource/unit). Title-only plan rows skipped. Not boot. This host inserted 2 proven enrollments. |
+| Exception APIs | One prefix: `/api/exceptions` (list, create, dates, toggle, import-holidays). `/api/calendar/exceptions` removed. Colors remain on `/api/settings/exception-colors`. |
+| Legacy tables | ORM models gone. Operator script `scripts/drop_legacy_tables.py` (dry-run / `--apply`; DROP only when `COUNT(*) = 0`; never deletes rows). Boot does not DROP. This host DROPped empty leftover tables on `./data/tenant_*.db`. |
+| `legacy_tables.py` | One implementation of each row-clear helper. Does not DROP tables. |
+| Ollama | Optional for scheduling. Four call sites, two stacks: PDF + homework (`ollama.AsyncClient`); spark + paper vision (`httpx` `/api/chat`). Vision model is `llama3.2-vision`, not `OLLAMA_MODEL`. Stacks kept (timeout / images / model class). |
+| `get_tenant_db` | Application users only (`get_current_user`). Capture JWTs are refused. Staging uses `get_staging_tenant_db` + `require_staging_upload`. |
+| Health | Catalog.db + admin.db `SELECT 1` only. Household `tenant_{uuid}.db` files are excluded on purpose. |
+| Plan processing notifications | PDF and paper workers create one `curriculum_plan_ready` or `curriculum_plan_failed` inbox row in the same tenant session that records terminal status. The 202 request does not notify. |
+| Assignment provenance | Nullable `assignments.curriculum_id` stamped on new pacing commits and plan applies. Additive schema patch. Historical title-only rows stay NULL. |
+
+Historical “recommended next priorities” 1–5 in the 2026-08-29 text (README, register JWT, All Students copy, tenant-file test, empty-reading-list copy) are **done**. Exception-API consolidation is **done**. `legacy_tables.py` helper deduplication is **done**. Settings date-column retirement is **done**. Enrollment backfill is **done** (operator script; this host applied proven rows). Leftover-table DROP is **done** (operator script; this host DROPped empty tables). `/books` vs catalog was investigated: same dictionary, different HTTP contracts; routes kept. Dual Ollama stacks were investigated and kept. GitHub Actions pytest is **done**. Persistent in-app notifications when a PDF or paper plan is `ready` / `failed` are **done**. New pacing/plan writes stamp `assignments.curriculum_id`. The architecture-hardening / cleanup phase is **closed**. Remaining items are optional product polish — see `docs/ROADMAP.md`.
+
+---
+
+## Historical audit (2026-08-29)
+
+**Scope then:** Compare the running tree to `docs/ARCHITECTURE.md` after the architecture-hardening roadmap. Application source was not changed for that audit.
+
+**Method then**
 
 - Read `ARCHITECTURE.md`, `CODEBASE_MAP.md`, `DOMAIN_MODEL.md`, `TECHNICAL_DEBT.md`, and `ROADMAP.md`.
 - Inspect routers, `app/core/security.py`, `app/config.py`, `app/db.py`, `app/schema_patches.py`, models, SPA calls, the extension, Compose, and tests for the fourteen checks below.
 - Ran the full suite: `docker compose --profile dev run --rm tests pytest -q --tb=line`.
 
-**Suite:** all tests passed (786 collected). Only warning: Passlib `crypt` deprecation (third-party).
+**Suite then:** all tests passed (**786** collected). Only warning: Passlib `crypt` deprecation (third-party).
 
-**Verdict:** The hardening goals for this roadmap are met. Critical privacy and calendar invariants hold. What remains is documented leftover work (Phase 4+), operator hygiene, and a few small code smells — not open holes in the fourteen checks.
+**Verdict then:** The hardening goals for this roadmap are met. Critical privacy and calendar invariants hold. What remains is documented leftover work (Phase 4+), operator hygiene, and a few small code smells — not open holes in the fourteen checks.
+
+The fourteen checks themselves remain **CONFIRMED** on 2026-09-01. Paper intake was added after this historical pass and is a third **guide capture** method, not a second calendar.
 
 ---
 
-## The fourteen checks
+## The fourteen checks (historical; still true)
 
 | # | Check | Result |
 |---|---|---|
@@ -24,231 +66,80 @@
 | 3 | JWT secrets cannot silently fall back to insecure production defaults | **CONFIRMED** |
 | 4 | SMTP credentials are not hardcoded | **CONFIRMED** |
 | 5 | Children can complete only their own assignments | **CONFIRMED** |
-| 6 | SchoolYear is the canonical operational year | **CONFIRMED** (date columns still mirrored) |
+| 6 | SchoolYear is the canonical operational year | **CONFIRMED** (settings date columns retired) |
 | 7 | Scheduling creates/verifies Enrollment | **CONFIRMED** |
-| 8 | PDF background workers own their DB sessions | **CONFIRMED** |
+| 8 | PDF background workers own their DB sessions | **CONFIRMED** (paper vision worker later copied this pattern) |
 | 9 | Schema management has one documented authoritative strategy | **CONFIRMED** |
 | 10 | Legacy entities identified for removal were addressed appropriately | **CONFIRMED** (models gone; tables not dropped) |
-| 11 | No regressions in the two curriculum intake paths | **CONFIRMED** |
+| 11 | No regressions in the two curriculum intake paths | **CONFIRMED** (paper is an additional guide capture) |
 | 12 | SQLite-per-household remains intact | **CONFIRMED** |
 | 13 | Ollama remains optional for core scheduling | **CONFIRMED** |
 | 14 | Assignment remains the sole calendar entity | **CONFIRMED** |
 
 ---
 
-## What is now confirmed
+## What was confirmed in 2026-08-29 (abridged)
 
-### 1. Evidence is tenant-private
+The body of checks 1–14 in the original audit is unchanged in substance: authenticated evidence GET, capture tokens, JWT fail-closed, env-only SMTP, child status PATCH, SchoolYear reads with settings date mirror, auto-enrollment, PDF worker own session, patches-only schema, unmapped leftover models, two book/guide intakes landing on assignments, file-per-household SQLite, Ollama off the calendar write path, Assignment as sole calendar entity.
 
-There is no public `StaticFiles` mount for work samples. `create_app()` mounts only `/static`. Files live under `{EVIDENCE_DIR}/{tenant_uuid}/{uuid}…`.
+Full original write-up of those fourteen sections is superseded for **file paths added after 2026-08-29** (paper services). Do not use this historical section as a file inventory.
 
-`GET /api/evidence/files/{path}` requires a JWT via `get_current_user`. `resolve_evidence_file(..., tenant_uuid=)` refuses a path whose folder is not the caller’s tenant. Children may read a file only when it is attached to one of their assignments. Capture credentials receive 403. Unauthenticated GET is 401. The old `/evidence/...` URL does not serve files. The service worker skips `/api/` and `/evidence/`. Responses use `Cache-Control: private, no-store`.
+---
 
-Covered by `tests/test_evidence_files_api.py` and `tests/test_capture_token.py`.
+## Historical “unresolved” list (2026-08-29) — with current status
 
-### 2. Extension credentials cannot act as parent JWTs
+None of these reversed a hardening check. Several are now done.
 
-Capture tokens are JWTs with `role=evidence` and `scope=evidence:write`, plus a revocable `capture_tokens` row on `admin.db`. `get_current_user` rejects them with 403. `require_parent` / `require_admin` therefore reject them. Staging POST uses `require_staging_upload`, which accepts a live capture credential or a parent session.
-
-Tests show 403 on `/auth/me`, household, students, staging list/link, admin invites, and evidence file GET. Minting a new token revokes the previous `jti`. Demo and child users cannot issue tokens.
-
-`get_tenant_db` decodes the JWT with `user_from_token` (not `get_current_user`) so staging can open the household file. Protection for every other route is the router dependency. That is correct today; new routes must keep a parent/child dependency (see residual risk below).
-
-### 3. JWT secrets cannot silently fall back in production
-
-Non-dev startup (`entrypoint.sh` and app lifespan) calls `validate_runtime_configuration()`. Missing, whitespace, known placeholders, and secrets shorter than 32 characters raise `ConfigurationError`. Compose interpolates `JWT_SECRET: ${JWT_SECRET:-}` with no baked-in fallback. `DEV_MODE=true` may apply the explicit `insecure-dev-secret` placeholder; that path is tests-covered and must not be used for a real family.
-
-Error text and `Settings.__repr__` do not print the secret.
-
-### 4. SMTP credentials are not hardcoded
-
-Compose interpolates empty `MAIL_USERNAME` / `MAIL_PASSWORD`. `.env.example` leaves them blank. `.env` is gitignored. `mail_connection()` uses settings as-is and does not invent a dummy mailbox password. The process still boots without mail; send fails until env is set.
-
-If this tree was copied when a mailbox password was still in Compose, rotate that mailbox. This audit did not search git history for old secrets.
-
-### 5. Children can complete only their own assignments
-
-`PATCH /api/assignments/{id}/status` uses `get_current_user`. A child whose `student_id` does not match the row gets 404. Children do not sync `shared_group_uuid` siblings. PUT, delete, grade, and evidence stay `require_parent`. Homework help uses the same own-assignment check.
-
-Covered by `tests/test_child_assignment_status.py`.
-
-### 6. SchoolYear is the canonical operational year
-
-`load_school_year_settings` / `require_operational_school_year` read dates from the latest named `SchoolYear` (start date, then id). Weekdays and exception colors stay on `HouseholdSettings`. The year modal (`PUT /settings/school-year`) and wizard (`POST /school-years`) write the same `SchoolYear` row. If only settings dates exist, a named year is created from them. If both exist and they differ, the named year wins and settings dates are copied from it.
-
-`HouseholdSettings.start_date` / `end_date` remain as a write-through mirror so old `tenant_*.db` files keep NOT NULL columns. They are not the read source once a `SchoolYear` exists. Columns are not dropped.
-
-### 7. Scheduling creates/verifies Enrollment
-
-Pacing commit (`enroll_students`) and plan-apply (`ensure_enrollment`) insert or reuse `student + curriculum + school_year` in the **same transaction** as the assignments. Unique violations are recovered with a savepoint. Preview does not enroll. A failed commit/apply rolls back. Settings `POST /enrollments` still works and still 409s on duplicates. Plan-apply reuses or creates a library row from the plan title so the reading list has a book.
-
-Covered by `tests/test_enrollments.py`.
-
-### 8. PDF background workers own their DB sessions
-
-`POST /curriculum/import-pdf` captures `tenant_uuid` and demo `jti`. `process_pdf_curriculum_background` calls `open_tenant_session` itself. It does not receive the request Session. Failures roll back the job session, then mark `failed` on a second session. Both are closed. Tests assert the HTTP handler does not pass `db` into the worker.
-
-Portfolio email is different and also safe: the request renders the PDF, then `BackgroundTasks` sends a built `MessageSchema`. That task does not keep a SQLAlchemy session.
-
-### 9. One schema strategy
-
-Runtime is `init_databases()` → `create_all` + ordered idempotent patches in `app/schema_patches.py` on catalog, admin, the shared tenant file, and every `tenant_*.db`. Alembic `env.py` calls `refuse_alembic_replay()`. Revisions 0001–0012 stay on disk as archaeology. `alembic/README.md` says not to ship columns as new revisions.
-
-Adding a column still needs a model change **and** a patch. `create_all` will not ALTER existing files. Tests cover fresh files, old files, a second apply, no row loss, leftover tables not mapped, and leftover tables not dropped.
-
-### 10. Legacy removal was appropriate
-
-| Item | Treatment | Appropriate? |
+| Item | 2026-08-29 status | 2026-09-01 status |
 |---|---|---|
-| `ScheduledWork` / `EvidenceCapture` models, unused read schemas, `ScheduleGrain` / `WorkStatus` | Unmapped / deleted | Yes. No write path. Available family files had COUNT=0. |
-| Orphan SQLite tables | Left in place; delete of student/curriculum still clears leftover rows | Yes. `create_all` does not DROP. Do not destroy data. |
-| `/books/*`, `POST /catalog/from-isbn`, `POST /curricula/import` | Kept | Yes. SPA unused; tests and API clients call them. |
-| Taxonomy columns | Kept | Yes. Pacing/assignments/tests still use them. |
-| Jurisdiction / compliance stubs | Kept, not called | Yes. Defer until a state form exists. |
-| Dual `/exceptions` APIs | Kept | Yes. SPA uses both. Fold later with aliases. |
-| Alembic 0001–0012 | Kept, refused | Yes. Replay is the wrong shape. |
-
-### 11. Two curriculum intake paths
-
-Both still land on `assignments`:
-
-1. **Book auto-schedule:** SPA `POST /catalog/lookup-isbn` → save library → `/pacing/generate-preview` → `/pacing/commit`. Preview is arithmetic (`SyllabusGenerator`). Commit writes units, page mappings, assignments, and enrollments.
-2. **Pacing guide:** CSV / PDF / builder → `curriculum_plans` → apply → assignments + enrollment. PDF parse may use Ollama; apply does not.
-
-`POST /curricula/import` remains an API-only tree import. The SPA does not call it. Tests for pacing, plan apply, enrollments, and curricula still pass.
-
-### 12. SQLite-per-household
-
-`admin.db` (users, invites, capture tokens), `catalog.db` (ISBN cache), `tenant_{uuid}.db` per family. Demo is in-memory keyed by JWT `jti`. Dev mode uses the shared `tenant.db`. JWT `tenant_uuid` selects the file. There is no `tenant_id` on planner tables (staging stores the UUID as a path prefix inside the file). Compose still bind-mounts `./data`.
-
-### 13. Ollama optional for core scheduling
-
-`SyllabusGenerator` does not import or call Ollama. Pacing comments say not to wire it into commit. Ollama is used for PDF → plan lessons, homework tutor, and spark. Those paths may fail closed. Compose `OLLAMA_HOST` is optional.
-
-### 14. Assignment is the sole calendar entity
-
-Pacing commit and plan-apply insert `Assignment` rows. The SPA calendar reads assignments. `ScheduledWork` is not mapped. Leftover tables are not created on new files. Recalibrate and shared groups operate on assignments.
+| `HouseholdSettings` date columns | Mirror still written | **Done.** Columns removed from the model; leftover tenant columns backfilled then dropped on boot. |
+| Dual exception HTTP APIs | SPA uses both prefixes | **Done.** Canonical `/api/exceptions`; `/api/calendar/exceptions` removed. |
+| `/books/*` vs catalog | Tests still on books | **Investigated.** Same `BookResolver` / `book_editions`. Different HTTP contracts. GET `/books` has no catalog twin. `from-isbn` creates library rows. Routes kept. |
+| Empty leftover `scheduled_work` / `evidence_captures` tables | Not DROPped | **Later:** operator script tested (COUNT=0 only). This host DROPped empty leftover tables. Boot still does not DROP. Non-empty tables stay. |
+| Register does not return a JWT | Extra login | **Done.** Token on register. |
+| All Students calendar is shared lessons only | UI copy missing | **Done.** Copy is in the calendar header. Query unchanged. |
+| Tests use one in-memory DB | No JWT → `tenant_{uuid}.db` test | **Intentional split.** File JWT tests exist in `test_auth.py` (`auth_client`). Default `client` stays in-memory. Persistence across sqlite3 connections and two-file isolation are covered. |
+| No root README / CI | Operator knowledge | **Done.** README and `.github/workflows/tests.yml` (Compose pytest on push and pull request). |
+| Health check skips tenant files | Catalog + admin only | **Intentional.** Process health is `catalog.db` + `admin.db`. Household `tenant_{uuid}.db` files must not fail the probe. |
+| Mailbox password rotation | Operator | **Still operator.** |
+| `DEV_MODE=true` skips JWT | Local-only | **Still true.** |
+| Historical enrollments | No backfill | **Later:** operator script + stored `curriculum_id` on new writes. Title-only week/day plan rows still cannot be reconstructed. |
+| Compliance / taxonomy product | DEFER | **Still DEFER.** |
+| `ai_generator.py` filename | Comments fixed | **Still a rename later.** |
 
 ---
 
-## What remains unresolved
+## Historical “new technical debt” (2026-08-29)
 
-These were already classified in the architecture docs. This audit agrees they are still open. None of them reverse a hardening check.
+These smells were real then and remain current except where noted:
 
-| Item | Status | Why it still matters |
-|---|---|---|
-| `HouseholdSettings` date columns | Mirror still written | Old files keep NOT NULL columns. Drop only in a later schema pass. |
-| Dual exception HTTP APIs | SPA uses both prefixes | Fold into one router with aliases. |
-| `/books/*` vs catalog | Tests still on books | Point tests at catalog, then alias. |
-| Empty leftover `scheduled_work` / `evidence_captures` tables | Not DROPped | DROP after COUNT=0 on each real `tenant_*.db`. |
-| Register does not return a JWT | Extra login | Additive. |
-| All Students calendar is shared lessons only | By design | UI copy is missing. |
-| Tests use one in-memory DB and often override the user | Gap | No JWT → `tenant_{uuid}.db` routing test. |
-| No root README / CI | Operator knowledge | First admin, invite, `JWT_SECRET`, compose port 3040. |
-| Health check skips tenant files | Catalog + admin only | A wedged `tenant_*.db` would not fail `/health`. |
-| Mailbox password rotation | Operator | Required if the old committed password was ever used. |
-| `DEV_MODE=true` skips JWT | Local-only | Dangerous if left on for a real family. |
-| Historical enrollments | No backfill | Years scheduled before auto-enroll may still have empty reading lists until the next commit/apply. |
-| Compliance / taxonomy product | DEFER | Correct to leave. |
-| `ai_generator.py` filename | Comments fixed | Rename when the file is already being edited. |
+- Duplicate helpers in `app/services/legacy_tables.py` — **fixed.** One implementation of each helper. Tables themselves are not DROPped.
+- Capture tokens and `get_tenant_db` — **fixed.** Capture JWTs cannot open a tenant file through `get_tenant_db`. Staging uses `get_staging_tenant_db`.
+- JWT strength is length + denylist — **still current.**
+- Child completion vs shared groups — intended rule, not a hole.
+- FastAPI description still says “compliance foundation” — **still current**, cosmetic.
+- `CODEBASE_MAP.md` intro line — **fixed** in the 2026-09-01 doc pass.
 
 ---
 
-## New technical debt
+## Historical recommended next priorities (2026-08-29)
 
-Found in this pass; not listed as resolved in `TECHNICAL_DEBT.md`.
+Do **not** execute this list as if it were current.
 
-### Duplicate helpers in `app/services/legacy_tables.py`
+| Then | Now |
+|---|---|
+| 1. Root README | Done |
+| 2. JWT on register | Done |
+| 3. All Students UI copy | Done |
+| 4. Tenant-file JWT pytest | Done (`test_auth.py`) |
+| 5. Empty-reading-list copy | Done |
+| 6. Deduplicate `legacy_tables.py` | **Done.** One implementation of each helper. |
+| 7. One exceptions router | **Done.** `/api/exceptions` only. |
+| 8. CI | **Still remaining** |
+| 9. DROP leftover tables after COUNT=0 | **Tooling done.** Script tested; operator must still run it on live files |
+| 10. Stop writing the settings date mirror | **Done.** Model, writes, and leftover columns retired. |
 
-`delete_legacy_rows_for_student`, `delete_legacy_rows_for_units`, and `delete_legacy_rows_for_enrollments` are each defined twice. Python keeps the second copy. Behavior is still correct (tests pass). The first copies are dead. Clean up when that file is touched. Do not change behavior.
-
-### Capture tokens and `get_tenant_db`
-
-`get_tenant_db` trusts `user_from_token`, which accepts a capture credential so staging can write. Every other tenant route today also depends on `get_current_user` or `require_parent`. A future route that uses only `get_tenant_db` would let an extension token mutate the planner. Checklist for new endpoints: parent/child/staging dependency must be explicit.
-
-### JWT strength is length + denylist, not entropy
-
-A 32-character string of a single letter is not in the placeholder list and would be accepted in non-dev. Good enough to stop silent Compose defaults; not a cryptographic policy. Optional later: require mixed characters or a generator in the README.
-
-### Child completion vs shared groups
-
-A child completing their own shared-group row does not update siblings. That is the documented rule. Parents can see mixed status on a co-lesson until they PATCH as a parent. Product copy or a later sync rule — not a security hole.
-
-### FastAPI description still says “compliance foundation”
-
-`create_app()` title/description still advertise a compliance slice that is a stub. Cosmetic. Portfolios are the printable-record product.
-
-### `CODEBASE_MAP.md` intro line
-
-The map still says application source was not changed for the map. The map was updated during hardening. Harmless drift.
-
----
-
-## Regressions or risks
-
-**No test-suite regression.** Book pacing, plan apply, enrollments, school year, evidence, capture tokens, child status, and schema tests are green.
-
-**Still high-blast-radius if edited carelessly** (unchanged by hardening):
-
-- Recalibrate and parent shared-group sync (sibling calendars).
-- Pacing/plan-apply writing hundreds of rows (one tenant transaction; catalog page-count is a second commit).
-- Forgetting a `schema_patches` ALTER on a new model column (old `tenant_*.db` files lag).
-- Replaying Alembic 0001 (refused, but someone generating a new revision might assume it runs).
-
-**Operational:**
-
-- `DEV_MODE=true` is a full parent/admin bypass.
-- Families may still paste an old parent JWT into the extension until they generate a capture token.
-- Empty leftover tables on disk are harmless until someone maps them again.
-
-**Not a regression:** child My Work completing a shared lesson without sibling sync. Intended.
-
----
-
-## Architecture deviations
-
-Compared with the **TARGET** sections, not with a generic SaaS template.
-
-| Target | Current | Kind |
-|---|---|---|
-| One operational year | Met for reads; settings dates still written | Documented leftover |
-| One exceptions HTTP surface | Two prefixes, one table | CONSOLIDATE later |
-| Catalog as the public ISBN name | SPA uses catalog; `/books/*` still live | API-only aliases |
-| Assignment-only calendar | Models unmapped; empty tables may remain | DEPRECATE tables |
-| Token on register | Not issued | COMPLETE later |
-| All Students copy | Query is correct; UI copy missing | Copy only |
-| Tenant-file integration tests | Schema file tests exist; JWT routing still in-memory | Testing gap |
-| README / CI | Absent at repo root | Deployment |
-| One household per tenant file | Schema still allows many; product uses `get_default_household` | Comment/rule, low |
-| Drop jurisdiction threading | `jurisdiction_id` still on `Household` | DEFER with compliance |
-
-These are **not** deviations (they match the ten decisions in `ROADMAP.md`):
-
-- File-per-household SQLite
-- Two curriculum intakes
-- Vanilla `app.js` without a framework
-- Ollama off the calendar write path
-- Compliance/taxonomy UIs not built
-- Alembic archive not used as the runner
-
----
-
-## Recommended next priorities
-
-Order is homeschool-operator value, not abstract cleanliness. Do not start Postgres, a JS framework, or compliance UI.
-
-1. **Root README** — compose port 3040, first admin, invite key, `JWT_SECRET`, optional Ollama, rotate mail if it was ever committed. (`ROADMAP` safest #9 / Phase 5)
-2. **JWT on `POST /auth/register`** — additive; one fewer login. (`ROADMAP` safest #5)
-3. **All Students UI copy** — “shared lessons only.” (`ROADMAP` safest #4)
-4. **One pytest** that provisions `tenant_{uuid}.db` and routes a real JWT without overriding `get_tenant_db`. (`ROADMAP` safest #10 / debt #15)
-5. **Empty-reading-list copy** on portfolios for years scheduled before auto-enroll. (`ROADMAP` Phase 2 leftover)
-6. **Deduplicate `legacy_tables.py`** — delete the first unused function copies. Tiny, no behavior change.
-7. **One exceptions router** with aliases for `/exceptions` and `/calendar/exceptions`. Wait until `app.js` can move. (`ROADMAP` Phase 4)
-8. **CI** running `docker compose --profile dev run --rm tests pytest`.
-9. **DROP leftover tables** only after `SELECT COUNT(*)` is 0 on each real `tenant_*.db`.
-10. **Stop writing the settings date mirror**, then drop those columns in a dedicated schema pass with backups.
-
-Leave alone until a product requirement forces it: Postgres, React, Celery, taxonomy admin, merging curricula with plans, deleting `/books/*` while tests still call them, making auto-schedule require Ollama.
+Current remaining order: `docs/ROADMAP.md`.
 
 ---
 
@@ -256,9 +147,9 @@ Leave alone until a product requirement forces it: Postgres, React, Celery, taxo
 
 | Question | Look at |
 |---|---|
-| Did hardening actually land? | The fourteen checks above |
-| What should we build next? | Recommended next priorities |
-| What must we not rewrite? | Architecture deviations (intentional) + `ROADMAP.md` section 4 |
-| Where is leftover cleanup recorded? | Unresolved + `TECHNICAL_DEBT.md` medium/low |
+| Did hardening land in 2026-08-29? | The fourteen checks (historical; still true) |
+| What is the system today? | `docs/ARCHITECTURE.md` and the current-state table at the top of this file |
+| What should we build next? | `docs/ROADMAP.md` (not the 2026-08-29 priority list) |
+| Independent evidence | `docs/IMPLEMENTATION_RECONCILIATION.md` (821 tests) |
 
 If a proposal conflicts with the ten decisions in `ROADMAP.md` section 1, it is a rewrite, not a simplification.

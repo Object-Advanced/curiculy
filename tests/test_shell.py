@@ -90,6 +90,11 @@ def test_readme_covers_bootstrap() -> None:
     assert "docker compose --profile dev run --rm tests pytest" in text
 
 
+def test_github_actions_runs_the_compose_suite() -> None:
+    text = (ROOT / ".github" / "workflows" / "tests.yml").read_text(encoding="utf-8")
+    assert "docker compose --profile dev run --rm -T tests pytest -q --tb=line" in text
+
+
 def test_shell_urls_are_existing_files() -> None:
     version = _shell_version()
     sw_text = SW_JS.read_text(encoding="utf-8").replace("${SHELL_VERSION}", version)

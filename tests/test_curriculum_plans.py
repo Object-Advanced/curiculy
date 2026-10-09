@@ -481,6 +481,12 @@ class TestApplyCurriculumPlan:
         ]
         assert "Do the facts" in (rows[0].notes or "")
         assert "https://example.com/a" in (rows[0].notes or "")
+        from app.models import Curriculum
+
+        curriculum = (
+            db.query(Curriculum).filter(Curriculum.title == created["title"]).one()
+        )
+        assert {row.curriculum_id for row in rows} == {curriculum.id}
 
     def test_skips_routine_break_blocks_like_lunch(
         self, client: TestClient, db: Session

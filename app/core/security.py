@@ -165,12 +165,12 @@ def user_from_token(token: str | None) -> CurrentUser:
     raise _UNAUTHENTICATED
 
 
-# Imported after the JWT helpers exist so ``app.db`` can finish loading.
-from app.db import get_admin_db  # noqa: E402
-
-
 def is_capture_credential(user: CurrentUser) -> bool:
     return user.role == UserRole.EVIDENCE.value or user.scope == CAPTURE_TOKEN_SCOPE
+
+
+# Imported after the JWT helpers exist so ``app.db`` can finish loading.
+from app.db import get_admin_db  # noqa: E402
 
 
 def get_current_user(

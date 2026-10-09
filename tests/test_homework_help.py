@@ -1,11 +1,12 @@
 """Homework helper guardrails, assignment notes, and parent notifications."""
 
 from datetime import date
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
 from app.schemas.homework import TutorReply
+from app.services.homework_help import tutor_with_ollama
 from tests.test_auth import bearer
 from tests.test_kid_auth import _child_token, _parent_ready, _set_pin
 
@@ -192,3 +193,81 @@ def test_mark_notifications_read(auth_client: TestClient) -> None:
     assert read.json()["read_at"] is not None
     empty = auth_client.get("/api/notifications", headers=bearer(token)).json()
     assert empty["unread_count"] == 0
+
+
+async def test_tutor_returns_canned_hint_when_ollama_is_down() -> None:
+    with patch(
+        "app.services.homework_help.chat_with_model_fallback",
+        new=AsyncMock(side_effect=ConnectionError("ollama down")),
+    ):
+        reply = await tutor_with_ollama(
+            assignment_title="Fractions p. 42",
+            student_name="Ada",
+            history=[],
+            user_message="I am stuck.",
+        )
+
+    assert reply.mode == "hint"
+    assert reply.redirect is False
+    assert "can't reach the tutor" in reply.message
+
+
+async def test_tutor_keeps_structured_json_schema_and_temperature() -> None:
+    chat = AsyncMock(
+        return_value={
+            "message": {
+                "content": TutorReply(
+                    mode="socratic",
+                    message="What is half of 8?",
+                    redirect=False,
+                ).model_dump_json()
+            }
+        }
+    )
+    mock_client = MagicMock()
+    mock_client.chat = chat
+    with patch(
+        "app.services.ollama_chat.ollama.AsyncClient",
+        return_value=mock_client,
+    ):
+        reply = await tutor_with_ollama(
+            assignment_title="Fractions p. 42",
+            student_name="Ada",
+            history=[],
+            user_message="How do I start?",
+        )
+
+    assert reply.mode == "socratic"
+    assert reply.message == "What is half of 8?"
+    kwargs = chat.await_args.kwargs
+    assert kwargs["format"] == TutorReply.model_json_schema()
+    assert kwargs["options"] == {"temperature": 0.3}
+    assert kwargs["model"] == "llama3.1"
+
+
+def test_message_when_ollama_is_down_is_still_200(auth_client: TestClient) -> None:
+    token, student = _parent_ready(auth_client)
+    _set_pin(auth_client, token, student["id"])
+    work = _assignment(auth_client, token, student["id"])
+    child = _child_token(auth_client, student["id"])
+    session = auth_client.post(
+        "/api/homework-help/sessions",
+        headers=bearer(child),
+        json={"assignment_id": work["id"]},
+    ).json()
+
+    with patch(
+        "app.services.homework_help.chat_with_model_fallback",
+        new=AsyncMock(side_effect=ConnectionError("ollama down")),
+    ):
+        response = auth_client.post(
+            f"/api/homework-help/sessions/{session['id']}/messages",
+            headers=bearer(child),
+            json={"content": "I am stuck on the first problem."},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "active"
+    texts = [row["content"] for row in body["messages"]]
+    assert any("can't reach the tutor" in text for text in texts)

@@ -16,7 +16,15 @@ How to add a column
 3. ``create_all`` covers brand-new tables; it will not add columns to old files.
 4. Test: fresh file, old file missing the column, second apply, existing rows
    still present.
-5. Do not ``DROP COLUMN`` on household files.
+
+Column retirement (settings date mirror only)
+---------------------------------------------
+``household_settings.start_date`` / ``end_date`` duplicated ``SchoolYear``.
+``retire_household_settings_date_columns`` backfills a named year when a
+household has leftover dates and no ``school_years`` row, then drops those
+two columns. It does not overwrite an existing ``SchoolYear``. Do not treat
+this as a general DROP-COLUMN runner. Do not DROP leftover
+``scheduled_work`` / ``evidence_captures`` tables from here.
 """
 
 from __future__ import annotations
@@ -78,6 +86,15 @@ TENANT_COLUMN_PATCHES: tuple[ColumnPatch, ...] = (
         extra_sql=(
             "CREATE INDEX IF NOT EXISTS ix_assignments_shared_group_uuid "
             "ON assignments (shared_group_uuid)",
+        ),
+    ),
+    ColumnPatch(
+        table="assignments",
+        column="curriculum_id",
+        ddl="ALTER TABLE assignments ADD COLUMN curriculum_id INTEGER",
+        extra_sql=(
+            "CREATE INDEX IF NOT EXISTS ix_assignments_curriculum_id "
+            "ON assignments (curriculum_id)",
         ),
     ),
     ColumnPatch(
@@ -203,9 +220,147 @@ def apply_column_patches(
             conn.execute(text(statement))
 
 
+def _school_year_name_sql() -> str:
+    """SQL expression matching ``school_year_name`` in ``app.services.school_year``."""
+    return (
+        "CASE WHEN strftime('%Y', hs.start_date) = strftime('%Y', hs.end_date) "
+        "THEN strftime('%Y', hs.start_date) "
+        "ELSE strftime('%Y', hs.start_date) || '-' || strftime('%Y', hs.end_date) "
+        "END"
+    )
+
+
+def _backfill_school_years_from_settings_dates(conn: Connection) -> None:
+    """Copy leftover settings dates onto SchoolYear when no year exists.
+
+    Does not update households that already have a ``school_years`` row.
+    Named years already win when both stores exist.
+    """
+    tables = sqlite_user_tables(conn)
+    if "household_settings" not in tables or "school_years" not in tables:
+        return
+    columns = sqlite_table_columns(conn, "household_settings")
+    if "start_date" not in columns or "end_date" not in columns:
+        return
+    year_columns = sqlite_table_columns(conn, "school_years")
+    required = {"household_id", "name", "start_date", "end_date"}
+    if not required.issubset(year_columns):
+        return
+    name_sql = _school_year_name_sql()
+    timestamp_cols = "created_at" in year_columns and "updated_at" in year_columns
+    if timestamp_cols:
+        conn.execute(
+            text(
+                "INSERT INTO school_years "
+                "(household_id, name, start_date, end_date, created_at, updated_at) "
+                f"SELECT hs.household_id, {name_sql}, hs.start_date, hs.end_date, "
+                "datetime('now'), datetime('now') "
+                "FROM household_settings hs "
+                "WHERE hs.start_date IS NOT NULL AND hs.end_date IS NOT NULL "
+                "AND NOT EXISTS ("
+                "SELECT 1 FROM school_years sy "
+                "WHERE sy.household_id = hs.household_id"
+                ")"
+            )
+        )
+        return
+    conn.execute(
+        text(
+            "INSERT INTO school_years "
+            "(household_id, name, start_date, end_date) "
+            f"SELECT hs.household_id, {name_sql}, hs.start_date, hs.end_date "
+            "FROM household_settings hs "
+            "WHERE hs.start_date IS NOT NULL AND hs.end_date IS NOT NULL "
+            "AND NOT EXISTS ("
+            "SELECT 1 FROM school_years sy "
+            "WHERE sy.household_id = hs.household_id"
+            ")"
+        )
+    )
+
+
+def _rebuild_household_settings_without_dates(conn: Connection) -> None:
+    """SQLite fallback when ALTER TABLE DROP COLUMN is unavailable."""
+    columns = sqlite_table_columns(conn, "household_settings")
+    has_colors = "exception_colors" in columns
+    has_created = "created_at" in columns
+    has_updated = "updated_at" in columns
+    color_ddl = "exception_colors TEXT," if has_colors else ""
+    created_ddl = "created_at DATETIME NOT NULL," if has_created else ""
+    updated_ddl = "updated_at DATETIME NOT NULL," if has_updated else ""
+    conn.execute(text("DROP TABLE IF EXISTS household_settings_new"))
+    conn.execute(
+        text(
+            "CREATE TABLE household_settings_new ("
+            "id INTEGER PRIMARY KEY, "
+            "household_id INTEGER NOT NULL, "
+            "weekdays VARCHAR(32) NOT NULL, "
+            f"{color_ddl}"
+            f"{created_ddl}"
+            f"{updated_ddl}"
+            "CONSTRAINT uq_household_settings_household UNIQUE (household_id), "
+            "FOREIGN KEY(household_id) REFERENCES households (id)"
+            ")"
+        )
+    )
+    select_cols = ["id", "household_id", "weekdays"]
+    if has_colors:
+        select_cols.append("exception_colors")
+    if has_created:
+        select_cols.append("created_at")
+    if has_updated:
+        select_cols.append("updated_at")
+    col_sql = ", ".join(select_cols)
+    conn.execute(
+        text(
+            f"INSERT INTO household_settings_new ({col_sql}) "
+            f"SELECT {col_sql} FROM household_settings"
+        )
+    )
+    conn.execute(text("DROP TABLE household_settings"))
+    conn.execute(text("ALTER TABLE household_settings_new RENAME TO household_settings"))
+
+
+def _sqlite_version_tuple(conn: Connection) -> tuple[int, int, int]:
+    raw = str(conn.execute(text("SELECT sqlite_version()")).scalar() or "0.0.0")
+    parts = []
+    for piece in raw.split("."):
+        digits = "".join(ch for ch in piece if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    while len(parts) < 3:
+        parts.append(0)
+    return parts[0], parts[1], parts[2]
+
+
+def retire_household_settings_date_columns(conn: Connection) -> None:
+    """Promote leftover settings dates to SchoolYear, then drop the mirror.
+
+    Idempotent. Existing ``SchoolYear`` rows are left unchanged when both
+    stores were present. Does not DROP leftover assignment tables.
+    """
+    tables = sqlite_user_tables(conn)
+    if "household_settings" not in tables:
+        return
+    columns = sqlite_table_columns(conn, "household_settings")
+    has_start = "start_date" in columns
+    has_end = "end_date" in columns
+    if not has_start and not has_end:
+        return
+    _backfill_school_years_from_settings_dates(conn)
+    if _sqlite_version_tuple(conn) >= (3, 35, 0):
+        if has_start:
+            conn.execute(text("ALTER TABLE household_settings DROP COLUMN start_date"))
+        remaining = sqlite_table_columns(conn, "household_settings")
+        if "end_date" in remaining:
+            conn.execute(text("ALTER TABLE household_settings DROP COLUMN end_date"))
+        return
+    _rebuild_household_settings_without_dates(conn)
+
+
 def apply_tenant_patches(conn: Connection) -> None:
-    """ALTER existing tenant tables. Does not drop school-year date mirrors."""
+    """ALTER existing tenant tables, then retire the settings date mirror."""
     apply_column_patches(conn, TENANT_COLUMN_PATCHES)
+    retire_household_settings_date_columns(conn)
 
 
 def apply_admin_patches(conn: Connection) -> None:
@@ -217,7 +372,7 @@ def apply_catalog_patches(conn: Connection) -> None:
 
 
 def apply_tenant_schema(engine: Engine) -> None:
-    """create_all plus tenant column patches. Safe to run on every boot."""
+    """create_all plus tenant patches, including settings date-column retirement."""
     import app.models  # noqa: F401
 
     from app.db import TenantBase

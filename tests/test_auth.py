@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
+import sqlite3
 
 import pytest
 from fastapi import HTTPException
@@ -38,6 +39,11 @@ def auth_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def auth_client(auth_dir: Path, db: Session) -> Iterator[TestClient]:
+    """HTTP client with real ``admin.db`` and ``tenant_{uuid}.db`` under tmp_path.
+
+    Does not override ``get_tenant_db`` or ``get_current_user``. Catalog stays
+    on the in-memory ``db`` session. Never writes ``./data``.
+    """
     application = create_app()
     application.dependency_overrides[get_catalog_db] = lambda: db
     try:
@@ -205,6 +211,50 @@ def test_login_routes_to_tenant_file(auth_client: TestClient, auth_dir: Path) ->
     assert tenant_path.exists()
 
 
+def _student_names_on_disk(path: Path) -> list[str]:
+    connection = sqlite3.connect(path)
+    try:
+        rows = connection.execute("SELECT name FROM students ORDER BY id").fetchall()
+        return [row[0] for row in rows]
+    finally:
+        connection.close()
+
+
+def test_physical_tenant_files_persist_and_stay_isolated(
+    auth_client: TestClient, auth_dir: Path
+) -> None:
+    """JWT → admin user → tenant_{uuid}.db; a second connection sees committed rows."""
+    seed_user(email="alpha@example.com", tenant_uuid="family-a")
+    seed_user(email="beta@example.com", tenant_uuid="family-b")
+    alpha = _login(auth_client, "alpha@example.com")
+    beta = _login(auth_client, "beta@example.com")
+
+    created_a = auth_client.post(
+        "/api/students",
+        headers=bearer(alpha),
+        json={"name": "Ada"},
+    )
+    created_b = auth_client.post(
+        "/api/students",
+        headers=bearer(beta),
+        json={"name": "Blaise"},
+    )
+    assert created_a.status_code == 201
+    assert created_b.status_code == 201
+
+    path_a = auth_dir / "tenant_family-a.db"
+    path_b = auth_dir / "tenant_family-b.db"
+    assert path_a.is_file()
+    assert path_b.is_file()
+    assert _student_names_on_disk(path_a) == ["Ada"]
+    assert _student_names_on_disk(path_b) == ["Blaise"]
+
+    listed_a = auth_client.get("/api/students", headers=bearer(alpha))
+    listed_b = auth_client.get("/api/students", headers=bearer(beta))
+    assert [row["name"] for row in listed_a.json()] == ["Ada"]
+    assert [row["name"] for row in listed_b.json()] == ["Blaise"]
+
+
 def test_auth_me_for_logged_in_user(auth_client: TestClient) -> None:
     seed_user()
     token = auth_client.post(
@@ -229,7 +279,9 @@ def test_health_is_public_and_reports_dev_mode(auth_client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
+    assert body["database"] == "ok"
     assert body["dev_mode"] is False
+    assert set(body) == {"status", "database", "dev_mode"}
 
 
 def _login(client: TestClient, email: str = "parent@example.com", password: str = "secret") -> str:

@@ -19,6 +19,7 @@ from app.db import open_tenant_session
 from app.enums import CurriculumPlanStatus
 from app.models import CurriculumLesson, CurriculumPlan
 from app.services.curriculum_plan_import import plan_dimensions_from_rows
+from app.services.notifications import notify_curriculum_plan_processed
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +166,7 @@ def _persist_lessons(
         plan.frequency_days = frequency_days
         plan.total_weeks = total_weeks
     plan.status = CurriculumPlanStatus.READY
+    notify_curriculum_plan_processed(db_session, title=plan.title, ready=True)
     db_session.commit()
 
 
@@ -175,6 +177,8 @@ def _mark_plan_status(
     if plan is None:
         return
     plan.status = status
+    if status is CurriculumPlanStatus.FAILED:
+        notify_curriculum_plan_processed(db_session, title=plan.title, ready=False)
     db_session.commit()
 
 

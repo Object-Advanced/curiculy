@@ -1,0 +1,24 @@
+# Full pytest suite in the Compose `tests` image (Python 3.12, same
+# dependencies as local development). No production secrets, SMTP, or Ollama.
+# SQLite files are created in pytest tmp paths inside the container.
+#
+# `-T` disables a TTY. GitHub Actions has none; the suite is otherwise the
+# same as `docker compose --profile dev run --rm tests pytest -q --tb=line`.
+
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the full pytest suite
+        run: docker compose --profile dev run --rm -T tests pytest -q --tb=line

@@ -184,7 +184,8 @@ def init_databases() -> None:
     """Apply the runtime schema to catalog, shared tenant, admin, and every tenant_*.db.
 
     Uses ``create_all`` plus ``app.schema_patches``. Does not replay Alembic.
-    Additive only: existing rows are not deleted.
+    Existing planner rows are not deleted. The settings date-mirror columns
+    are retired after a SchoolYear backfill (see schema_patches).
     """
     import app.models  # noqa: F401  (registers every mapper before create_all)
     import app.models.admin  # noqa: F401
@@ -205,14 +206,41 @@ def init_databases() -> None:
 
 # JWT helpers live in ``app.core.security``; imported here after ``get_admin_db``
 # exists so that module can depend on this one without a circular import.
-from app.core.security import oauth2_scheme, user_from_token  # noqa: E402
+from app.core.security import oauth2_scheme  # noqa: E402
 
 
 def get_tenant_db(
     token: str | None = Depends(oauth2_scheme),
+    admin_db: Session = Depends(get_admin_db),
 ) -> Generator[Session, None, None]:
-    """Session for the tenant named in the caller's JWT (or DEV_MODE fallback)."""
-    user = user_from_token(token)
+    """Session for an application user (parent, child, or demo).
+
+    Identity comes from ``get_current_user``, which rejects capture credentials
+    and uses the admin ``users`` row for tenant_uuid. Opening a tenant file is
+    not capture authorization. Staging must use ``get_staging_tenant_db``.
+    """
+    from app.core.security import get_current_user
+
+    user = get_current_user(token, admin_db)
+    db = open_tenant_session(user.tenant_uuid, user.jti)
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_staging_tenant_db(
+    token: str | None = Depends(oauth2_scheme),
+    admin_db: Session = Depends(get_admin_db),
+) -> Generator[Session, None, None]:
+    """Session for a parent JWT or a live capture credential.
+
+    Only evidence staging should depend on this. Capture tokens cannot open a
+    tenant file through ``get_tenant_db``.
+    """
+    from app.core.security import require_staging_upload
+
+    user = require_staging_upload(token, admin_db)
     db = open_tenant_session(user.tenant_uuid, user.jti)
     try:
         yield db

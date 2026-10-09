@@ -10,8 +10,8 @@ from pydantic import ValidationError
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.enums import CurriculumPlanStatus
-from app.models import CurriculumLesson, CurriculumPlan
+from app.enums import CurriculumPlanStatus, ParentNotificationType
+from app.models import CurriculumLesson, CurriculumPlan, ParentNotification
 from app.schemas.curriculum_plans import AIParsedCurriculum, AIParsedLesson
 from app.services.ai_curriculum_worker import (
     parse_text_with_ollama,
@@ -23,6 +23,35 @@ from app.services.pdf_parser import extract_text_from_pdf, is_sparse_curriculum_
 def _see_worker_commit(db: Session) -> None:
     """The worker commits on its own Session; drop this identity map."""
     db.expire_all()
+
+
+def _assert_one_plan_notification(
+    session: Session, *, ready: bool, plan_title: str
+) -> ParentNotification:
+    rows = session.query(ParentNotification).order_by(ParentNotification.id).all()
+    assert len(rows) == 1
+    note = rows[0]
+    expected = (
+        ParentNotificationType.CURRICULUM_PLAN_READY
+        if ready
+        else ParentNotificationType.CURRICULUM_PLAN_FAILED
+    )
+    other = (
+        ParentNotificationType.CURRICULUM_PLAN_FAILED
+        if ready
+        else ParentNotificationType.CURRICULUM_PLAN_READY
+    )
+    assert note.type == expected
+    assert note.student_id is None
+    assert note.assignment_id is None
+    assert plan_title in note.body
+    assert "Traceback" not in note.body
+    if ready:
+        assert note.title == "Curriculum plan is ready"
+    else:
+        assert note.title == "Curriculum plan processing failed"
+    assert session.query(ParentNotification).filter_by(type=other).count() == 0
+    return note
 
 
 def _tracked_opener(engine: Engine, expected_tenant: str, expected_demo_key: str | None):
@@ -374,6 +403,14 @@ class TestImportCurriculumPdf:
         assert lessons[0].pages == "7-10"
         assert lessons[0].time_slot == "9:00-9:45"
         assert lessons[0].category == "Daily Work"
+        _assert_one_plan_notification(db, ready=True, plan_title="guide")
+        inbox = client.get("/api/notifications")
+        assert inbox.status_code == 200
+        payload = inbox.json()
+        assert payload["unread_count"] == 1
+        assert payload["notifications"][0]["type"] == "curriculum_plan_ready"
+        assert payload["notifications"][0]["student_id"] is None
+        assert payload["notifications"][0]["assignment_id"] is None
 
     def test_background_worker_saves_a_replicated_daily_routine(
         self, client: TestClient, db: Session
@@ -436,6 +473,7 @@ class TestImportCurriculumPdf:
         assert plan is not None
         assert plan.status == "failed"
         assert plan.total_weeks == 1
+        _assert_one_plan_notification(db, ready=False, plan_title="empty-guide")
 
     def test_ollama_error_marks_the_plan_failed(
         self, client: TestClient, db: Session
@@ -455,6 +493,7 @@ class TestImportCurriculumPdf:
         plan = db.get(CurriculumPlan, response.json()["plan_id"])
         assert plan is not None
         assert plan.status == "failed"
+        _assert_one_plan_notification(db, ready=False, plan_title="bad-ai")
 
     def test_corrupt_pdf_does_not_fail_the_request(
         self, client: TestClient, db: Session
@@ -470,6 +509,7 @@ class TestImportCurriculumPdf:
         assert plan is not None
         assert plan.status == "failed"
         assert db.query(CurriculumLesson).filter_by(plan_id=plan_id).count() == 0
+        _assert_one_plan_notification(db, ready=False, plan_title="bad")
 
     def test_queues_the_worker_with_tenant_identity_not_the_request_session(
         self, client: TestClient
@@ -504,6 +544,38 @@ class TestImportCurriculumPdf:
         assert captured["demo_key"] == "test"
         assert captured["bytes_len"] > 0
         assert "db" not in captured
+
+    def test_processing_request_does_not_create_a_notification(
+        self, client: TestClient, db: Session
+    ) -> None:
+        async def fake_worker(
+            plan_id: int,
+            file_bytes: bytes,
+            tenant_uuid: str,
+            demo_key: str | None = None,
+        ) -> None:
+            return None
+
+        with patch(
+            "app.routers.curriculum_plans.process_pdf_curriculum_background",
+            new=fake_worker,
+        ):
+            response = client.post(
+                "/api/curriculum/import-pdf",
+                files={
+                    "file": ("guide.pdf", _pdf_bytes("Lesson 1"), "application/pdf")
+                },
+            )
+
+        assert response.status_code == 202
+        plan = db.get(CurriculumPlan, response.json()["plan_id"])
+        assert plan is not None
+        assert plan.status == "processing"
+        assert db.query(ParentNotification).count() == 0
+        inbox = client.get("/api/notifications")
+        assert inbox.status_code == 200
+        assert inbox.json()["unread_count"] == 0
+        assert inbox.json()["notifications"] == []
 
 
 class TestPdfWorkerOwnsItsSession:
@@ -560,6 +632,7 @@ class TestPdfWorkerOwnsItsSession:
                 verify.query(CurriculumLesson).filter_by(plan_id=plan_id).all()
             )
             assert [lesson.title for lesson in lessons] == ["Lesson 1"]
+            _assert_one_plan_notification(verify, ready=True, plan_title="Guide")
         finally:
             verify.close()
 
@@ -606,6 +679,7 @@ class TestPdfWorkerOwnsItsSession:
                 verify.query(CurriculumLesson).filter_by(plan_id=plan_id).count()
                 == 0
             )
+            _assert_one_plan_notification(verify, ready=False, plan_title="Guide")
         finally:
             verify.close()
 
@@ -651,6 +725,7 @@ class TestPdfWorkerOwnsItsSession:
                 verify.query(CurriculumLesson).filter_by(plan_id=plan_id).count()
                 == 0
             )
+            _assert_one_plan_notification(verify, ready=False, plan_title="Guide")
         finally:
             verify.close()
 
@@ -674,7 +749,7 @@ class TestParseTextWithOllama:
             return_value={"message": {"content": json.dumps(payload)}}
         )
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient",
+            "app.services.ollama_chat.ollama.AsyncClient",
             return_value=mock_client,
         ):
             result = await parse_text_with_ollama(
@@ -706,7 +781,7 @@ class TestParseTextWithOllama:
             ]
         )
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient",
+            "app.services.ollama_chat.ollama.AsyncClient",
             return_value=mock_client,
         ):
             result = await parse_text_with_ollama("Day 1: Lesson 1")
@@ -716,9 +791,22 @@ class TestParseTextWithOllama:
         assert mock_client.chat.await_args_list[1].kwargs["model"] == "mistral"
         assert result.lessons[0].title == "Lesson 1"
 
+    async def test_non_missing_model_error_is_not_a_fallback(self) -> None:
+        mock_client = MagicMock()
+        mock_client.chat = AsyncMock(side_effect=ConnectionError("ollama down"))
+        with patch(
+            "app.services.ollama_chat.ollama.AsyncClient",
+            return_value=mock_client,
+        ):
+            with pytest.raises(ConnectionError, match="ollama down"):
+                await parse_text_with_ollama("Day 1: Lesson 1")
+
+        mock_client.chat.assert_awaited_once()
+        assert mock_client.chat.await_args.kwargs["model"] == "llama3.1"
+
     async def test_empty_text_skips_the_model(self) -> None:
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient"
+            "app.services.ollama_chat.ollama.AsyncClient"
         ) as factory:
             result = await parse_text_with_ollama("   ")
         factory.assert_not_called()
@@ -726,7 +814,7 @@ class TestParseTextWithOllama:
 
     async def test_cover_page_week_count_skips_the_model(self) -> None:
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient"
+            "app.services.ollama_chat.ollama.AsyncClient"
         ) as factory:
             result = await parse_text_with_ollama(
                 "Abeka K4\n36 weeks\nTeacher Edition"

@@ -19,7 +19,7 @@ from app.core.security import (
     require_parent,
     require_staging_upload,
 )
-from app.db import get_tenant_db
+from app.db import get_staging_tenant_db, get_tenant_db
 from app.enums import UserRole
 from app.evidence import (
     evidence_media_type,
@@ -50,7 +50,7 @@ def stage_evidence(
     file: UploadFile = File(...),
     source: str = Form(_DEFAULT_SOURCE),
     user: CurrentUser = Depends(require_staging_upload),
-    tenant_db: Session = Depends(get_tenant_db),
+    tenant_db: Session = Depends(get_staging_tenant_db),
 ) -> EvidenceStaging:
     """Store a screenshot and hold it until a parent links it to an assignment."""
     file_path = store_capture(

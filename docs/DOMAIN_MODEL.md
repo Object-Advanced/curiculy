@@ -2,7 +2,7 @@
 
 Canonical language for the product. Use these names in code comments, UI copy, and future schema work.
 
-The live calendar object is the **assignment**. Older **scheduled work** is not part of the target model.
+The live calendar object is the **assignment**. Older **scheduled work** is not part of the model. `ScheduledWork` / `EvidenceCapture` ORM types are gone; empty leftover SQLite tables may remain on older tenant files until an operator COUNT=0 and DROP.
 
 ---
 
@@ -44,7 +44,7 @@ Do not put planner rows in `catalog.db`. Do not put ISBN cache in the tenant fil
 | **Class days** | `household_settings.weekdays` | Which weekdays count as school (0=Mon). |
 | **Exception** | `calendar_exceptions` | Days not to schedule: holiday, vacation, sick, appointment. Household-wide or one student. |
 
-**Target rule:** Dates of the current year live on `SchoolYear`. Weekdays and exception colors live on `HouseholdSettings`. Settings still store start/end as a write-through mirror of the operational year so existing tenant files keep those columns; they are not a second source of truth.
+**Rule:** Dates of the operational year live only on `SchoolYear` (latest start date, then id). Weekdays and exception colors live on `HouseholdSettings`. Settings do not store a year window. Older tenant files that still had settings date columns are upgraded on boot: leftover dates become a `SchoolYear` only when that household has no named year; an existing named year is not overwritten; the leftover columns are then dropped.
 
 **Attendance** (`attendance`) is a log for reports: Present / Absent / Sick / Vacation. It is not the same as an exception. Exceptions change **whether work is generated**. Attendance records **what happened**.
 
@@ -52,7 +52,7 @@ Do not put planner rows in `catalog.db`. Do not put ISBN cache in the tenant fil
 
 ## Library vs guide (two curriculum objects)
 
-Homeschoolers use both. They must not be merged.
+Homeschoolers use both. They must not be merged. Both objects produce **assignments**. Page pacing (books) and week/day pacing guides (including paper sheets) stay distinct intake paths.
 
 ### 1. Program (book-based)
 
@@ -75,6 +75,17 @@ Auto-schedule: parent picks a resource/book page range → preview lessons → c
 
 Apply plan: walk school days, skip exceptions, write **assignments**. Does not require a book page count.
 
+Guide capture methods (all write `curriculum_plans` / `curriculum_lessons`, then apply):
+
+| Capture | Meaning |
+|---|---|
+| Manual builder | Parent edits the week/day grid in the SPA |
+| CSV import | `POST /api/curriculum/import-csv` |
+| PDF import | `POST /api/curriculum/import-pdf`; Ollama parses extracted text in a background worker |
+| Paper sheet | Print `GET /api/curriculum/paper-template` (ArUco corners + QR via `qrcode`). Photograph and `POST /api/curriculum/import-paper`: OpenCV flattens the page on the request; Ollama vision transcribes cells in a background worker |
+
+Paper intake is a pacing-guide capture, not a third calendar object and not a `scheduled_work` revival.
+
 ### Shared bibliographic cache (not the household library)
 
 | Term | Table | Database |
@@ -93,9 +104,11 @@ A resource **may** point at a book edition by integer id. That is a cache link, 
 |---|---|---|
 | **Enrollment** | `enrollments` | This student is using this curriculum in this school year. |
 
-**Target:** Created automatically when a book is committed or a plan is applied to a student. Used by portfolio reading lists. Settings can still edit. Duplicate student + curriculum + year is reused, not inserted twice.
+**Rule:** Created automatically when a book is committed or a plan is applied to a student. Used by portfolio reading lists. Settings can still edit. Duplicate student + curriculum + year is reused, not inserted twice.
 
-`curriculum_id` is an integer (no FK) because it was designed like catalog ids; it actually points at tenant `curricula`. Plan-apply matches or creates that library row from the plan title.
+New pacing commits and plan applies stamp `assignments.curriculum_id` (nullable tenant integer, no FK). Historical book-paced assignments still prove the trio through a live resource or unit. Historical plan-apply rows that store only a title and date are not inferred. Operator script `scripts/backfill_enrollments.py` inserts missing enrollments from stored `curriculum_id` or resource/unit provenance when the date falls in exactly one `SchoolYear`. Direct library create does not enroll.
+
+`enrollments.curriculum_id` is an integer (no FK); it points at tenant `curricula`. Plan-apply matches or creates that library row from the plan title, then copies the id onto each new assignment.
 
 ---
 
@@ -103,14 +116,14 @@ A resource **may** point at a book edition by integer id. That is a cache link, 
 
 | Term | Table | Meaning |
 |---|---|---|
-| **Assignment** | `assignments` | One dated piece of work for one student. |
+| **Assignment** | `assignments` | One dated piece of work for one student. Optional `curriculum_id` (new pacing/plan writes). |
 | **Shared group** | `assignments.shared_group_uuid` | Same lesson cloned to siblings; completion/evidence can sync. |
 | **Grade** | `assignment_grades` | One optional score, stored as a string plus type. |
 | **Assignment evidence** | `assignment_evidence` | Filed work sample (path or URL). |
 
 Statuses: assigned, in_progress, completed, skipped, excused.
 
-**Not in the target model:** `scheduled_work`, `WorkStatus` on that table, `ScheduleGrain` as a pacing grain for generated work. Those models and enums are unmapped. Empty leftover tables may remain on older SQLite files until an operator COUNT=0 and DROP. Grain/period enums that remain are for **calendar windows** (day/week/month), not for a second work table.
+**Not in the canonical model:** `scheduled_work`, `WorkStatus` on that table, `ScheduleGrain` as a pacing grain for generated work. Those models and enums are unmapped. Empty leftover tables may remain on older SQLite files until an operator COUNT=0 and DROP. Grain/period enums that remain are for **calendar windows** (day/week/month), not for a second work table.
 
 ---
 
@@ -123,7 +136,7 @@ Statuses: assigned, in_progress, completed, skipped, excused.
 
 Flow: screenshot → staging → parent links (or drag) onto a lesson. Direct upload on an assignment skips the inbox.
 
-**Not in the target model:** `evidence_captures` (legacy, tied to scheduled_work). Model unmapped. Empty tables may remain; do not DROP from boot.
+**Not in the canonical model:** `evidence_captures` (legacy, tied to scheduled_work). Model unmapped. Empty tables may remain; do not DROP from boot.
 
 ---
 
@@ -151,6 +164,8 @@ Output: HTML fragment, PDF, or email-with-PDF.
 
 Weekly manifest is a separate print: Mon–Fri checklist for one student.
 
+Paper template is a separate print: a blank week grid used only to capture a pacing guide. It is not a portfolio and not a calendar.
+
 ---
 
 ## Deferred (exist in schema, not in the product)
@@ -167,13 +182,13 @@ Until then, free-text `subject` on curricula/plans is enough.
 
 ---
 
-## Relationships (target)
+## Relationships
 
 ```text
 Tenant 1 — 1 Household
 Household 1 — * Student
 Household 1 — * SchoolYear (one current)
-Household 1 — 1 HouseholdSettings (weekdays, colors)
+Household 1 — 1 HouseholdSettings (weekdays, colors; no year dates)
 Household 1 — * CalendarException
 Student 1 — * Assignment
 Student 1 — * Attendance
@@ -195,11 +210,11 @@ Catalog sits beside this: `BookEdition` ← optional `CurriculumResource.book_ed
 
 1. A child JWT may only read assignments (and homework help) for `student_id` in the token, and may change **status** on those assignments only.
 2. Pacing and plan-apply skip household exceptions and off weekdays; student-specific exceptions skip that child only.
-3. Shared-group members keep the same lesson identity; private assignments never appear on `/calendar`.
+3. Shared-group members keep the same lesson identity; private assignments never appear on `GET /api/calendar` (All Students). The SPA states that in copy.
 4. Evidence files are tenant-prefixed; serving them requires the same tenant’s parent or child JWT. A child may only read files attached to their own assignments. A capture credential cannot read files.
 5. Demo data never writes `tenant_*.db`.
-6. Scheduling works if Ollama is down; PDF import and tutoring may fail closed.
-7. A capture credential identifies a tenant and may only stage evidence for that tenant. It is rejected by parent authentication.
+6. Scheduling works if Ollama is down. PDF import, paper handwriting, tutoring, and spark may fail closed. Paper geometry (OpenCV) does not need Ollama.
+7. A capture credential identifies a tenant and may only stage evidence for that tenant. It is rejected by `get_current_user` and by `get_tenant_db`. Staging opens the household file through `get_staging_tenant_db` after `require_staging_upload` (live capture row or parent JWT).
 
 ---
 
@@ -212,3 +227,4 @@ Catalog sits beside this: `BookEdition` ← optional `CurriculumResource.book_ed
 | “AI syllabus” for page math | Auto-schedule / pacing preview |
 | “Device token” as parent password | Upload token / staging credential |
 | “Catalog” for the household library | Library / curricula |
+| Paper import as a second calendar | Pacing-guide capture → apply → assignment |

@@ -131,24 +131,54 @@ def test_capture_credential_cannot_call_parent_apis(
     denied = [
         auth_client.get("/api/auth/me", headers=headers),
         auth_client.get("/api/household", headers=headers),
-        auth_client.patch(
-            "/api/household",
-            headers=headers,
-            json={"name": "Nope"},
-        ),
+        auth_client.patch("/api/household", headers=headers, json={"name": "Nope"}),
         auth_client.get("/api/students", headers=headers),
+        auth_client.get("/api/settings/school-year", headers=headers),
+        auth_client.get("/api/curricula", headers=headers),
+        auth_client.get("/api/students/1/assignments", headers=headers),
+        auth_client.patch(
+            "/api/assignments/1/status",
+            headers=headers,
+            json={"status": "completed"},
+        ),
+        auth_client.get(
+            "/api/portfolios/report",
+            headers=headers,
+            params={
+                "student_id": 1,
+                "school_year_id": 1,
+                "report_type": "reading_list",
+            },
+        ),
+        auth_client.get("/api/admin/invites", headers=headers),
+        auth_client.get("/api/notifications", headers=headers),
+        auth_client.get(
+            "/api/homework-help/sessions",
+            headers=headers,
+            params={"assignment_id": 1},
+        ),
+        auth_client.get("/api/calendar", headers=headers),
+        auth_client.get("/api/dashboard/stats", headers=headers),
         auth_client.get("/api/evidence/staging", headers=headers),
         auth_client.post(
             "/api/evidence/link",
             headers=headers,
             json={"evidence_id": 1, "assignment_id": 1},
         ),
-        auth_client.get("/api/admin/invites", headers=headers),
+        auth_client.get("/api/students/1/spark", headers=headers),
+        auth_client.post("/api/auth/capture-token", headers=headers),
+        auth_client.get("/api/auth/switchable-users", headers=headers),
+        auth_client.get("/api/school-years", headers=headers),
+        auth_client.get("/api/enrollments", headers=headers),
     ]
     assert all(row.status_code == 403 for row in denied)
     assert all(
         row.json()["detail"]
-        in {"This credential can only upload evidence", "Parent access required", "Admin access required"}
+        in {
+            "This credential can only upload evidence",
+            "Parent access required",
+            "Admin access required",
+        }
         for row in denied
     )
 
@@ -272,6 +302,92 @@ def test_capture_credential_is_scoped_to_its_tenant(
         headers=bearer(parent_a),
     )
     assert other_file.status_code == 404
+
+
+def test_capture_credential_cannot_use_child_assignment_routes(
+    auth_client: TestClient, capture_dir: Path
+) -> None:
+    from app.enums import AssignmentStatus
+    from tests.test_kid_auth import _child_token, _parent_ready, _set_pin
+
+    parent, student = _parent_ready(auth_client)
+    created = auth_client.post(
+        "/api/assignments",
+        headers=bearer(parent),
+        json={
+            "student_id": student["id"],
+            "title": "Fractions",
+            "scheduled_date": "2026-09-16",
+        },
+    )
+    assert created.status_code == 201
+    assignment_id = created.json()["id"]
+    _set_pin(auth_client, parent, student["id"])
+    child = _child_token(auth_client, student["id"])
+    capture = _issue_capture(auth_client, parent)
+
+    child_ok = auth_client.patch(
+        f"/api/assignments/{assignment_id}/status",
+        headers=bearer(child),
+        json={"status": AssignmentStatus.COMPLETED.value},
+    )
+    assert child_ok.status_code == 200
+
+    capture_status = auth_client.patch(
+        f"/api/assignments/{assignment_id}/status",
+        headers=bearer(capture),
+        json={"status": AssignmentStatus.ASSIGNED.value},
+    )
+    assert capture_status.status_code == 403
+    help_denied = auth_client.get(
+        "/api/homework-help/sessions",
+        headers=bearer(capture),
+        params={"assignment_id": assignment_id},
+    )
+    assert help_denied.status_code == 403
+
+
+def test_capture_credential_cannot_select_another_tenant_via_claims(
+    auth_client: TestClient, capture_dir: Path
+) -> None:
+    seed_user(email="alpha@example.com", tenant_uuid="family-a")
+    seed_user(email="beta@example.com", tenant_uuid="family-b")
+    capture_a = _issue_capture(auth_client, _login(auth_client, "alpha@example.com"))
+    payload = decode_access_token(capture_a)
+    swapped = create_access_token(
+        subject=str(payload["sub"]),
+        tenant_uuid="family-b",
+        extra={
+            "role": UserRole.EVIDENCE.value,
+            "scope": CAPTURE_TOKEN_SCOPE,
+            "jti": payload["jti"],
+        },
+    )
+    response = _stage(auth_client, swapped)
+    assert response.status_code == 401
+    listed_b = auth_client.get(
+        "/api/evidence/staging",
+        headers=bearer(_login(auth_client, "beta@example.com")),
+    )
+    assert listed_b.status_code == 200
+    assert listed_b.json() == []
+
+
+def test_capture_credential_cannot_become_parent_by_changing_role(
+    auth_client: TestClient, capture_dir: Path
+) -> None:
+    seed_user()
+    capture = _issue_capture(auth_client, _login(auth_client))
+    payload = decode_access_token(capture)
+    as_parent = create_access_token(
+        subject=str(payload["sub"]),
+        tenant_uuid=str(payload["tenant_uuid"]),
+        extra={"role": UserRole.PARENT.value, "jti": payload["jti"]},
+    )
+    household = auth_client.get("/api/household", headers=bearer(as_parent))
+    assert household.status_code == 401
+    staged = _stage(auth_client, as_parent)
+    assert staged.status_code == 401
 
 
 def test_demo_and_child_cannot_issue_capture_tokens(auth_client: TestClient) -> None:

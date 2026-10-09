@@ -1,28 +1,28 @@
 # Curiculy Roadmap (architecture only)
 
-This is an implementation **order**, not a commitment to rewrite. Do not implement from this file until a given item is scheduled as work.
+Remaining work only. Completed hardening is described in `docs/ARCHITECTURE.md`. The 2026-09-01 reconciliation recorded 821 tests; the current suite is **892 tests passed**. The architecture-hardening / cleanup phase is **closed**.
 
-Goal: simplify toward the target in `ARCHITECTURE.md` without breaking families who already have `tenant_*.db` files and evidence on disk.
+Do not implement from this file until a given item is scheduled as work. Goal: simplify without breaking families who already have `tenant_*.db` files and evidence on disk.
 
 ---
 
 ## 1. The 10 most important architectural decisions
 
-Make these explicitly. Reversing them later is expensive.
+These stand. Reversing them later is expensive.
 
 1. **Isolation stays file-per-household SQLite** until a real multi-tenant operational need (many writers, hosted HA) appears. Do not “prepare for Postgres” by adding `tenant_id` everywhere now.
 
 2. **`Assignment` is the only calendar event.** Do not revive `scheduled_work` for new features.
 
-3. **Two curriculum intakes remain:** book auto-schedule (pages) and pacing guides (week/day). Both write assignments.
+3. **Two curriculum intakes remain:** book auto-schedule (pages) and pacing guides (week/day). Guide capture includes CSV, PDF+Ollama, paper sheet (OpenCV + Ollama vision), and the manual builder. Both intakes write assignments.
 
-4. **One operational school year** for scheduling: named `SchoolYear` dates + settings weekdays/colors. Stop dual start/end.
+4. **One operational school year** for scheduling: named `SchoolYear` dates + settings weekdays/colors. `HouseholdSettings` does not store year dates.
 
 5. **Enrollment is a side effect of scheduling**, not a required Settings ritual, so portfolios tell the truth.
 
 6. **Evidence is private.** Files are never world-readable. The extension gets an upload-scoped credential, not a parent session.
 
-7. **Ollama is optional.** Calendar generation must not require it. PDF parse and tutoring may degrade.
+7. **Ollama is optional for scheduling.** Calendar generation must not require it. PDF parse, paper handwriting, tutoring, and spark may degrade.
 
 8. **The SPA stays a FastAPI-served vanilla shell** until there is a second client. No framework migration as an architecture goal.
 
@@ -32,43 +32,53 @@ Make these explicitly. Reversing them later is expensive.
 
 ---
 
-## 2. The 10 highest-risk technical issues
+## 2. Remaining high-risk items
 
-These can leak data, lock families out, or destroy calendars.
+These can still leak data, lock families out, or destroy calendars.
 
-1. SMTP password was previously in compose — treat as leaked until rotated; keep it in `.env` only (**env-only is in place**).
-2. Unauthenticated `/evidence` mount (**authenticated file GET is in place**).
-3. Guessable/weak `JWT_SECRET` in production-like compose (**fail-closed in non-dev is in place**).
-4. Parent JWT on a child’s Chromebook (extension) (**capture credential is in place**).
-5. Informal schema patches missing a column on old `tenant_*.db` files (**one patch module is in place**; forgetting a new ALTER is still the risk).
-6. Recalibrate / shared-group assignment updates (easy to desync siblings).
-7. Pacing/plan-apply writing hundreds of rows (partial commit = torn year).
-8. PDF worker using a request-scoped SQLAlchemy session after the HTTP response (**own tenant session is in place**).
-9. Stale service worker serving old `app.js` (silent “bug that was already fixed”) (**SHELL_VERSION lockstep is in place**).
-10. Replaying historical Alembic `0001` against live databases (wrong shape) (**`alembic upgrade` is refused**).
+1. Forgetting a `schema_patches` ALTER on a new model column (old `tenant_*.db` files lag).
+2. Recalibrate / parent shared-group assignment updates (easy to desync siblings).
+3. Pacing/plan-apply writing hundreds of rows (partial commit = torn year). Catalog `page_count` is a second commit after the tenant calendar.
+4. Replaying historical Alembic `0001` against live databases (wrong shape). `alembic upgrade` is refused; generating a new revision could still mislead.
+5. `DEV_MODE=true` left on for a real family (full JWT bypass).
+6. DROP leftover `scheduled_work` / `evidence_captures` without COUNT=0 on each real tenant file. This host’s empty leftover tables were already DROPped.
+
+Mail secrets, public `/evidence`, weak Compose JWT defaults, parent JWT in the extension, PDF worker request-Session reuse, SW/HTML version drift, capture tokens opening a tenant file through `get_tenant_db`, and the `household_settings` date mirror are **already addressed** in source. Do not treat them as open roadmap items.
 
 ---
 
-## 3. The 10 safest improvements
+## 3. Remaining work (current)
 
-Low blast radius, high clarity. Good first PRs.
+Low-to-medium blast radius unless noted.
 
-1. Move mail (and JWT) secrets to environment; stop committing passwords. Rotate mail.
-2. Align `sw.js` and `index.html` cache-query versions (one token) (**done**).
-3. Add missing logo / extension icons, or drop the `src`/`icons` entries (**done**; files were already on disk, now tested).
-4. Document in UI that All Students shows **shared** lessons only. (**done**)
-5. Return a JWT from `POST /auth/register` (additive). (**done**)
-6. Auto-insert `enrollments` on pacing commit / plan apply (IntegrityError = already enrolled) (**done**).
-7. Allow child `PATCH` status on own assignments (with tests) (**done**).
-8. Rename comments on `ai_generator.py` so nobody wires Ollama into commit “to finish it.” (**done**)
-9. Add README: compose port 3040, first invite, `JWT_SECRET`, optional Ollama. (**done**)
-10. Pytest: one test that provisions `tenant_{uuid}.db` and routes a JWT without overriding `get_tenant_db`.
+### Fold duplicates
+
+| Work | Domain | Status |
+|---|---|---|
+| Catalog as the ISBN HTTP name; `/books/*` as alias | Catalog / Books | Investigated, not started. `/books/resolve` shares the resolver with lookup-isbn but not the response shape. GET `/books/isbn/{isbn}` and GET `/books/{id}` have no catalog twin. `POST /catalog/from-isbn` creates library rows; it is not a books alias. Do not delete. |
+
+### Operator data
+
+| Work | Domain | Status |
+|---|---|---|
+| Run leftover-table DROP against live family `tenant_*.db` files | Assignments leftover | **Done on this host.** Empty `scheduled_work` / `evidence_captures` DROPped on `./data/tenant_*.db`. Script remains for other disks (`COUNT(*) = 0` only, never deletes rows, not boot). |
+| Optional backfill of enrollments for years scheduled before auto-enroll | Portfolios | **Done on this host** for proven rows (2 inserted). New pacing/plan writes stamp `assignments.curriculum_id`. Title-only historical plan rows stay skipped. |
+
+### Product polish (when needed)
+
+| Work | Domain | Status |
+|---|---|---|
+| Optional LLM titles in pacing **preview**, still commitable offline | Pacing / AI | Not implemented. Do not put Ollama on commit. |
+| Attendance auto-suggest from vacation exceptions | Attendance | DEFER if busy. |
+| Align paper vision with `OLLAMA_MODEL` (today hardcoded `llama3.2-vision`) | Paper intake | **Do not.** Text vs vision models. Optional later: separate `OLLAMA_VISION_MODEL` defaulting to `llama3.2-vision`. |
+
+Tenant-file JWT tests, register access token, All Students copy, logo/extension icons, README, capture tokens, child status PATCH, paper intake, exception API consolidation, `legacy_tables.py` helper deduplication, capture isolation from `get_tenant_db`, SchoolYear date-column retirement, enrollment backfill (script + this-host apply), leftover-table DROP (script + this-host empty DROP), the shared PDF/homework `ollama_chat` fallback, catalog/admin-only `/api/health`, GitHub Actions pytest, persistent in-app notifications when a PDF or paper plan is `ready` / `failed`, and `assignments.curriculum_id` on new pacing/plan writes **are already in source**. They are not remaining hardening work.
 
 ---
 
 ## 4. What NOT to refactor yet
 
-Leave these alone until the critical/high items above are done — or until a product requirement forces them.
+Leave these alone unless a product requirement forces them.
 
 - Migrating SQLite → Postgres / a single shared tenant schema
 - Rewriting `app.js` in React/Vue/Svelte
@@ -77,85 +87,22 @@ Leave these alone until the critical/high items above are done — or until a pr
 - Building subject taxonomy admin
 - Merging `curricula` and `curriculum_plans` into one table
 - Merging attendance into exceptions (different meanings)
-- Deleting `/books/*` or `/catalog/from-isbn` before checking for external callers
+- Deleting `/books/*` or `/catalog/from-isbn` (SPA-quiet is not proof of no caller; GET `/books` has no catalog twin; `from-isbn` is not `POST /curricula`)
 - Dropping `scheduled_work` tables before a `SELECT COUNT` on real tenant files (models are already unmapped)
 - Changing `/calendar` to include private lessons without a product decision
 - Splitting the monolith into microservices
 - GraphQL
 - Replacing WeasyPrint with a browser print-only workflow
 - Making auto-schedule require Ollama for titles
+- Merging `ollama.AsyncClient` and raw `httpx` `/api/chat` into one generic client
+- Pointing paper vision at `OLLAMA_MODEL` (text vs vision)
+- Failing `GET /api/health` because one `tenant_{uuid}.db` is malformed or locked
+- Converting the default pytest `client` from in-memory SQLite to per-test `tenant_{uuid}.db` files
+- Turning paper intake into a second calendar object
 
 ---
 
-## 5. Recommended implementation order
-
-Phases are sequential. Do not start phase 3 while phase 1 secrets are still in git.
-
-### Phase 0 — Safety (days)
-
-| Work | Domain |
-|---|---|
-| Rotate mail credentials; env-only secrets | Deployment — **done** (rotate the mailbox if it was ever committed) |
-| Require strong `JWT_SECRET` when `DEV_MODE` is false | Auth — **done** |
-| Authenticate evidence file reads; keep write paths | Evidence — **done** |
-| SW / HTML cache version lockstep | Offline — **done** |
-
-**Exit:** No secrets in compose; work samples not publicly fetchable; deploys actually update JS.
-
-### Phase 1 — Child and extension trust (days–week)
-
-| Work | Domain |
-|---|---|
-| Child PATCH own assignment status | Assignments / Students — **done** |
-| Staging-only device token for extension | Auth / Extension — **done** |
-| Restore extension icons | Extension — **done** |
-
-**Exit:** Chromebook capture token cannot load `/admin` or email portfolios (**done**). Kid can check off today (**done**).
-
-### Phase 2 — One school year, honest portfolios (week)
-
-| Work | Domain |
-|---|---|
-| Wizard + year modal write the same `SchoolYear` | School years — **done** |
-| Stop using settings as a second date range (weekdays/colors only) | School years — **done** (date columns remain as a mirror) |
-| Auto-enrollment on schedule/apply | Enrollments — **done** |
-| Copy/help on empty reading list if still no enrollment | Portfolios — **done** |
-
-**Exit:** One year on the grid and on the PDF; scheduling a book fills the reading list.
-
-### Phase 3 — Schema honesty (week, ops-heavy)
-
-| Work | Domain |
-|---|---|
-| Decide Alembic-real vs patches-only; document it | Database / Alembic — **done (patches-only)** |
-| Stamp existing DBs; never run 0001 on prod | Alembic — **0001 cannot run** (`alembic upgrade` refused; no stamp) |
-| Open a fresh Session in PDF background worker | AI / plans — **done** |
-| Optional: tenant-file integration test | Testing — schema upgrade tests in `test_schema.py` |
-
-**Exit:** Adding a column has a checklist that updates every `tenant_*.db`.
-
-### Phase 4 — Fold duplicates (ongoing, opportunistic)
-
-| Work | Domain |
-|---|---|
-| One exceptions router; aliases for old paths | Exceptions / API |
-| Catalog as the ISBN HTTP name; books as alias | Catalog / Books |
-| Drop unused tables after COUNT=0 | Assignments leftover (**models unmapped**; DROP TABLE later) |
-| Exception API module merge | API |
-
-**Exit:** Fewer ways to do the same write.
-
-### Phase 5 — Product polish (when needed)
-
-| Work | Domain |
-|---|---|
-| Notify parent when PDF plan is `ready` / `failed` | Notifications |
-| Optional LLM titles in pacing **preview**, still commitable offline | Pacing / AI |
-| Attendance auto-suggest from vacation exceptions | Attendance (DEFER if busy) |
-| CI: `docker compose run tests` | Deployment / Testing |
-| First-admin bootstrap documented | Deployment |
-
-### Phase 6 — SaaS scale (not now)
+## 5. SaaS scale (not now)
 
 Only when invite-gated hosting is not enough:
 
@@ -166,41 +113,41 @@ Only when invite-gated hosting is not enough:
 
 ---
 
-## Classification summary (all analyzed domains)
+## Classification summary (current)
 
-| Domain | Label | Priority |
+| Domain | Label | Remaining |
 |---|---|---|
-| Authentication | REFACTOR | Critical / High |
-| Multi-tenancy | KEEP | — |
-| Students | KEEP | Child complete **done** |
-| Households | REFACTOR | Low |
-| School years | KEEP | Operational year **done**; drop settings date columns later |
-| Enrollments | KEEP | Auto-create on schedule **done** |
-| Curricula | KEEP | Low |
-| Curriculum resources | KEEP | Low |
-| Curriculum plans | KEEP | PDF worker session **done** |
-| Assignments | KEEP | Critical (center) |
-| Pacing | KEEP | Low |
-| Calendar | KEEP | Low |
-| Attendance | KEEP | Low |
-| Exceptions | CONSOLIDATE | Medium |
-| Evidence | REFACTOR | Critical |
-| Portfolios | KEEP | High (data + mail) |
-| Homework Help | KEEP | Low |
-| AI / Ollama | KEEP | Medium |
-| Catalog / ISBN | KEEP | Low |
-| Books | CONSOLIDATE | Low |
-| Notifications | KEEP | Low |
-| Offline / PWA | KEEP + REFACTOR | High |
-| Chrome extension | KEEP + REFACTOR | High |
-| Compliance | DEFER | Low |
-| Taxonomy | DEFER | Low |
-| Database architecture | REFACTOR process | Patch runner **done**; engines unchanged |
-| Alembic | ARCHIVE | Not the runner; 0001–0012 kept |
-| Frontend | KEEP + REFACTOR edges | High (assets) / Low (split) |
-| API | KEEP + REFACTOR dupes | Medium |
-| Testing | REFACTOR | Medium |
-| Deployment | REFACTOR | Critical |
+| Authentication | KEEP | `DEV_MODE`; JWT denylist vs entropy |
+| Multi-tenancy | KEEP | Patch discipline |
+| Students | KEEP | Palette duplication |
+| Households | KEEP | One-household rule is product, not schema |
+| School years | KEEP | Date source is SchoolYear only |
+| Enrollments | KEEP | Title-only historical plan rows stay skipped |
+| Curricula | KEEP | API-only import unused by SPA |
+| Curriculum resources | KEEP | Cross-DB ids |
+| Curriculum plans | KEEP | Vision model stays distinct from `OLLAMA_MODEL` |
+| Assignments | KEEP | Recalibrate / shared-group sync; nonempty leftover tables on other disks |
+| Pacing | KEEP | Filename; two-engine commit |
+| Calendar | KEEP | Shared-only is by design |
+| Attendance | KEEP | Auto-fill DEFER |
+| Exceptions | KEEP | Optional titled-row edit/delete UI later |
+| Evidence | KEEP | Nonempty leftover capture tables on other disks |
+| Portfolios | KEEP | Title-only historical plan rows |
+| Homework Help | KEEP | Thin tests |
+| AI / Ollama | KEEP | Two HTTP stacks on purpose; optional for scheduling |
+| Catalog / ISBN | KEEP | lookup-isbn is SPA; `from-isbn` API-only library create |
+| Books | KEEP | Dictionary HTTP; GET routes have no catalog twin |
+| Notifications | KEEP | Email/push not requested |
+| Offline / PWA | KEEP | Lockstep already tested |
+| Chrome extension | KEEP | Broad host_permissions |
+| Compliance | DEFER | Stub |
+| Taxonomy | DEFER | No CRUD UI |
+| Database architecture | KEEP | Additive patches plus the settings-date retirement |
+| Alembic | ARCHIVE | Not the runner |
+| Frontend | KEEP | Do not framework-rewrite |
+| API | KEEP | `/books` dictionary HTTP kept; not aliased onto catalog |
+| Testing | KEEP | Homework-help coverage is thin |
+| Deployment | KEEP | GitHub Actions pytest; no in-repo proxy |
 
 ---
 
@@ -208,10 +155,12 @@ Only when invite-gated hosting is not enough:
 
 | Doc | Use when |
 |---|---|
-| `ARCHITECTURE.md` | Debating whether to add a table or a new intake path |
+| `ARCHITECTURE.md` | What the system is today |
 | `CODEBASE_MAP.md` | Finding the file to change |
 | `DOMAIN_MODEL.md` | Naming things in UI and schema |
-| `TECHNICAL_DEBT.md` | Writing a PR description for a cleanup |
-| `ROADMAP.md` | Choosing the next slice |
+| `TECHNICAL_DEBT.md` | Current unresolved debt only |
+| `ROADMAP.md` | Choosing the next remaining slice |
+| `IMPLEMENTATION_RECONCILIATION.md` | Independent verification vs source (821 at that pass) |
+| `POST_HARDENING_AUDIT.md` | Historical 2026-08-29 findings, then current-state note |
 
 If a proposal conflicts with the ten decisions in section 1, it is probably a rewrite, not a simplification.
