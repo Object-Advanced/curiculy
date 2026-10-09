@@ -1,4 +1,8 @@
-/* Curiculy service worker: app shell cache + IndexedDB outbox replay.
+/* Curiculy service worker: the app shell cache.
+
+Offline writes are queued and replayed by the page (static/js/app.js), not
+here: replay needs the current sign-in, and a service worker cannot read it
+without storing a token where it would outlive logout.
 
 SHELL_VERSION is the one cache-bust token. index.html and CSS query strings
 must use the same value. Changing it also renames SHELL_CACHE so activate()
@@ -15,113 +19,6 @@ const SHELL_URLS = [
   `/static/curiculy-logo.png?v=${SHELL_VERSION}`,
   `/static/night-mountains.jpg?v=${SHELL_VERSION}`,
 ];
-
-const SYNC_DB_NAME = "curiculy-sync";
-const SYNC_DB_VERSION = 1;
-const OUTBOX_STORE = "outbox";
-
-function openSyncDb() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(SYNC_DB_NAME, SYNC_DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(OUTBOX_STORE)) {
-        db.createObjectStore(OUTBOX_STORE, { keyPath: "id", autoIncrement: true });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error("IndexedDB open failed"));
-  });
-}
-
-function idbReq(request) {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function idbTxDone(tx) {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
-}
-
-async function outboxAll() {
-  const db = await openSyncDb();
-  try {
-    return await idbReq(db.transaction(OUTBOX_STORE, "readonly").objectStore(OUTBOX_STORE).getAll());
-  } finally {
-    db.close();
-  }
-}
-
-async function outboxDelete(id) {
-  const db = await openSyncDb();
-  try {
-    const tx = db.transaction(OUTBOX_STORE, "readwrite");
-    tx.objectStore(OUTBOX_STORE).delete(id);
-    await idbTxDone(tx);
-  } finally {
-    db.close();
-  }
-}
-
-function restoreRequestBody(record) {
-  if (record.bodyKind === "formdata") {
-    const form = new FormData();
-    for (const part of record.body || []) {
-      if (part.kind === "blob") {
-        form.append(part.name, part.blob, part.filename || "file");
-      } else {
-        form.append(part.name, part.value);
-      }
-    }
-    return form;
-  }
-  if (record.bodyKind === "urlencoded" || record.bodyKind === "text") {
-    return record.body;
-  }
-  if (record.bodyKind === "blob") {
-    return record.body;
-  }
-  return undefined;
-}
-
-function replayHeaders(record) {
-  const headers = { ...(record.headers || {}) };
-  if (record.bodyKind === "formdata") {
-    delete headers["Content-Type"];
-    delete headers["content-type"];
-  }
-  return headers;
-}
-
-async function flushOutbox() {
-  const items = await outboxAll();
-  let incomplete = false;
-  for (const item of items) {
-    try {
-      const response = await fetch(item.url, {
-        method: item.method,
-        headers: replayHeaders(item),
-        body: restoreRequestBody(item),
-      });
-      if (response.ok) {
-        await outboxDelete(item.id);
-        continue;
-      }
-      incomplete = true;
-    } catch {
-      incomplete = true;
-    }
-  }
-  if (incomplete) {
-    throw new Error("Outbox sync incomplete");
-  }
-}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -141,18 +38,6 @@ self.addEventListener("activate", (event) => {
       await self.clients.claim();
     })()
   );
-});
-
-self.addEventListener("sync", (event) => {
-  if (event.tag === "sync-outbox") {
-    event.waitUntil(flushOutbox());
-  }
-});
-
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "sync-outbox") {
-    event.waitUntil(flushOutbox());
-  }
 });
 
 self.addEventListener("fetch", (event) => {

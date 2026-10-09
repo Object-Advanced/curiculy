@@ -346,10 +346,19 @@ function humanize(value) {
 }
 
 const SYNC_DB_NAME = "curiculy-sync";
-const SYNC_DB_VERSION = 1;
+const SYNC_DB_VERSION = 2;
 const OUTBOX_STORE = "outbox";
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const OFFLINE_QUEUED = Object.freeze({ __offlineQueued: true });
+
+// Offline queue. Writes made while offline are kept in IndexedDB and replayed
+// from this page (never the service worker) once the network is back:
+// - no sign-in token is stored; replay attaches the current one;
+// - each change belongs to the account that made it and replays only for it;
+// - every write carries an Idempotency-Key, reused on replay, so a change the
+//   server already applied (the reply was lost) is not applied twice;
+// - a change the server refuses (4xx) moves to a "couldn't save" list instead
+//   of retrying forever; logging out clears the queue.
 
 function isOfflineQueued(result) {
   return result === OFFLINE_QUEUED || Boolean(result && result.__offlineQueued);
@@ -364,13 +373,54 @@ function shouldQueueRequest(options) {
   return MUTATING_METHODS.has(method) && !options.skipAuth && !options.skipOutbox;
 }
 
+function newIdempotencyKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+// Matches the server's idempotency scope: household, user, and kid; each demo
+// household separately.
+function tokenOwner(token) {
+  const payload = token ? decodeJwtPayload(token) : null;
+  if (!payload || !payload.tenant_uuid || !payload.sub) return "";
+  const household =
+    payload.tenant_uuid === "DEMO" ? `DEMO/${payload.jti || ""}` : payload.tenant_uuid;
+  return `${household}:${payload.sub}:${payload.student_id ?? ""}`;
+}
+
 function openSyncDb() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(SYNC_DB_NAME, SYNC_DB_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
-      if (!db.objectStoreNames.contains(OUTBOX_STORE)) {
-        db.createObjectStore(OUTBOX_STORE, { keyPath: "id", autoIncrement: true });
+      const store = db.objectStoreNames.contains(OUTBOX_STORE)
+        ? request.transaction.objectStore(OUTBOX_STORE)
+        : db.createObjectStore(OUTBOX_STORE, { keyPath: "id", autoIncrement: true });
+      if (event.oldVersion >= 1 && event.oldVersion < 2) {
+        // Version 1 stored each request's Authorization header. Keep the
+        // change, tie it to the account that made it, and drop the token.
+        store.openCursor().onsuccess = (cursorEvent) => {
+          const cursor = cursorEvent.target.result;
+          if (!cursor) return;
+          const item = cursor.value;
+          const headers = { ...(item.headers || {}) };
+          const auth = String(headers.Authorization || headers.authorization || "");
+          delete headers.Authorization;
+          delete headers.authorization;
+          headers["Idempotency-Key"] = headers["Idempotency-Key"] || newIdempotencyKey();
+          cursor.update({
+            ...item,
+            headers,
+            owner: tokenOwner(auth.replace(/^Bearer\s+/i, "")),
+            status: "pending",
+            attempts: 0,
+          });
+          cursor.continue();
+        };
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -393,11 +443,11 @@ function idbTxDone(tx) {
   });
 }
 
-async function outboxAdd(record) {
+async function outboxWrite(change) {
   const db = await openSyncDb();
   try {
     const tx = db.transaction(OUTBOX_STORE, "readwrite");
-    tx.objectStore(OUTBOX_STORE).add(record);
+    change(tx.objectStore(OUTBOX_STORE));
     await idbTxDone(tx);
   } finally {
     db.close();
@@ -413,16 +463,10 @@ async function outboxAll() {
   }
 }
 
-async function outboxDelete(id) {
-  const db = await openSyncDb();
-  try {
-    const tx = db.transaction(OUTBOX_STORE, "readwrite");
-    tx.objectStore(OUTBOX_STORE).delete(id);
-    await idbTxDone(tx);
-  } finally {
-    db.close();
-  }
-}
+const outboxAdd = (record) => outboxWrite((store) => store.add(record));
+const outboxPut = (record) => outboxWrite((store) => store.put(record));
+const outboxDelete = (id) => outboxWrite((store) => store.delete(id));
+const outboxClear = () => outboxWrite((store) => store.clear());
 
 function serializeRequestBody(body) {
   if (body == null || body === "") {
@@ -476,8 +520,8 @@ function restoreRequestBody(record) {
   return undefined;
 }
 
-function replayHeaders(record) {
-  const headers = { ...(record.headers || {}) };
+function replayHeaders(record, token) {
+  const headers = { ...(record.headers || {}), Authorization: `Bearer ${token}` };
   if (record.bodyKind === "formdata") {
     delete headers["Content-Type"];
     delete headers["content-type"];
@@ -485,48 +529,132 @@ function replayHeaders(record) {
   return headers;
 }
 
+async function failureDetail(response) {
+  try {
+    const body = await response.json();
+    if (typeof body?.detail === "string") return body.detail;
+  } catch {
+    /* not JSON */
+  }
+  return `Request failed (${response.status})`;
+}
+
+let outboxFlushing = null;
+
+// Replays this account's queued changes in order. Stops at the first network
+// error (offline again) or 401 (signed out), and keeps those for later.
 async function flushOutbox() {
-  const items = await outboxAll();
-  let incomplete = false;
-  for (const item of items) {
-    try {
-      const response = await fetch(item.url, {
-        method: item.method,
-        headers: replayHeaders(item),
-        body: restoreRequestBody(item),
-      });
+  if (outboxFlushing) return outboxFlushing;
+  outboxFlushing = (async () => {
+    const token = getAuthToken();
+    const owner = tokenOwner(token);
+    if (!owner || (typeof navigator !== "undefined" && navigator.onLine === false)) return 0;
+    const items = (await outboxAll()).filter(
+      (item) => item.status !== "failed" && item.owner === owner
+    );
+    let saved = 0;
+    for (const item of items) {
+      let response;
+      try {
+        response = await fetch(item.url, {
+          method: item.method,
+          headers: replayHeaders(item, token),
+          body: restoreRequestBody(item),
+        });
+      } catch {
+        break;
+      }
       if (response.ok) {
         await outboxDelete(item.id);
+        saved += 1;
         continue;
       }
-      incomplete = true;
-    } catch {
-      incomplete = true;
+      if (response.status === 401) break;
+      if (response.status === 408 || response.status === 429 || response.status >= 500) {
+        await outboxPut({ ...item, attempts: (item.attempts || 0) + 1 });
+        break;
+      }
+      await outboxPut({
+        ...item,
+        status: "failed",
+        failedStatus: response.status,
+        failedDetail: await failureDetail(response),
+      });
     }
-  }
-  if (incomplete) {
-    throw new Error("Outbox sync incomplete");
+    return saved;
+  })();
+  try {
+    const saved = await outboxFlushing;
+    if (saved) {
+      showToast("success", saved === 1 ? "Saved 1 offline change." : `Saved ${saved} offline changes.`);
+      if (!document.activeElement?.closest?.("#view form")) showRoute();
+    }
+    return saved;
+  } catch {
+    return 0;
+  } finally {
+    outboxFlushing = null;
+    paintSyncStatus();
   }
 }
 
-function registerOutboxSync() {
-  if ("serviceWorker" in navigator) {
-    return navigator.serviceWorker.ready
-      .then((sw) => sw.sync.register("sync-outbox"))
-      .catch(() => {
-        if (navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({ type: "sync-outbox" });
-          return;
-        }
-        return flushOutbox().catch(() => {});
-      });
+async function outboxForCurrentUser() {
+  const owner = tokenOwner(getAuthToken());
+  if (!owner) return { pending: [], failed: [] };
+  try {
+    const mine = (await outboxAll()).filter((item) => item.owner === owner);
+    return {
+      pending: mine.filter((item) => item.status !== "failed"),
+      failed: mine.filter((item) => item.status === "failed"),
+    };
+  } catch {
+    return { pending: [], failed: [] };
   }
-  return flushOutbox().catch(() => {});
+}
+
+function describeQueuedChange(item) {
+  const path = String(item.url || "").replace(/^\/api/, "");
+  return `${item.method} ${path} — ${item.failedDetail || "refused"}`;
+}
+
+async function paintSyncStatus() {
+  const pill = $("sync-pill");
+  if (!pill) return;
+  const { pending, failed } = await outboxForCurrentUser();
+  if (failed.length) {
+    pill.textContent =
+      failed.length === 1 ? "1 change couldn't be saved" : `${failed.length} changes couldn't be saved`;
+    pill.className = "pill warn is-actionable";
+    pill.hidden = false;
+  } else if (pending.length) {
+    pill.textContent =
+      pending.length === 1 ? "1 change waiting to sync" : `${pending.length} changes waiting to sync`;
+    pill.className = "pill";
+    pill.hidden = false;
+  } else {
+    pill.hidden = true;
+  }
+}
+
+async function reviewFailedChanges() {
+  const { failed } = await outboxForCurrentUser();
+  if (!failed.length) return;
+  const list = failed.map((item) => `• ${describeQueuedChange(item)}`).join("\n");
+  const message =
+    `${failed.length === 1 ? "This change" : "These changes"} made offline couldn't be saved, ` +
+    `usually because the item changed or was deleted meanwhile:\n\n${list}\n\nDiscard ${
+      failed.length === 1 ? "it" : "them"
+    }?`;
+  if (!window.confirm(message)) return;
+  await Promise.all(failed.map((item) => outboxDelete(item.id)));
+  paintSyncStatus();
 }
 
 async function enqueueOutboxRequest(path, fetchOptions) {
   const serialized = serializeRequestBody(fetchOptions.body);
   const headers = { ...(fetchOptions.headers || {}) };
+  delete headers.Authorization;
+  delete headers.authorization;
   if (serialized.bodyKind === "formdata") {
     delete headers["Content-Type"];
     delete headers["content-type"];
@@ -537,10 +665,14 @@ async function enqueueOutboxRequest(path, fetchOptions) {
     headers,
     bodyKind: serialized.bodyKind,
     body: serialized.body,
+    owner: tokenOwner(getAuthToken()),
+    status: "pending",
+    attempts: 0,
     createdAt: Date.now(),
   });
   showOfflineSavedToast();
-  await registerOutboxSync();
+  paintSyncStatus();
+  if (typeof navigator === "undefined" || navigator.onLine !== false) flushOutbox();
   return OFFLINE_QUEUED;
 }
 
@@ -558,6 +690,9 @@ async function api(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
   const queueable = shouldQueueRequest(options);
+  if (queueable && !headers["Idempotency-Key"]) {
+    headers["Idempotency-Key"] = newIdempotencyKey();
+  }
   const fetchOptions = { ...options, headers };
   delete fetchOptions.skipAuth;
   delete fetchOptions.skipOutbox;
@@ -7909,7 +8044,7 @@ function syncOfflineIndicator() {
 function initOfflineIndicator() {
   window.addEventListener("online", () => {
     syncOfflineIndicator();
-    registerOutboxSync();
+    flushOutbox();
     loadHealth();
   });
   window.addEventListener("offline", () => {
@@ -8582,6 +8717,7 @@ async function enterApp() {
     return;
   }
   render();
+  flushOutbox();
   if (!currentUserIsChild() && !window.__notifyTimer) {
     window.__notifyTimer = window.setInterval(() => {
       if (!isLoginOpen() && !currentUserIsChild()) loadNotifications();
@@ -9095,7 +9231,23 @@ async function unlockHomeworkHelp(assignmentId) {
   }
 }
 
-function logout() {
+async function logout() {
+  const { pending } = await outboxForCurrentUser();
+  if (
+    pending.length &&
+    !window.confirm(
+      `${pending.length === 1 ? "1 change" : `${pending.length} changes`} made offline ` +
+        "haven't been saved yet. Log out anyway and discard them?"
+    )
+  ) {
+    return;
+  }
+  try {
+    await outboxClear();
+  } catch {
+    /* IndexedDB unavailable */
+  }
+  paintSyncStatus();
   clearEvidenceBlobs();
   clearAuthToken();
   syncSessionChrome();
@@ -9185,6 +9337,7 @@ async function boot() {
     event.preventDefault();
     submitSwitchUser(event.currentTarget);
   });
+  $("sync-pill")?.addEventListener("click", reviewFailedChanges);
   $("notify-bell")?.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleNotifications();
@@ -9249,6 +9402,7 @@ async function boot() {
   closeLoginModal();
   await loadWorkspace();
   render();
+  flushOutbox();
   if (!currentUserIsChild()) {
     loadNotifications();
     window.setInterval(() => {

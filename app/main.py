@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response
 
 from app.config import settings, validate_runtime_configuration
+from app.core.idempotency import IdempotencyMiddleware, purge_expired_records
 from app.core.middleware import (
     BodySizeLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -57,6 +58,7 @@ class StaticRevalidateMiddleware(BaseHTTPMiddleware):
 async def lifespan(_app: FastAPI):
     validate_runtime_configuration()
     evidence_root()
+    purge_expired_records()
     yield
 
 
@@ -70,6 +72,8 @@ def create_app() -> FastAPI:
     application.state.rate_limiter = RateLimiter()
     # The last one added runs first: the size cap refuses oversized uploads
     # before anything else, then headers, compression, and static caching.
+    # Idempotency is innermost so it stores uncompressed responses.
+    application.add_middleware(IdempotencyMiddleware)
     application.add_middleware(StaticRevalidateMiddleware)
     application.add_middleware(SelectiveGZipMiddleware)
     application.add_middleware(SecurityHeadersMiddleware)
