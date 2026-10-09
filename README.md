@@ -16,6 +16,9 @@ Curiculy runs via Docker Compose.
 `docker compose up -d`
 The UI will be available at `http://localhost:3040`. *(Note: Code directories are bind-mounted. Evidence files and databases are stored in the `./data` directory on the host).*
 
+### Behind a proxy or tunnel
+If a reverse proxy or Cloudflare Tunnel forwards traffic to port 3040, set `FORWARDED_ALLOW_IPS` in `.env` to the address that traffic arrives from (for a tunnel reaching the published port, the Docker gateway: `docker network inspect curiculy_default`). The app then uses each visitor's real address, from `X-Forwarded-For`, for rate limits and logs, and still ignores that header from anyone else.
+
 ## 3. Bootstrapping the First Admin
 Registration is invite-gated, so the first parent account needs an invite key made from the command line:
 

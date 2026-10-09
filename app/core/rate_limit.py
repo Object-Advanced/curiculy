@@ -2,9 +2,10 @@
 
 Counts live in process memory, which is enough for today's single uvicorn
 process. They are keyed by the client address uvicorn reports. Behind a
-reverse proxy that address is the proxy's unless uvicorn runs with
-``--proxy-headers``, so every family would share one bucket; the limits are
-generous for that reason. Set RATE_LIMITS_ENABLED=false only for test rigs.
+proxy or tunnel, uvicorn takes it from X-Forwarded-For for requests from
+FORWARDED_ALLOW_IPS (see entrypoint.sh); if that is not set, every family
+shares the proxy's bucket, which is why the limits are generous. Set
+RATE_LIMITS_ENABLED=false only for test rigs.
 """
 
 from __future__ import annotations
