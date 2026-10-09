@@ -247,20 +247,24 @@ def init_databases() -> None:
 
     Uses ``create_all`` plus ``app.schema_patches``. Does not replay Alembic.
     Existing planner rows are not deleted. The settings date-mirror columns
-    are retired after a SchoolYear backfill (see schema_patches).
+    are retired after a SchoolYear backfill (see schema_patches). Plans an
+    earlier process left "processing" are marked failed (plan_recovery).
     """
     import app.models  # noqa: F401  (registers every mapper before create_all)
     import app.models.admin  # noqa: F401
+    from app.services.plan_recovery import fail_interrupted_plans
 
     _ensure_sqlite_path(settings.catalog_database_url)
     _ensure_sqlite_path(settings.tenant_database_url)
     _ensure_sqlite_path(settings.admin_database_url)
     _ensure_catalog_schema(catalog_engine)
     _ensure_tenant_schema(tenant_engine)
+    fail_interrupted_plans(tenant_engine)
     for url in _existing_tenant_file_urls():
         engine = _engine(url)
         try:
             _ensure_tenant_schema(engine)
+            fail_interrupted_plans(engine)
         finally:
             engine.dispose()
     _admin_maker()

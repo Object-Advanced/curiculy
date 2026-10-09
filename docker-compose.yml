@@ -39,6 +39,14 @@ services:
       - ./static:/app/static
       - ./index.html:/app/index.html
       - ./sw.js:/app/sw.js
+    # Shows as healthy/unhealthy in `docker ps` and to an uptime monitor.
+    # Checks the process and catalog/admin databases, not each household file.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
     restart: unless-stopped
 
   # Nightly backups, off until enabled: docker compose --profile backup up -d backup
