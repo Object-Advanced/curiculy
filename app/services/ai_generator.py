@@ -1,14 +1,13 @@
 """Draft a syllabus from a book's page range.
 
-Real generation will call a local LLM with the book's table of contents. Until
-that exists the split is arithmetic: the page range is divided into as many
-near-equal chunks as there are lessons.
+The split is arithmetic: the page range is divided into as many near-equal
+chunks as there are lessons. Auto-schedule does not call Ollama. Optional LLM
+titles can be added later on preview only; commit must stay offline.
 
-The mock is deterministic on purpose. It lets the preview endpoint be tested
-without a model in the loop, and it pins down the contract the model will have to
-satisfy afterwards — lessons numbered from one, in page order, covering the
-requested range exactly once with no gap and no overlap. A model that returns
-something else is wrong, not creative.
+The generator is deterministic on purpose. It lets the preview endpoint be
+tested without a model in the loop, and it pins down the contract: lessons
+numbered from one, in page order, covering the requested range exactly once
+with no gap and no overlap.
 """
 
 from app.schemas.pacing import SyllabusLesson
@@ -25,8 +24,7 @@ class SyllabusGenerationError(ValueError):
 class SyllabusGenerator:
     """Splits a page range into lessons.
 
-    Stateless, and swappable for an LLM-backed implementation with the same
-    ``generate_syllabus`` signature.
+    Stateless. Do not wire Ollama into this class for calendar commit.
     """
 
     def generate_syllabus(

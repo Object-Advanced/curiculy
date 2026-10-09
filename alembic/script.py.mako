@@ -1,3 +1,7 @@
+# Curiculy does not run Alembic at boot.
+# Do not add a revision here to ship a column. Add an idempotent patch in
+# app/schema_patches.py and a test in tests/test_schema.py.
+# Files in versions/ are a historical archive and must not be replayed.
 """${message}
 
 Revision ID: ${up_revision}

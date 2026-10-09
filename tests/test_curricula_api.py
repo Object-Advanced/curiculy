@@ -3,6 +3,7 @@
 from datetime import date
 
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.enums import MappingSource, ResourceKind, UnitKind
@@ -14,7 +15,9 @@ from app.models import (
     CurriculumPageMapping,
     CurriculumResource,
     CurriculumUnit,
+    Enrollment,
     Household,
+    SchoolYear,
     Student,
     Work,
 )
@@ -139,6 +142,39 @@ class TestUnscheduleCurriculum:
         match = next(item for item in listed if item["id"] == curriculum_id)
         assert match["is_scheduled"] is False
 
+    def test_unschedule_clears_orphan_scheduled_work_for_generated_units(
+        self, client: TestClient, db: Session
+    ) -> None:
+        curriculum, _, assignment = seed_scheduled_curriculum(db)
+        assert assignment.curriculum_unit_id is not None
+        db.execute(
+            text(
+                """
+                CREATE TABLE scheduled_work (
+                    id INTEGER PRIMARY KEY,
+                    enrollment_id INTEGER,
+                    student_id INTEGER,
+                    unit_id INTEGER,
+                    title VARCHAR(255) NOT NULL
+                )
+                """
+            )
+        )
+        db.execute(
+            text(
+                "INSERT INTO scheduled_work (id, enrollment_id, student_id, unit_id, title) "
+                "VALUES (1, 1, 1, :unit_id, 'legacy')"
+            ),
+            {"unit_id": assignment.curriculum_unit_id},
+        )
+        db.commit()
+
+        response = client.delete(f"/api/curricula/{curriculum.id}/schedule")
+
+        assert response.status_code == 204
+        leftover = db.execute(text("SELECT COUNT(*) FROM scheduled_work")).scalar()
+        assert leftover == 0
+
     def test_unknown_curriculum_is_a_404(self, client: TestClient) -> None:
         assert client.delete("/api/curricula/4242/schedule").status_code == 404
 
@@ -159,6 +195,67 @@ class TestDeleteCurriculum:
         assert db.query(CurriculumEdition).count() == 0
         assert db.query(CurriculumResource).count() == 0
         assert db.get(BookEdition, book_id) is not None
+
+    def test_delete_clears_orphan_scheduled_work_for_units_and_enrollments(
+        self, client: TestClient, db: Session
+    ) -> None:
+        curriculum = seed_unscheduled_curriculum(db)
+        student = seed_student(db)
+        year = SchoolYear(
+            household_id=student.household_id,
+            name="2026-2027",
+            start_date=date(2026, 8, 1),
+            end_date=date(2027, 5, 31),
+        )
+        db.add(year)
+        db.flush()
+        unit = CurriculumUnit(
+            curriculum_edition=curriculum.editions[0],
+            kind=UnitKind.COURSE,
+            title="Imported tree",
+            sort_order=0,
+            depth=0,
+        )
+        enrollment = Enrollment(
+            student_id=student.id,
+            curriculum_id=curriculum.id,
+            school_year_id=year.id,
+        )
+        db.add_all([unit, enrollment])
+        db.commit()
+        db.execute(
+            text(
+                """
+                CREATE TABLE scheduled_work (
+                    id INTEGER PRIMARY KEY,
+                    enrollment_id INTEGER,
+                    student_id INTEGER,
+                    unit_id INTEGER,
+                    title VARCHAR(255) NOT NULL
+                )
+                """
+            )
+        )
+        db.execute(
+            text(
+                "INSERT INTO scheduled_work "
+                "(id, enrollment_id, student_id, unit_id, title) "
+                "VALUES (1, :enrollment_id, :student_id, :unit_id, 'by-enroll'), "
+                "(2, 99, :student_id, :unit_id, 'by-unit')"
+            ),
+            {
+                "enrollment_id": enrollment.id,
+                "student_id": student.id,
+                "unit_id": unit.id,
+            },
+        )
+        db.commit()
+
+        response = client.delete(f"/api/curricula/{curriculum.id}")
+
+        assert response.status_code == 204
+        leftover = db.execute(text("SELECT COUNT(*) FROM scheduled_work")).scalar()
+        assert leftover == 0
 
     def test_refuses_to_delete_a_curriculum_that_is_still_scheduled(
         self, client: TestClient, db: Session

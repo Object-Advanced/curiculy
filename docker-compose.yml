@@ -1,3 +1,6 @@
+# Secrets (JWT_SECRET, MAIL_USERNAME, MAIL_PASSWORD, GOOGLE_BOOKS_API_KEY)
+# come from the host environment or a gitignored .env file. Never put real
+# credentials in this file.
 services:
   api:
     build:
@@ -14,12 +17,12 @@ services:
       INDEX_HTML_PATH: /app/index.html
       STATIC_DIR: /app/static
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
-      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_long_random_string_like_a_password}
-      DEV_MODE: "false"
+      JWT_SECRET: ${JWT_SECRET:-}
+      DEV_MODE: ${DEV_MODE:-false}
       MAIL_SERVER: ${MAIL_SERVER:-smtp-relay.brevo.com}
       MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-portfolios@curiculy.com}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Curiculy}
       MAIL_STARTTLS: "true"
@@ -32,6 +35,7 @@ services:
       - ./data:/data # NVMe drive for SQLite databases
       - /datalake/projects/curiculy/evidence:/data/evidence # 30TB array for photos
       - ./app:/app/app
+      - ./scripts:/app/scripts
       - ./static:/app/static
       - ./index.html:/app/index.html
       - ./sw.js:/app/sw.js
@@ -44,6 +48,14 @@ services:
     profiles: ["dev"]
     volumes:
       - ./app:/app/app
+      - ./scripts:/app/scripts
       - ./tests:/app/tests
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
       - ./sw.js:/app/sw.js
+      - ./index.html:/app/index.html
+      - ./static:/app/static
+      - ./extension:/app/extension
+      - ./README.md:/app/README.md
+      - ./.github:/app/.github
     command: ["pytest"]

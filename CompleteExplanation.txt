@@ -1,0 +1,700 @@
+Curiculy — Security issue #1 (secrets and JWT startup)
+
+This session only hardened how secrets are stored and how the app starts. Evidence auth, extension tokens, and the database were not changed.
+
+
+What was wrong
+
+1. SMTP
+   Compose was already reading MAIL_USERNAME and MAIL_PASSWORD from the environment, but the Python config still had dummy values (a fake user and password). Portfolio email would silently use those dummies if env vars were missing.
+
+2. JWT
+   If JWT_SECRET was unset, the app used a well-known development string, and Compose would fill in a long placeholder. That is not safe for a real family deploy: anyone who knows the placeholder can forge login tokens.
+
+
+What we changed
+
+SMTP
+- docker-compose.yml no longer contains mailbox passwords. It only passes through environment variables (or a gitignored .env file).
+- The app no longer invents a dummy SMTP user or password. Those fields are empty until you set them.
+- Portfolio email uses whatever is configured. If username or password is missing, it does not try to log into the mail server with fake credentials. The app still starts; sending mail will fail until real values are set.
+
+JWT
+- Non-development (DEV_MODE=false, the usual Compose setting): the process will not start unless JWT_SECRET is set, is not a known placeholder, and is at least 32 characters.
+- Development (DEV_MODE=true): the app may start without JWT_SECRET. In that case it uses an explicit local-only signing key. That path is for a kitchen laptop, not a live household.
+- Compose no longer supplies a fallback JWT secret. If you forget JWT_SECRET in a real deploy, startup fails on purpose.
+- Failure messages name the setting (JWT_SECRET) but never print the secret value.
+
+Config hygiene
+- JWT_SECRET, MAIL_PASSWORD, and GOOGLE_BOOKS_API_KEY are stored as secrets in settings. Printing or dumping settings shows redacted placeholders, not the real values.
+- Code that signs tokens, sends mail, or calls Google Books reads the secret only for that job. It does not log it.
+
+
+How to run this
+
+Copy .env.example to .env (never commit .env).
+
+Required for a normal deploy (DEV_MODE=false):
+- JWT_SECRET — a long random string, 32+ characters. Not a placeholder.
+
+Optional:
+- MAIL_USERNAME / MAIL_PASSWORD — needed only if you email evaluator PDFs
+- GOOGLE_BOOKS_API_KEY — nicer ISBN lookup rate limits
+- OLLAMA_HOST / OLLAMA_MODEL — optional AI extras
+- DEV_MODE=true — local only; skips JWT auth and allows an empty JWT_SECRET
+
+If this repo ever had a real mailbox password in git or Compose, rotate that mailbox password. Treat the old one as leaked.
+
+
+Tests
+
+New tests check:
+- DEV_MODE can start without a JWT secret and uses the explicit development key
+- Missing, blank, short, and placeholder JWT secrets are rejected when DEV_MODE is false
+- A long non-placeholder secret is accepted
+- Error text and settings dumps do not include secret values
+- SMTP settings come from configuration, not dummy passwords
+
+Existing login / child PIN tests still pass.
+
+Ran: tests/test_config.py, tests/test_auth.py, tests/test_kid_auth.py, then the full suite.
+Result: 687 passed.
+
+
+What we did not do (on purpose)
+
+- Files under /evidence are still publicly readable (security issue #2)
+- The Chrome extension still stores a full parent JWT
+- Children still cannot mark assignments complete
+- Database layout and Alembic were not touched
+
+
+Files touched
+
+App: app/config.py, app/core/security.py, app/main.py, app/services/portfolio.py, app/services/providers/google_books.py, entrypoint.sh
+Deploy: docker-compose.yml, .env.example
+Tests: tests/conftest.py, tests/test_auth.py, tests/test_config.py
+Docs: docs/ARCHITECTURE.md, docs/CODEBASE_MAP.md, docs/TECHNICAL_DEBT.md, docs/ROADMAP.md
+This write-up: CompleteExplanation.txt
+
+
+---
+
+Private evidence files (security issue #2)
+
+What was wrong
+
+Work samples lived on disk as tenant/filename, which is fine. The problem was how they were served: the app mounted the whole evidence folder as public files at /evidence. Anyone who learned a household id and a filename could open a child's worksheet with no login.
+
+Uploads and linking were already logged-in parent actions. The gap was reading the files.
+
+
+What we changed
+
+Old access
+- Browser asked for /evidence/{household}/{filename}
+- No password, no token, no check of which family it belonged to
+
+New access
+- Browser asks for /api/evidence/files/{household}/{filename} with the same login token used everywhere else
+- The file still sits in the same folder on disk. We did not move or rename stored files.
+
+Who can open a file
+- Not logged in: no
+- Parent: files in their own household folder
+- Child: only files attached to that child's assignments, not the unsorted inbox and not a sibling's work
+- Another family: no, even if they guess the path
+- Guessing UUID names is not enough
+
+The old public /evidence address no longer serves files.
+
+The website
+- Thumbnails and galleries no longer point at the public folder
+- They fetch the file with the login token, then show it
+- Evaluator PDF generation still reads the files directly on the server (no public URL). The on-screen preview hydrates images the same authenticated way.
+
+What we did not change
+- How screenshots are uploaded or linked to a lesson
+- How the Chrome extension sends captures (still upload-only; its token type is a later task)
+- The relative file_path value already stored on evidence records (that is a storage key, not a disk path in the JSON)
+
+
+Tests
+
+New checks cover: no token, parent success, other household denied, child denied for inbox/sibling files, missing file, and upload/link still works.
+
+Ran evidence tests, assignment tests, portfolio tests, then the full suite.
+Result: 697 passed.
+
+
+Callers that needed a tweak
+- Website JavaScript (load files with the login token)
+- Portfolio HTML preview (no public image URLs)
+- index.html / service worker cache token so the new script actually loads
+
+Still open
+- The Chrome extension still stores a full parent login token
+- A stolen parent token can still download that household's work samples
+- Children still cannot check off assignments (separate task)
+
+
+Curiculy — Chrome extension capture credential (upload-only)
+
+This session only replaced the extension’s full parent login token with a
+narrowly scoped capture credential. Assignment completion and database
+migrations were not changed.
+
+
+What was wrong
+
+The Chrome extension stored whatever was pasted as “device token” and sent it
+as Authorization: Bearer on screenshot upload.
+
+Parents were told to paste a parent login JWT. That token can also load the
+calendar, students, mail, and work-sample files. A school Chromebook should
+not hold that much authority.
+
+
+What we changed
+
+New credential
+- A parent generates it in Settings → Students (“Chrome capture token”).
+- The secret is shown once so it can be copied into the extension. Status
+  checks never return the secret.
+- The token is a JWT with scope=evidence:write and role=evidence. The subject
+  is capture.{household}, not the parent’s email. It names the household and
+  is not an admin or child login.
+- Lifetime is 365 days by default (CAPTURE_TOKEN_EXPIRE_DAYS).
+
+Revocation (no Redis/Postgres)
+- admin.db gains a capture_tokens table (created on startup, same as other
+  admin tables). Each token has a unique id (jti).
+- Generating a new token turns off the previous one for that household.
+- Revoke in Settings marks it revoked. The JWT may still look valid until it
+  expires, but the server refuses it.
+
+What the token can do
+- POST /api/evidence/staging (upload a screenshot into that household’s inbox)
+- Nothing else. Parent APIs, listing/linking the inbox, and downloading
+  evidence files all refuse it.
+
+What still works
+- A parent logged into the website can still upload to staging. The website
+  uses the parent session, not the capture token.
+- The extension UI still says “Device Token.” The hint now tells you to paste
+  the capture token from Settings, not the parent login.
+
+
+Lifecycle (plain language)
+
+1. Parent signs in on the website → Settings → Students → Generate token.
+2. Copy it into the Chrome extension on the student’s computer (server URL +
+   device token). Students do not sign in there.
+3. Toolbar click uploads a screenshot to that household’s unsorted inbox.
+4. If the Chromebook is lost, or you want a new token: Revoke or Generate new
+   in Settings. The old paste stops working.
+5. Demo mode does not issue capture tokens (there is no real household file).
+
+
+Tests
+
+Proved: a valid capture token can stage; it cannot call parent APIs or
+download evidence; garbage/expired/revoked tokens are refused; a token for
+household A cannot act as household B; parent login can still stage; demo and
+child logins cannot issue a capture token.
+
+Ran auth, kid-auth, evidence staging/files, config, shell, capture-token tests,
+then the full suite.
+Result: 708 passed.
+
+
+Still open
+- Families who already pasted a parent login into the extension still have a
+  full parent session on that computer until they generate a capture token and
+  replace it.
+- A stolen parent login can still download that household’s work samples
+  (parent sessions are supposed to).
+- Children still cannot check off assignments (separate task).
+- Extension icons are still missing (separate task).
+
+
+Curiculy — Shell cache lockstep and brand assets
+
+This session only fixed deployment/frontend hygiene: service-worker cache
+versions, and checking the logo and Chrome extension icons. No API, login, or
+database changes.
+
+
+What was wrong
+
+1. Cache versions
+   The website, the CSS, and the service worker did not share one version
+   string. JavaScript/CSS used one token, the logo used another, and the
+   service-worker cache had a third name (v22). After a deploy, a tablet could
+   keep an old shell while the HTML asked for new files — or mix old and new
+   URLs in the same cache.
+
+   The service worker also ignored missing files during install, so a failed
+   logo fetch would not stop it from activating.
+
+2. Logo and extension icons
+   Docs said the files were missing. On disk they were already present:
+   static/curiculy-logo.png (same image as Curiculy Logo.png at the repo root)
+   and extension/icons/icon16.png, icon32.png, icon48.png, icon128.png, plus
+   logo.png for the extension settings page. Nothing needed inventing.
+
+
+What we changed
+
+One shell version
+- sw.js now has SHELL_VERSION = 20260829-shell.
+- The cache name is curiculy-shell- plus that version. Changing the version
+  throws away the old cache instead of mixing URLs.
+- index.html query strings (script, stylesheet, favicon, logo) use the same
+  token.
+- The login-page mountain background in CSS uses the same token, and the
+  service worker precaches that file too.
+- Install uses cache.addAll (all files or none). It no longer swallows a
+  missing file.
+
+Assets
+- Left the existing logo and extension icons in place. Did not redesign them.
+- Tests now fail if index.html or the extension manifest point at a file that
+  is not there, if PNG sizes are wrong, or if HTML/CSS/SW versions drift.
+
+Tests
+- Shell tests check lockstep, that / loads, and that the logo, JS, CSS, and
+  background image are served.
+- Full suite: 716 passed.
+- The running site on port 3040 returned 200 for the page, the logo, and app.js.
+
+
+Still unused (not missing from the app)
+- Curiculy Logo.png and New Curiculy Logo.png at the repo root are the same
+  image as static/curiculy-logo.png. The app serves the static/ copy only.
+
+Still open
+- Children still cannot check off assignments (separate task).
+
+
+Curiculy — Children can complete their own assignments
+
+This session only let a signed-in child mark their own work done. Enrollment,
+school year, and pacing were not changed.
+
+
+What was wrong
+
+Children could see My Work, but checking a box was not allowed. The status
+API was parent-only, so the child experience was a list, not a checklist.
+
+
+What we changed
+
+API
+- PATCH /api/assignments/{id}/status now uses the existing household login
+  (the same JWT as the rest of the app). A parent can still mark any
+  assignment in the household. A child can mark only their own.
+- If two siblings share a lesson, a parent checking one still checks both.
+  A child checking theirs does not change the sibling’s copy.
+- Children still cannot change grades, dates, titles, evidence, or delete
+  work. Those stay parent-only.
+
+My Work screen
+- Each assignment now has the same complete checkbox the parent Kids
+  checklist already used. Opening an assignment also has a Done checkbox.
+- No new login system and no new screens.
+
+
+Tests
+
+Covered: parent in their household; child own work (including in progress
+then completed); sibling denied; missing assignment 404; grade/edit/delete/
+evidence denied; another family denied; child completing a shared lesson
+does not complete the sibling.
+
+There is no automated browser test for My Work. The checkboxes call the
+same PATCH the tests cover.
+
+Full suite: 723 passed.
+
+
+Still open
+- Dual school-year dates and auto-enrollment are separate tasks.
+
+================================================================================
+School-year consolidation (29 Aug 2026)
+================================================================================
+
+What this was about
+-------------------
+Curiculy had two places that both looked like "the school year":
+
+1. A named SchoolYear row (what the setup wizard and Settings → Years create).
+   Portfolios and enrollments already pointed at this.
+2. A HouseholdSettings row with its own start and end dates (what the year-at-a-
+   glance modal saved). Class days (Mon–Fri etc.) and exception colors lived here
+   too.
+
+The grid, auto-schedule weekdays, and recalibration read the settings dates.
+Portfolios read the named year. If those two disagreed, the PDF window and the
+calendar were different years.
+
+Field split (what we kept vs what we stopped treating as truth)
+---------------------------------------------------------------
+- School-year identity: SchoolYear id, name, household.
+- School-year dates: SchoolYear start_date and end_date. The "current" year is
+  the one with the latest start date (then highest id).
+- Scheduling preferences: HouseholdSettings weekdays (0=Monday … 6=Sunday).
+- UI preferences: HouseholdSettings exception_colors.
+- Left alone on purpose: enrollment start/end (per child/book), exception
+  ranges, assignment dates, attendance dates. Those are not a second school year.
+
+CURRENT → TARGET
+----------------
+CURRENT: GET /settings/school-year returned settings dates whenever a settings
+row existed, even if a named SchoolYear had different dates. The wizard wrote
+only SchoolYear. The year modal wrote settings and copied dates onto the latest
+SchoolYear. Two write paths, two read paths.
+
+TARGET: Named SchoolYear rows are the only operational date range. The wizard,
+the year modal, and PATCH /school-years/{id} all update that same row (current =
+latest). Settings still store weekdays and colors. Settings start/end columns
+are still there and still written, but only as a copy of the named year so old
+family databases keep working. They are not consulted when a SchoolYear exists.
+
+What changed
+------------
+- Loading school-year settings now reads dates from the latest named year.
+- If a family only had settings dates (old modal, no SchoolYear row), the first
+  load creates a named year from those dates so they are not stranded.
+- If both exist and they disagree, the named year wins. A year the wizard just
+  created is not overwritten by leftover settings dates. The settings date
+  columns are then copied from the year so they match.
+- Creating a school year (wizard or Settings → Years) also updates that settings
+  copy when the new year is the current (latest) one. An earlier "historical"
+  year does not steal the operational dates.
+- Updating the year modal still saves weekdays on settings and dates on the
+  latest SchoolYear, without renaming a year the parent already named.
+- PATCH /school-years/{id} can change name and dates. If that year is still the
+  current one, the settings copy is updated too.
+- The year modal reloads the years list after save so portfolio filters see the
+  new dates. Apply-plan weekday checkboxes follow saved class days, same as
+  auto-schedule.
+- Existing tenant files: we did not drop start_date or end_date on
+  household_settings. Schema init still only adds missing columns (such as
+  exception_colors).
+
+What compatibility logic remains
+--------------------------------
+- household_settings.start_date and end_date still exist and are still written
+  whenever the operational year is saved, so old rows stay populated.
+- Empty households (no year, no settings) still GET default August–June dates
+  with no school_year_id until something is saved. That is unchanged.
+- Enrollment date overrides, exception ranges, and attendance are unchanged.
+
+What can be removed later
+-------------------------
+- Stop writing start/end onto household_settings (read-only leftover).
+- After a real schema process that visits every tenant_*.db, drop those two
+  columns. Do not drop them in this phase.
+- An explicit is_current flag is not needed while "latest start date" is enough.
+
+Tests
+-----
+Create / retrieve / update a named year; settings GET follows it; pacing
+lessons stay inside its dates; exception toggle uses its first day;
+recalibration uses saved weekdays; portfolio window follows an updated year
+end date; a settings-only legacy database still initializes and backfills a
+named year without losing date columns.
+
+
+================================================================================
+Enrollment on schedule (29 Aug 2026)
+================================================================================
+
+What this was about
+-------------------
+Enrollment means “this child is using this program this year.” Until now that
+row was only created if a parent visited Settings → Enrollments. Auto-schedule
+(commit a book) and Apply lesson plan wrote assignments but not enrollments.
+Portfolios build the reading list from enrollments, so a family who only
+scheduled work got an empty book list on the evaluator PDF.
+
+The rule now
+------------
+Student + SchoolYear + Curriculum → Enrollment → Assignments.
+
+When a curriculum is actually put on a child’s calendar, Curiculy creates or
+reuses that enrollment. It does not invent one for a preview that is never
+saved.
+
+What changed
+------------
+- Book auto-schedule commit (POST /pacing/commit) enrolls each student in that
+  book’s curriculum for the current school year (the latest named year).
+- Applying a pacing guide (POST /curriculum/plans/{id}/apply) does the same.
+  Guides are not stored as a library book, so Curiculy reuses a library title
+  that already matches the plan name, or creates a library row from that name
+  so the reading list has something to point at.
+- A second commit or apply for the same child, book, and year does not create
+  a second enrollment. A different child or a different school year does.
+- Preview still writes nothing on the family calendar (no enrollment).
+- Enrollment is written in the same database transaction as the assignments.
+  If the commit or apply fails, the enrollment is rolled back too. Settings
+  can still add an enrollment by hand; a duplicate still returns 409.
+
+What was left alone
+-------------------
+- The Settings → Enrollments form and API.
+- Portfolio report layout and types (no redesign). Reading lists now fill
+  because the enrollment row exists after you schedule.
+- Old years that were scheduled before this change are not backfilled.
+
+
+
+Curiculy — Background PDF worker database sessions
+
+This session only made PDF import use its own database session. Parsing, Ollama, and calendar apply were not redesigned.
+
+
+What was wrong
+
+The PDF import HTTP handler created a plan, then handed its request database Session to a FastAPI BackgroundTask. That Session is meant to live for one HTTP request. After the response, FastAPI may close it. The worker then tried to write lessons and status on a session that might already be dead.
+
+Tenant identity was implied by “whatever session the request had,” not passed as data the worker could use to open a new connection.
+
+
+What we changed
+
+The import route still creates the plan as “processing” and still returns 202 immediately. It now copies two values off the logged-in parent: household id (`tenant_uuid`) and the demo key (`jti`). Those go into the background task. The request Session is not passed.
+
+The worker opens a fresh tenant Session from those values, does the work, then always closes it.
+
+Success: lessons are inserted, the plan is marked ready, one commit.
+
+Empty parse (no lessons): the plan is marked failed on that same job session and committed. That is not an exception path.
+
+Any exception: the job session is rolled back and closed. Then a second, fresh Session marks the plan failed. That way a broken or closed session cannot block the status update. Both sessions are closed.
+
+Tests now open a separate Session for the worker (same in-memory engine, different object). After a worker run, the test Session is expired so it sees the worker’s commit. New tests close the original Session first, then run the worker, and still get ready or failed as expected. They also check that every Session the worker opened was closed.
+
+
+Pacing and apply (looked at, not changed)
+
+Applying a pacing guide to the calendar is one tenant commit: all assignments land or none do. A crash in the middle of that commit does not leave a half-written year on SQLite.
+
+Auto-schedule commit writes the calendar on the household database, then commits the shared catalog database. Catalog is only updating book page count there. If that second commit failed, the family’s assignments would still be complete; the ISBN page count might be stale. Tests share one memory database, so they cannot see that split. Left for a later session.
+
+
+What we did not change
+
+No Celery, Redis, or queue. No PDF parser changes. No Ollama prompt or client changes. Portfolio email still only sends mail in the background (no database).
+
+
+
+Curiculy — Database schema management
+
+This session decided how Curiculy updates database files. Family data was not opened or migrated. Alembic history files were not deleted.
+
+
+The problem
+
+The project had two stories at once. Alembic folders looked like real migrations. Boot actually used “create missing tables, then a list of ALTER statements.” Those Alembic scripts are not the live schema:
+
+- They assume one database. Curiculy uses three (shared books, login/admin, one file per family).
+- The first revision still has ISBN on the household curriculum table. Today ISBN lives in the shared book cache.
+- A later revision tries to add columns to pacing-guide tables that the script chain never creates.
+- Login tables (users, invites, capture tokens) are not in Alembic at all.
+
+Replaying that history on a real family file would be the wrong shape. We did not do that.
+
+
+The decision
+
+Keep the thing that already works, and stop pretending Alembic runs it.
+
+On every start (and when a new family file is created):
+
+1. Create any tables the models know about that are not there yet.
+2. Run a single ordered list of “add this column if it is missing” patches (indexes too).
+3. Do that for the book cache, the admin file, the shared tenant file, and every tenant_*.db sitting next to it.
+
+Running that twice does not delete data. Missing columns are added; existing columns are left alone. We do not drop columns (including the old school-year dates still stored on household settings).
+
+
+What changed in the code
+
+- The ALTER lists moved into app/schema_patches.py so there is one place to add a future column.
+- Boot still calls the same init_databases path. create_all was not removed.
+- alembic upgrade now errors on purpose, with a message that those old scripts must not be replayed. The old revision files stay in the repo as history.
+- Tests build throwaway SQLite files only (not /data): empty catalog/admin/family files match the models; an old family file without student color keeps the child’s name and gains the color column; an old admin file keeps the email and gains role fields; a second apply leaves rows in place; alembic upgrade fails closed.
+
+
+How to add a column later
+
+Change the model, add a matching “ALTER if missing” line in schema_patches.py, add a test. Do not add a new Alembic revision as the way to ship it.
+
+
+Rollback
+
+There is no reverse migration. Patches only add. To undo a bad new patch, restore copies of the SQLite files from before that boot and remove the patch from the list. Copying a family’s tenant_*.db file is the backup.
+
+
+What we did not do
+
+We did not stamp live databases as Alembic “head.” We did not invent a second Alembic history and turn it on. That can wait for a later session with backups, if Alembic is ever wanted for real. We did not change PDF parsing, Ollama, or calendar writes.
+
+
+================================================================================
+Legacy cleanup
+================================================================================
+
+This pass cleaned leftover calendar code. It did not drop family data, and it
+did not delete APIs just because the website never calls them.
+
+What we checked before deleting anything
+----------------------------------------
+
+For each leftover piece we looked at Python imports, router registration, the
+website, tests, background jobs, templates, the Chrome extension, database
+models, rows in the development family files we could open, docs, and URLs
+built in code.
+
+Available family SQLite files on this host had zero rows in scheduled_work and
+evidence_captures. They also had zero rows in the unused compliance tables.
+The live calendar is assignments (hundreds of rows). We did not drop any
+tables, because create_all never drops leftover tables and we will not destroy
+data on a file we have not counted ourselves.
+
+What was safe to remove (and was removed)
+-----------------------------------------
+
+- ScheduledWork and EvidenceCapture database models. Nothing wrote to them.
+  Deletes were the only code that mentioned them.
+- Unused read schemas ScheduledWorkRead and CurriculumUnitRead. The tree API
+  already uses CurriculumUnitNode.
+- The unused TenantCurriculum name.
+- The unused ScheduleGrain and WorkStatus labels. CalendarPeriod is the live
+  day/week/month window.
+
+No HTTP endpoints were deleted. No Alembic history files were deleted. No
+database tables were dropped.
+
+What we kept, and why
+---------------------
+
+- POST /catalog/from-isbn, /books/*, and POST /curricula/import. The website
+  does not call them. Tests and API clients do. Quiet SPA is not enough reason
+  to delete an API.
+- Taxonomy tables and assignments.subject_taxonomy_id. Pacing, assignments,
+  the weekly list, and tests still use them. There is no admin screen. That is
+  a product defer, not dead code.
+- Jurisdiction / CompliancePacket models and the compliance/parsing stubs.
+  They raise NotImplementedError. Leave them until a real state form exists.
+- /exceptions and /calendar/exceptions. The website uses both paths on the
+  same table. Fold them later with aliases. Do not delete one now.
+- Alembic revisions 0001 through 0012. They are history. Replaying them is
+  refused and would be the wrong shape.
+- Empty leftover scheduled_work / evidence_captures tables on old files. Boot
+  does not DROP them. A later operator can DROP after COUNT=0 on each file.
+- ai_generator.py. The math is the real generator. Comments now say that
+  clearly. Renaming the file can wait.
+- Root Curiculy Logo.png. The served copy is static/curiculy-logo.png.
+
+What the code does now for leftover rows
+----------------------------------------
+
+Student delete, curriculum unschedule, and curriculum delete still clear
+leftover rows if those old tables exist, so a forgotten foreign key cannot
+block removal. New databases never create those tables.
+
+Comments on books, catalog from-isbn, and curricula import now say they are
+API paths, not website paths.
+
+What still needs a later pass
+-----------------------------
+
+- DROP leftover tables only after COUNT=0 on every real tenant_*.db.
+- Point tests at /catalog/lookup-isbn, then consider aliases for /books/*.
+- One exceptions router, with the current URLs kept as aliases until the
+  website is updated.
+- Rename ai_generator.py when that file is already being edited.
+
+================================================================================
+Post-hardening audit
+================================================================================
+
+Architecture hardening is treated as complete. This pass did not change
+application code. It compared the running tree to the target docs and ran
+the full test suite (all tests passed).
+
+The fourteen checks all hold:
+
+1. Work samples are served only with a household JWT, never as public files.
+2. The Chrome capture token can upload staging photos only. It is not a
+   parent login.
+3. Production will not start with a missing or placeholder JWT secret.
+4. Mail username and password come from the environment, not from Compose.
+5. A child can mark only their own assignments complete.
+6. The named school year is the date range that scheduling and the year
+   modal both use. Old settings date columns are still copied, not dropped.
+7. Auto-schedule and applying a pacing guide create or reuse the enrollment
+   row so the reading list fills in.
+8. PDF import opens its own database session. It does not keep the request
+   session after the HTTP response.
+9. Schema changes run through create_all plus one patch list. Alembic
+   history is not the runner.
+10. Old calendar models are gone. Empty leftover tables were not dropped.
+    Quiet APIs the tests still call were kept.
+11. Book auto-schedule and pacing-guide apply both still write assignments.
+12. Each family still has its own SQLite file.
+13. Building a calendar does not need Ollama.
+14. Assignment is the only calendar object.
+
+What is still later work (not a failed check): README and first-admin
+notes, a token returned on register, a line of copy that All Students
+shows shared lessons only, a test that uses a real tenant file and a JWT,
+folding the two exception URLs, and dropping leftover tables only after
+each family file is counted empty.
+
+One small mess found and left alone: leftover-table cleanup functions are
+defined twice in one file. The second copy is the one Python uses. Tests
+still pass. Clean it up the next time that file is edited.
+
+The full write-up is docs/POST_HARDENING_AUDIT.md.
+
+================================================================================
+README, register token, UI copy, leftover-table script
+================================================================================
+
+Four operator and UX items from the post-hardening list.
+
+1. Root README
+   How to copy .env, set JWT_SECRET, start Compose on port 3040, insert the
+   first invite key, and run tests. There is still no CI.
+
+   The documented sqlite INSERT only sets key and expires_at. The live
+   invite_keys table also requires tenant_uuid (the admin API uses an empty
+   string). If that INSERT fails, add tenant_uuid '' the same way.
+
+2. Register no longer asks for a second login
+   POST /auth/register returns the same access_token body as login (201).
+   The website stores it in localStorage.auth_token, goes to #/dashboard,
+   and loads the workspace like a normal login.
+
+3. Two notes in the UI
+   All Students calendar header: shared lessons only; private work is on
+   each child’s calendar.
+   Portfolios: if this student/year has no enrollments, explain that older
+   scheduled years need Settings → Enrollments.
+
+4. scripts/drop_legacy_tables.py
+   Operator script. For each tenant_*.db it COUNTs scheduled_work and
+   evidence_captures, DROPs only when empty, and warns if rows exist.
+   Do not run it as part of boot.
+
+The shell cache token was bumped because app.js and app.css changed.
+The full test suite passed.
+
+

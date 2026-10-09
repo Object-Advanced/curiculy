@@ -10,8 +10,6 @@ from app.models import (
     CalendarException,
     DEFAULT_STUDENT_COLOR,
     Enrollment,
-    EvidenceCapture,
-    ScheduledWork,
     Student,
     next_unused_student_color,
 )
@@ -23,6 +21,7 @@ from app.services.child_accounts import (
     upsert_child_pin,
 )
 from app.services.households import get_default_household
+from app.services.legacy_tables import delete_legacy_rows_for_student
 from app.services.spark import lesson_question
 
 router = APIRouter(
@@ -60,11 +59,13 @@ def _student_read(
 def _clear_student_dependents(db: Session, student_id: int) -> None:
     """Remove rows that point at the student but are not cascaded from assignments.
 
-    Assignments, grades, and evidence follow ``Student.assignments``. Enrollments,
-    exceptions, and the older scheduled-work tables do not, so they are deleted
-    here before the student row itself.
+    Assignments, grades, and evidence follow ``Student.assignments``. Enrollments
+    and exceptions do not, so they are deleted here before the student row.
+    Leftover ``scheduled_work`` / ``evidence_captures`` rows on older files are
+    cleared so a forgotten FK cannot block the delete.
     """
-    for model in (EvidenceCapture, ScheduledWork, Enrollment, CalendarException):
+    delete_legacy_rows_for_student(db, student_id)
+    for model in (Enrollment, CalendarException):
         for row in db.query(model).filter(model.student_id == student_id).all():
             db.delete(row)
 

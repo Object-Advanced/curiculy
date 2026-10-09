@@ -1,9 +1,11 @@
 """Curriculum endpoints.
 
-``POST /curricula/import`` accepts the structure in whichever form the caller
-already has it: a JSON document, a raw CSV body, or an uploaded file. The format
-is taken from the content type, falling back to sniffing the first character so
-a file posted without a useful type still works.
+``POST /curricula/import`` is an API path (JSON, CSV body, or uploaded file).
+The SPA saves books through ``POST /curricula`` after ISBN lookup. Import stays
+because tests and API clients use it.
+
+The format is taken from the content type, falling back to sniffing the first
+character so a file posted without a useful type still works.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -21,7 +23,6 @@ from app.models import (
     CurriculumResource,
     CurriculumUnit,
     Enrollment,
-    ScheduledWork,
 )
 from app.schemas import (
     CurriculumCreate,
@@ -34,6 +35,10 @@ from app.schemas import (
 from app.services.catalog import create_curriculum as persist_curriculum
 from app.services.curriculum_import import CurriculumImporter, CurriculumImportError
 from app.services.curriculum_structure import load_resources, load_tree, select_edition
+from app.services.legacy_tables import (
+    delete_legacy_rows_for_enrollments,
+    delete_legacy_rows_for_units,
+)
 
 router = APIRouter(
     prefix="/curricula",
@@ -185,7 +190,7 @@ def delete_curriculum(
 ) -> Response:
     """Remove an unused curriculum, its editions, and its resources.
 
-    Linked books stay in the catalog. Scheduled work has to be cleared first so
+    Linked books stay in the catalog. Assignments have to be cleared first so
     a student's calendar is never emptied as a side effect of deleting a book.
     """
     curriculum = _get_curriculum(tenant_db, curriculum_id)
@@ -195,6 +200,18 @@ def delete_curriculum(
             detail="Unschedule this curriculum before deleting it",
         )
     _delete_enrollments(tenant_db, curriculum.id)
+    edition_ids = _edition_ids(tenant_db, curriculum.id)
+    unit_ids = (
+        [
+            unit_id
+            for (unit_id,) in tenant_db.query(CurriculumUnit.id)
+            .filter(CurriculumUnit.curriculum_edition_id.in_(edition_ids))
+            .all()
+        ]
+        if edition_ids
+        else []
+    )
+    delete_legacy_rows_for_units(tenant_db, unit_ids)
     tenant_db.delete(curriculum)
     tenant_db.commit()
     return Response(status_code=204)
@@ -415,11 +432,7 @@ def _clear_schedule(tenant_db: Session, curriculum: Curriculum) -> None:
     if not generated_ids:
         return
 
-    work_rows = (
-        tenant_db.query(ScheduledWork).filter(ScheduledWork.unit_id.in_(generated_ids)).all()
-    )
-    for row in work_rows:
-        tenant_db.delete(row)
+    delete_legacy_rows_for_units(tenant_db, generated_ids)
 
     units = tenant_db.query(CurriculumUnit).filter(CurriculumUnit.id.in_(generated_ids)).all()
     generated_id_set = generated_ids
@@ -442,12 +455,7 @@ def _delete_enrollments(tenant_db: Session, curriculum_id: int) -> None:
     )
     enrollment_ids = [row.id for row in enrollments]
     if enrollment_ids:
-        for row in (
-            tenant_db.query(ScheduledWork)
-            .filter(ScheduledWork.enrollment_id.in_(enrollment_ids))
-            .all()
-        ):
-            tenant_db.delete(row)
+        delete_legacy_rows_for_enrollments(tenant_db, enrollment_ids)
     for enrollment in enrollments:
         tenant_db.delete(enrollment)
 

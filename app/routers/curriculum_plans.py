@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Qu
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.security import require_parent
+from app.core.security import CurrentUser, require_parent
 from app.db import get_tenant_db
 from app.enums import CurriculumPlanStatus
 from app.models import CurriculumLesson, CurriculumPlan, Student
@@ -23,6 +23,7 @@ from app.schemas.curriculum_plans import (
     CurriculumPlanDetailRead,
     CurriculumPlanImportRead,
     CurriculumPlanListRead,
+    CurriculumPlanPaperImportRead,
     CurriculumPlanPdfImportRead,
     CurriculumPlanWrite,
     dump_json_value,
@@ -37,6 +38,9 @@ from app.services.curriculum_plan_import import (
     import_pacing_csv,
     plan_title_from_filename,
 )
+from app.services.paper_parser import parse_paper_upload
+from app.services.paper_template import generate_paper_template_pdf
+from app.services.paper_vision_worker import extract_handwriting_from_slices
 
 router = APIRouter(
     prefix="/curriculum",
@@ -158,6 +162,23 @@ def _sync_lessons(
     db.add_all(to_add)
 
 
+@router.get("/paper-template")
+def paper_template(
+    curriculum_id: int | None = Query(None),
+    _parent: CurrentUser = Depends(require_parent),
+) -> Response:
+    """Print a fill-in week sheet with ArUco corners and a plan QR code."""
+    pdf_bytes = generate_paper_template_pdf(curriculum_id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="paper_template.pdf"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 @router.post(
     "/import-csv",
     response_model=CurriculumPlanImportRead,
@@ -194,6 +215,7 @@ async def import_curriculum_pdf(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_tenant_db),
+    user: CurrentUser = Depends(require_parent),
 ) -> CurriculumPlanPdfImportRead:
     """Accept a pacing-guide PDF and queue AI parsing in the background."""
     raw = await file.read()
@@ -210,11 +232,51 @@ async def import_curriculum_pdf(
         process_pdf_curriculum_background,
         plan.id,
         raw,
-        db,
+        user.tenant_uuid,
+        user.jti,
     )
     return CurriculumPlanPdfImportRead(
         plan_id=plan.id,
         message="PDF accepted for background AI processing.",
+    )
+
+
+@router.post(
+    "/import-paper",
+    response_model=CurriculumPlanPaperImportRead,
+    status_code=202,
+)
+async def import_paper(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_tenant_db),
+    user: CurrentUser = Depends(require_parent),
+) -> CurriculumPlanPaperImportRead:
+    """Slice a photographed week sheet now; queue handwriting OCR in the background."""
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="the image payload is empty")
+    try:
+        slices = parse_paper_upload(raw)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    plan = CurriculumPlan(
+        title="Paper Import",
+        status=CurriculumPlanStatus.PROCESSING,
+    )
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+    background_tasks.add_task(
+        extract_handwriting_from_slices,
+        slices,
+        plan.id,
+        user.tenant_uuid,
+        user.jti,
+    )
+    return CurriculumPlanPaperImportRead(
+        id=plan.id,
+        status=CurriculumPlanStatus.PROCESSING,
     )
 
 

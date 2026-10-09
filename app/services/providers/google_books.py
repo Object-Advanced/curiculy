@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from app.config import settings
+from app.config import reveal_secret, settings
 from app.enums import MetadataSource
 from app.schemas.metadata import AuthorCredit, BookMetadataResult
 from app.services.providers.base import BibliographicProvider, search_confidence
@@ -78,8 +78,9 @@ class GoogleBooksProvider(BibliographicProvider):
 
     def _params(self, **kwargs: Any) -> dict[str, Any]:
         params = {key: value for key, value in kwargs.items() if value is not None}
-        if self._api_key:
-            params["key"] = self._api_key
+        api_key = reveal_secret(self._api_key)
+        if api_key:
+            params["key"] = api_key
         return params
 
     def _parse_volume(

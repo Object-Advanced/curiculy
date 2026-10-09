@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Curiculy week sheet{% if curriculum_id %} · plan {{ curriculum_id }}{% endif %}</title>
+  <style>
+    @page { size: letter; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 8.5in;
+      height: 11in;
+      margin: 0;
+      padding: 0;
+      position: relative;
+      color: #000;
+      background: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .marker {
+      position: absolute;
+      width: 0.65in;
+      height: 0.65in;
+      display: block;
+    }
+    .marker.tl { top: 0.12in; left: 0.12in; }
+    .marker.tr { top: 0.12in; right: 0.12in; }
+    .marker.bl { bottom: 0.12in; left: 0.12in; }
+    .marker.br { bottom: 0.12in; right: 0.12in; }
+    .qr img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .sheet {
+      position: absolute;
+      top: 0.9in;
+      left: 0.55in;
+      width: 7.4in;
+      height: 9.2in;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 0.12in;
+      flex-shrink: 0;
+    }
+    .brand {
+      width: 2.4in;
+      padding-top: 0.08in;
+    }
+    .brand h1 {
+      font-size: 14pt;
+      margin: 0 0 2px;
+      font-weight: bold;
+    }
+    .brand p {
+      font-size: 8pt;
+      margin: 0;
+    }
+    .qr {
+      width: 0.85in;
+      height: 0.85in;
+      flex-shrink: 0;
+    }
+    .week-field {
+      width: 1.35in;
+      text-align: center;
+    }
+    .week-field .label {
+      font-size: 9pt;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .week-box {
+      width: 1.1in;
+      height: 0.7in;
+      border: 2pt solid #000;
+      margin: 0 auto;
+    }
+    .week-grid {
+      flex: 1;
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      border: 1.5pt solid #000;
+    }
+    .week-grid col.time-col { width: 0.85in; }
+    .week-grid th,
+    .week-grid td {
+      border: 0.6pt solid #000;
+      vertical-align: top;
+      overflow: hidden;
+    }
+    .cell {
+      min-width: 0;
+    }
+    .week-grid thead .cell {
+      height: 0.32in;
+    }
+    .week-grid tbody .cell {
+      height: 1.2in;
+    }
+    .head {
+      font-size: 9pt;
+      font-weight: bold;
+      text-align: center;
+      padding: 4px 2px;
+    }
+    .time-box, .lesson-box {
+      position: relative;
+    }
+    .hint {
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      font-size: 7pt;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <img class="marker tl" src="{{ markers.tl }}" alt="ArUco 0">
+  <img class="marker tr" src="{{ markers.tr }}" alt="ArUco 1">
+  <img class="marker bl" src="{{ markers.bl }}" alt="ArUco 2">
+  <img class="marker br" src="{{ markers.br }}" alt="ArUco 3">
+  <div class="sheet">
+    <div class="header">
+      <div class="brand">
+        <h1>Curiculy week sheet</h1>
+        <p>Write the week number, times, and lesson titles. Leave a cell blank if that slot is empty.</p>
+        {% if curriculum_id %}
+        <p>Plan {{ curriculum_id }}</p>
+        {% endif %}
+      </div>
+      <div class="qr"><img src="{{ qr_data_uri }}" alt="Sheet QR code"></div>
+      <div class="week-field">
+        <div class="label">Week</div>
+        <div class="week-box"></div>
+      </div>
+    </div>
+    <table class="week-grid">
+      <colgroup>
+        <col class="time-col">
+        <col class="day-col">
+        <col class="day-col">
+        <col class="day-col">
+        <col class="day-col">
+        <col class="day-col">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="cell head">Time</th>
+          <th class="cell head">Monday</th>
+          <th class="cell head">Tuesday</th>
+          <th class="cell head">Wednesday</th>
+          <th class="cell head">Thursday</th>
+          <th class="cell head">Friday</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in lesson_rows %}
+        <tr>
+          <td class="cell time-box"><span class="hint">time</span></td>
+          <td class="cell lesson-box"><span class="hint">lesson</span></td>
+          <td class="cell lesson-box"><span class="hint">lesson</span></td>
+          <td class="cell lesson-box"><span class="hint">lesson</span></td>
+          <td class="cell lesson-box"><span class="hint">lesson</span></td>
+          <td class="cell lesson-box"><span class="hint">lesson</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

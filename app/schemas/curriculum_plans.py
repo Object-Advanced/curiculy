@@ -370,6 +370,11 @@ class CurriculumPlanPdfImportRead(BaseModel):
     message: str
 
 
+class CurriculumPlanPaperImportRead(BaseModel):
+    id: int
+    status: CurriculumPlanStatus
+
+
 class CurriculumLessonWrite(BaseModel):
     id: int | None = None
     unit_title: str | None = Field(default=None, max_length=255)

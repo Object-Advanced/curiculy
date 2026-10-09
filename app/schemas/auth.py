@@ -95,3 +95,16 @@ class SwitchableUserRead(BaseModel):
 class SwitchUserRequest(BaseModel):
     student_id: int | None = None
     parent_password: str | None = None
+
+
+class CaptureTokenIssued(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_at: datetime
+    created_at: datetime
+
+
+class CaptureTokenStatusRead(BaseModel):
+    active: bool
+    created_at: datetime | None = None
+    expires_at: datetime | None = None

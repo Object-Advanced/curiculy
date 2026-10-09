@@ -75,7 +75,11 @@
             {% for record in item.evidence %}
               {% set src = evidence_src(record.file_path) %}
               {% if src %}
+                {% if for_pdf %}
                 <img src="{{ src }}" alt="{{ record.notes or item.title }}">
+                {% else %}
+                <img data-evidence-file="{{ src }}" alt="{{ record.notes or item.title }}">
+                {% endif %}
               {% endif %}
             {% endfor %}
           </div>
@@ -160,7 +164,11 @@
             {% set src = evidence_src(record.file_path) %}
             {% if src %}
               {% set ns.count = ns.count + 1 %}
+              {% if for_pdf %}
               <img src="{{ src }}" alt="{{ record.notes or item.title }}">
+              {% else %}
+              <img data-evidence-file="{{ src }}" alt="{{ record.notes or item.title }}">
+              {% endif %}
             {% endif %}
           {% endfor %}
         {% endfor %}

@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from app.core.security import require_parent
 from app.db import get_tenant_db
 from app.models import SchoolYear
-from app.schemas import SchoolYearCreate, SchoolYearRead
-from app.services.households import get_default_household
+from app.schemas import SchoolYearCreate, SchoolYearRead, SchoolYearUpdate
+from app.services.school_year import create_named_school_year, update_named_school_year
 
 router = APIRouter(
     prefix="/school-years",
@@ -29,11 +29,30 @@ def get_school_year(school_year_id: int, db: Session = Depends(get_tenant_db)) -
 
 @router.post("", response_model=SchoolYearRead, status_code=201)
 def create_school_year(payload: SchoolYearCreate, db: Session = Depends(get_tenant_db)) -> SchoolYear:
-    if payload.end_date < payload.start_date:
-        raise HTTPException(status_code=400, detail="end_date must be on or after start_date")
-    household = get_default_household(db)
-    school_year = SchoolYear(household_id=household.id, **payload.model_dump())
-    db.add(school_year)
-    db.commit()
-    db.refresh(school_year)
-    return school_year
+    try:
+        return create_named_school_year(
+            db, payload.name, payload.start_date, payload.end_date
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.patch("/{school_year_id}", response_model=SchoolYearRead)
+def update_school_year(
+    school_year_id: int,
+    payload: SchoolYearUpdate,
+    db: Session = Depends(get_tenant_db),
+) -> SchoolYear:
+    school_year = db.get(SchoolYear, school_year_id)
+    if school_year is None:
+        raise HTTPException(status_code=404, detail="School year not found")
+    try:
+        return update_named_school_year(
+            db,
+            school_year,
+            name=payload.name,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error

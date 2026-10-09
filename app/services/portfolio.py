@@ -14,7 +14,6 @@ from datetime import date
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import quote
 
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -22,9 +21,9 @@ from pydantic import SecretStr
 from sqlalchemy.orm import Session
 from starlette.datastructures import Headers, UploadFile
 
-from app.config import settings
+from app.config import reveal_secret, settings
 from app.enums import AssignmentStatus, AttendanceStatus, PortfolioReportType
-from app.evidence import evidence_root
+from app.evidence import evidence_root, resolve_evidence_file, stored_relative_path
 from app.models import Attendance, Curriculum, Enrollment, SchoolYear, Student
 from app.schemas import (
     AssignmentDetailRead,
@@ -62,17 +61,19 @@ class PortfolioLookupError(LookupError):
 
 
 def mail_connection() -> ConnectionConfig:
-    """Build fastapi-mail config from settings, with the same dummy fallbacks."""
+    """Build fastapi-mail config from environment-backed settings only."""
+    username = settings.mail_username or ""
+    password = reveal_secret(settings.mail_password)
     return ConnectionConfig(
-        MAIL_USERNAME=settings.mail_username or "curiculy",
-        MAIL_PASSWORD=SecretStr(settings.mail_password or "changeme"),
+        MAIL_USERNAME=username,
+        MAIL_PASSWORD=SecretStr(password),
         MAIL_FROM=settings.mail_from or "noreply@example.com",
         MAIL_FROM_NAME=settings.mail_from_name or "Curiculy",
         MAIL_PORT=settings.mail_port or 587,
         MAIL_SERVER=settings.mail_server or "localhost",
         MAIL_STARTTLS=settings.mail_starttls,
         MAIL_SSL_TLS=settings.mail_ssl_tls,
-        USE_CREDENTIALS=True,
+        USE_CREDENTIALS=bool(username and password),
         VALIDATE_CERTS=True,
     )
 
@@ -328,7 +329,7 @@ def _books_for_student(
 ) -> list[PortfolioBookRead]:
     counts: dict[int, tuple[int, int]] = {}
     for item in assignments:
-        curriculum_id = item.curriculum_id
+        curriculum_id = item.resolved_curriculum_id()
         if curriculum_id is None:
             continue
         total, completed = counts.get(curriculum_id, (0, 0))
@@ -402,23 +403,10 @@ def pdf_filename(report: PortfolioReportRead) -> str:
 
 
 def _evidence_file(file_path: str | None) -> Path | None:
-    if not file_path:
+    path = resolve_evidence_file(file_path)
+    if path is None or path.suffix.lower() not in _IMAGE_SUFFIXES:
         return None
-    relative = Path(str(file_path).replace("\\", "/").lstrip("/"))
-    parts = relative.parts
-    if len(parts) >= 2 and parts[0] == "data" and parts[1] == "evidence":
-        relative = Path(*parts[2:])
-    if not relative.parts or ".." in relative.parts:
-        return None
-    root = evidence_root().resolve()
-    candidate = (root / relative).resolve()
-    try:
-        candidate.relative_to(root)
-    except ValueError:
-        return None
-    if candidate.is_file() and candidate.suffix.lower() in _IMAGE_SUFFIXES:
-        return candidate
-    return None
+    return path
 
 
 def evidence_src(file_path: str | None, *, for_pdf: bool) -> str | None:
@@ -427,8 +415,7 @@ def evidence_src(file_path: str | None, *, for_pdf: bool) -> str | None:
         return None
     if for_pdf:
         return path.as_uri()
-    relative = path.relative_to(evidence_root().resolve())
-    return "/evidence/" + "/".join(quote(part) for part in relative.parts)
+    return stored_relative_path(file_path)
 
 
 def _template_context(report: PortfolioReportRead, *, for_pdf: bool) -> dict:

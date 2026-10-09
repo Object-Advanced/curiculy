@@ -1,6 +1,6 @@
-# Curiculy Target Architecture
+# Curiculy Architecture
 
-This document describes what Curiculy’s architecture **should** look like. It is based on the existing codebase, not on a generic SaaS template.
+This document describes Curiculy’s architecture **as it exists**. It is based on the running source tree. The 2026-09-01 reconciliation collected 821 tests; after later consolidations the suite is **892 passed**, 0 failed, 0 skipped (`docker compose --profile dev run --rm tests pytest`). The architecture-hardening / cleanup phase is **closed**.
 
 Curiculy is a homeschool planner for one family (a household) with multiple children. Parents schedule curricula, mark work, keep evidence, and produce printable records. Children sign in with a PIN and do today’s work. The product must work on a kitchen-table laptop, including when the network is flaky, and must remain simple enough for one operator to run.
 
@@ -15,16 +15,16 @@ These are requirements, not optional style.
 | Constraint | Why it matters | Architectural consequence |
 |---|---|---|
 | One family, several children | Siblings share some lessons and not others | Per-student assignments plus optional `shared_group_uuid` |
-| Two ways curricula arrive | Textbooks are paged; vendor guides are week/day grids | Keep **book auto-schedule** and **pacing guides** as two intake paths that both land on `assignments` |
-| School-year calendar | Homeschool years are custom, not district calendars | One named year with bounds, class weekdays, and exceptions |
+| Two curriculum objects | Textbooks are paged; vendor guides are week/day grids | **Book auto-schedule** (pages) and **pacing guides** (week/day). Guide capture: CSV, PDF+Ollama, paper sheet (OpenCV + Ollama vision), or manual builder. Both objects land on `assignments` |
+| School-year calendar | Homeschool years are custom, not district calendars | One named `SchoolYear` with bounds; class weekdays and exception colors on settings |
 | Exceptions and holidays | Life happens; sick days can be one child | Household-wide and student-specific exceptions on the same table |
 | Assignment generation | Parents will not type 180 lesson rows | Pacing commit and plan-apply write `assignments` |
-| Evidence / work samples | Evaluators want photos and PDFs | Staging inbox → assignment attachment; files on a volume |
+| Evidence / work samples | Evaluators want photos and PDFs | Staging inbox → assignment attachment; files on a volume; authenticated GET |
 | Portfolios | State evaluations and reading lists | Date-window reports over assignments, attendance, books, evidence |
-| Child accounts | Kids should not use the parent password | PIN users scoped to one student |
+| Child accounts | Kids should not use the parent password | PIN users scoped to one student; child may PATCH own assignment status |
 | Offline | Rural / travel / kitchen wifi | Service worker shell + outbox for safe writes |
 | Barcode / ISBN | Scan a book, fill the form | Shared catalog cache, household library separate |
-| AI-assisted parsing | PDFs of pacing guides are common | Background Ollama parse into `curriculum_plans`, not into a second calendar |
+| AI-assisted parsing | PDFs and handwritten week sheets are common | Background Ollama into `curriculum_plans`, not into a second calendar. Scheduling does not require Ollama |
 | Printable records | Ink-saver weekly list + evaluator PDF | WeasyPrint from the same assignment data |
 | Eventual public SaaS | Invite-gated today; public later | Tenant isolation stays; do not require Postgres until scale demands it |
 
@@ -36,7 +36,7 @@ These are requirements, not optional style.
 |---|---|
 | **KEEP** | Core. Do not replace. Improve in place if needed. |
 | **CONSOLIDATE** | Multiple implementations of one idea. Fold into one. |
-| **REFACTOR** | Right concept, messy or unsafe implementation. |
+| **REFACTOR** | Right concept, messy or unsafe leftover. |
 | **REMOVE** | Dead or superseded. Delete after confirming no data depends on it. |
 | **COMPLETE** | Partially built and worth finishing because parents will use it. |
 | **DEFER** | Valid later. Do not spend cycles now. |
@@ -45,145 +45,95 @@ These are requirements, not optional style.
 
 ## Domain classifications
 
-### Authentication — REFACTOR
+### Authentication — KEEP (small leftover: `DEV_MODE`)
 
-**CURRENT:** JWT (HS256) in `localStorage`. Parent email/password. Invite-key registration. Child PIN accounts (`child.{tenant}.{id}@kid.local`). Demo in-memory tenant. `DEV_MODE` bypass. Household user switching. Chrome extension stores a parent JWT as a “device token.”
+**CURRENT:** JWT (HS256) in `localStorage`. Parent email/password. Invite-key registration. `POST /api/auth/register` returns `{access_token, token_type}` (201); the SPA stores it and enters the app. Child PIN accounts (`child.{tenant}.{id}@kid.local`). Demo in-memory tenant. `DEV_MODE` bypass. Household user switching. Chrome extension stores a long-lived **capture credential** (`scope=evidence:write`) issued from Settings → Students. Non-dev startup requires `JWT_SECRET` from the environment and refuses known-weak placeholders (missing, whitespace, known list, or shorter than 32 characters).
 
-**PROBLEM:** Default `JWT_SECRET` is weak. Register does not return a token (extra login). Children cannot `PATCH` assignment status, so they cannot check off work. Extension holds a full parent credential. `DEV_MODE` is useful locally and dangerous if left on.
-
-**TARGET:** Keep JWT, invites, PIN children, demo, and switch-user. Issue a token on register. Allow a child JWT to complete **their** assignments only. Give the extension a long-lived **upload-only** token (staging evidence), not a parent session. Fail closed without a strong secret in non-dev.
+**REMAINING:** `DEV_MODE` is useful locally and dangerous if left on. JWT strength is length plus a denylist, not an entropy policy.
 
 **DEPENDENCIES:** Every parent and child route; extension; tenant session selection.
 
-**MIGRATION:** Additive. New token type or JWT `scope=evidence:write`. Child status PATCH is a permission change with tests. Rotate `JWT_SECRET` with a dual-accept window if any sessions are live.
+**Capture credential lifecycle**
 
-**RISK:** Logged-in families; extension uploads; demo mode.
+1. A parent (not demo, not a child) opens Settings → Students and generates a token (`POST /api/auth/capture-token`). The secret is shown once in the SPA. Status (`GET`) never returns the secret.
+2. The JWT identifies the household (`tenant_uuid`), uses `sub=capture.{tenant}`, `role=evidence`, `scope=evidence:write`, and a `jti`. Lifetime defaults to 365 days (`CAPTURE_TOKEN_EXPIRE_DAYS`).
+3. A `capture_tokens` row on `admin.db` stores that `jti`. Minting a new token revokes earlier rows for the tenant. Revoke is `DELETE /api/auth/capture-token`.
+4. The extension pastes the token as “device token” and sends it as `Authorization: Bearer` on `POST /api/evidence/staging` only.
+5. The server accepts that credential for staging writes after checking the JWT and that the row is present, unrevoked, and unexpired. `get_current_user` rejects it, so `/auth/me`, household, calendar, admin, listing/linking staging, and evidence file reads all fail.
+6. Tenant sessions are split: `get_tenant_db` calls `get_current_user` (parent, child, demo) and refuses capture JWTs. Staging uses `get_staging_tenant_db`, which calls `require_staging_upload`. Opening a household file is not itself authorization. A route that depends only on `get_tenant_db` cannot be mutated by the extension.
+7. Parent login JWTs can still stage (API). They must not be pasted into the extension.
 
-**PRIORITY:** Critical (secrets and evidence token) / High (child complete).
+**TESTS:** `tests/test_capture_token.py` (physical `auth_client`). Capture may `POST /evidence/staging`. It is 403 on `/auth/me`, household, students, spark, curricula, assignments, homework-help, portfolios, notifications, calendar, dashboard, staging list/link, evidence file GET, capture-token mint, switchable-users, school-years, and enrollments. Child status PATCH still works with a child JWT. Forged/expired/revoked tokens and JWT claim swaps are 401.
 
 ---
 
 ### Multi-tenancy — KEEP
 
-**CURRENT:** One `admin.db` (users, invites), one shared `catalog.db` (ISBN dictionary), one SQLite file per household (`tenant_{uuid}.db`). Demo uses process-memory SQLite keyed by JWT `jti`. Dev mode uses a shared `tenant.db`.
+**CURRENT:** One `admin.db` (users, invites, capture tokens), one shared `catalog.db` (ISBN dictionary), one SQLite file per household (`tenant_{uuid}.db`). Demo uses process-memory SQLite keyed by JWT `jti`. Dev mode uses a shared `tenant.db`. JWT `tenant_uuid` selects the file. Planner tables do not carry a `tenant_id` column; `evidence_staging.tenant_id` stores the JWT UUID as a path prefix inside the household file.
 
-**PROBLEM:** Schema updates are `create_all` plus ad-hoc `ALTER` on every tenant file. That is easy to get wrong as the number of families grows. SQLite-per-tenant will not be the forever SaaS answer at thousands of concurrent writers — but it is the right isolation model **now**.
+**REMAINING:** Schema updates must touch every `tenant_*.db`. A model field without a matching patch in `app/schema_patches.py` is created on new files and missing on old ones. SQLite-per-tenant will not be the forever SaaS answer at thousands of concurrent writers — it is the right isolation model **now**.
 
-**TARGET:** Keep file-per-household. It matches homeschool privacy (a family’s planner is their lockbox) and backup (copy a file). Do not introduce `tenant_id` columns on every table until a single database is actually required. Fix **how schema is applied** (see Database / Alembic), not the isolation model.
+Do not introduce `tenant_id` columns on every table until a single database is actually required.
 
 **DEPENDENCIES:** Auth (`tenant_uuid` in JWT), evidence paths `{tenant_uuid}/…`, catalog vs tenant FKs.
 
-**MIGRATION:** None for the isolation model. Schema process is a separate change.
-
-**RISK:** Low if left as-is. High if rewritten to Postgres prematurely (every query, backup, and demo path changes).
-
-**PRIORITY:** Keep as-is. Schema process is High.
+**TESTS:** `tests/test_auth.py` provisions `tenant_{uuid}.db` and routes a real JWT without overriding `get_tenant_db` (`test_login_routes_to_tenant_file`, `test_register_with_invite_provisions_tenant`, `test_physical_tenant_files_persist_and_stay_isolated`). The default `conftest.py` `client` stays in-memory on purpose.
 
 ---
 
 ### Students — KEEP
 
-**CURRENT:** Tenant `students` with name, grade, notes, color. Parent CRUD. PIN create/clear. “Kids” dashboard is today’s checklist plus spark question. Child login is a separate `users` row in `admin.db`.
+**CURRENT:** Tenant `students` with name, grade, notes, color. Parent CRUD. PIN create/clear. “Kids” dashboard is today’s checklist plus spark question. Child login is a separate `users` row in `admin.db`. A child JWT may `PATCH /assignments/{id}/status` on their own assignments (404 for a sibling’s row). Children do not sync `shared_group_uuid` siblings. PUT/delete/grade/evidence stay parent-only.
 
-**PROBLEM:** Child cannot mark work complete. Spark is parent-only on `/students/{id}/spark` (router-level `require_parent`), which is fine. Color palette is duplicated in JS and Python.
-
-**TARGET:** Student remains the child record. Color stays on the student (calendar tiles). PIN stays an admin-db user linked by `student_id`. One palette module or documented duplication.
+**REMAINING:** Color palette is duplicated in JS and Python. Spark is parent-only on `/students/{id}/spark` (`require_parent`), which is fine.
 
 **DEPENDENCIES:** Assignments, attendance, enrollments, evidence, homework help, calendar, portfolios.
 
-**MIGRATION:** Child complete-work is an API permission change, not a model change.
-
-**RISK:** Deleting a student already cascades assignments; keep that.
-
-**PRIORITY:** High only for child completion. Otherwise Low.
-
 ---
 
-### Households — REFACTOR (small)
+### Households — KEEP (schema leftover)
 
-**CURRENT:** `Household` row auto-created as “Default household.” `get_default_household` is first-by-id. `jurisdiction_id` unused.
+**CURRENT:** `Household` row auto-created as “Default household.” The first-run wizard PATCHes `/household` so the family names it. Settings can rename it and pick a sidebar icon (letter skips a leading “The”, or a school emoji). `get_default_household` is first-by-id. Product rule is **one household per tenant file**. `jurisdiction_id` is unused.
 
-**PROBLEM:** Multi-household-per-file is implied by the schema but not a product. Jurisdiction is compliance leftover.
-
-**TARGET:** **One household per tenant file** is the product rule. Make that explicit in code comments and stop threading `jurisdiction_id` until a state pack exists. Optional later: rename household from the settings menu (display name already used in the chrome).
+**REMAINING:** The schema still allows many households in one file. Ignore/drop `jurisdiction_id` when a state pack exists.
 
 **DEPENDENCIES:** Almost every tenant write uses the default household.
 
-**MIGRATION:** No data migration. Ignore/drop jurisdiction when compliance is designed.
-
-**RISK:** Low.
-
-**PRIORITY:** Low.
-
 ---
 
-### School years — CONSOLIDATE
+### School years — KEEP (canonical dates on SchoolYear)
 
-**CURRENT:** Two date ranges:
+**CURRENT:** Named `SchoolYear` rows are the operational year (latest by start date, then id). `GET /settings/school-year` reads dates from that year and weekdays from `HouseholdSettings`. The year modal (`PUT /settings/school-year`) and wizard (`POST /school-years`) write the same `SchoolYear`. `PATCH /school-years/{id}` updates a named year. `HouseholdSettings` stores class weekdays and exception colors only.
 
-1. `school_years` — named years (wizard `POST /school-years`, settings list, enrollments, portfolios).
-2. `household_settings` — `start_date`, `end_date`, `weekdays` (year modal, auto-schedule, holiday grid).
+Existing `tenant_*.db` files that still have leftover `household_settings.start_date` / `end_date` columns are upgraded on boot: if that household has no `school_years` row, one is created from those dates; an existing named year is not overwritten. The leftover columns are then dropped. Fresh files never receive those columns.
 
-`save_school_year_settings` already copies dates onto the **latest** `SchoolYear`. Wizard can create a `SchoolYear` without writing `HouseholdSettings`. Weekdays live only on settings.
-
-**PROBLEM:** Parents think there is one school year. Operators have two write paths. Latest-year-wins is implicit.
-
-**TARGET:** One **operational year**:
-
-- `SchoolYear` is the named academic period (name + start + end). It is what portfolios and enrollments point at.
-- `HouseholdSettings` holds **weekdays** and **exception_colors** only (not a second start/end).
-- Wizard and the year modal both create/update the same `SchoolYear` (current = latest, or an explicit `is_current` flag if multiple years are kept for history).
-
-Historical years remain rows for old portfolios. Only one year is current for pacing and the grid.
+**REMAINING:** None for the date source. Do not add year bounds back onto settings.
 
 **DEPENDENCIES:** Pacing, plan-apply, exceptions grid, enrollments, portfolios, wizard.
 
-**MIGRATION:** Backfill: if settings dates exist and latest year differs, prefer settings dates onto that year (they already tend to sync on save). Stop writing start/end on settings in a later step; read dates from current `SchoolYear`.
-
-**RISK:** Portfolios keyed by `school_year_id`; wizard vs modal drift during the transition.
-
-**PRIORITY:** High.
+**TESTS:** `tests/test_school_years.py`, `tests/test_school_year_settings.py`, `tests/test_schema.py`. Settings GET/PUT read and write `SchoolYear` dates and `HouseholdSettings` weekdays. Leftover tenant files with settings date columns backfill a named year only when none exists, then drop the columns. Divergent leftover dates do not overwrite an existing year. Production Python (outside `schema_patches.py`) does not pair `household_settings` with year dates.
 
 ---
 
-### Enrollments — COMPLETE (then simplify the UI)
+### Enrollments — KEEP (auto-create on schedule)
 
-**CURRENT:** `enrollments` unique on student + curriculum + school year. Settings form can create them. Pacing commit does **not**. Plan-apply does **not**. Portfolios use enrollments to build the book list.
+**CURRENT:** Unique on student + curriculum + school year. Settings can still POST/list (409 on duplicate). Pacing commit and plan-apply insert or reuse the row in the **same tenant transaction** as the assignments if it is missing. Unique violations are recovered with a savepoint. Preview does not enroll. Direct curriculum create does not enroll. The operational (latest) `SchoolYear` is the year used at schedule time. Plans have no `curriculum_id`; apply reuses a library row with the same title or creates one from the plan title, and stamps that id onto each new assignment.
 
-**PROBLEM:** Parents schedule a book and still have an empty reading list unless they visit Settings → Enrollments. That is a hidden second job.
+Historical work can be reconciled by `scripts/backfill_enrollments.py` when an assignment proves the trio: stored `curriculum_id`, or a live resource/unit whose edition still points at `curricula`, and `scheduled_date` in exactly one named year. Title-only plan-apply rows (no stored id, no resource/unit) are still refused. Default is dry-run; `--apply` writes. It is not part of boot.
 
-**TARGET:** Enrollment means “this child is using this program this year.” It should be a **side effect** of:
-
-- auto-schedule commit (curriculum + each student + current year)
-- apply pacing guide (same, if the plan is tied to a curriculum; if not, skip or use plan title as a curriculum later)
-
-Keep the settings list as an editor for edge cases (unenroll, date overrides). Do not make it the primary workflow.
+**REMAINING:** Title-only historical plan assignments stay unlinked by design. Do not infer a curriculum from titles.
 
 **DEPENDENCIES:** Portfolios (reading list), settings UI, curriculum delete (already cleans enrollments).
-
-**MIGRATION:** On next pacing/plan commits, insert enrollment if missing. Optional one-time backfill from distinct `assignments` → curriculum via resource/unit.
-
-**RISK:** Duplicate unique constraint if both UI and auto-create race — handle with the existing 409/IntegrityError pattern.
-
-**PRIORITY:** High (portfolio completeness). Medium (UI copy: “usually created when you schedule”).
 
 ---
 
 ### Curricula — KEEP
 
-**CURRENT:** Tenant `curricula` is the household library (Saxon Math 3, etc.). Editions, resources, units, page mappings. Created by form (`sku`/ISBN), ISBN lookup then save, or structure import API.
+**CURRENT:** Tenant `curricula` is the household library (Saxon Math 3, etc.). Editions, resources, units, page mappings. Created by the form (`POST /curricula` with optional `sku` after `POST /catalog/lookup-isbn`), by API `POST /catalog/from-isbn`, or by `POST /curricula/import`. `/books/*` does not create library rows.
 
-**PROBLEM:** `POST /curricula/import` (JSON/CSV tree) is unused by the SPA. Catalog `POST /from-isbn` is unused; the form uses lookup + `POST /curricula`. Naming: `/curricula` vs `/curriculum/plans` is already the right split.
-
-**TARGET:** Household library stays tenant-scoped. ISBN lookup fills the form; save creates library + catalog edition. Keep `/curricula/import` as a power-user/API path or hide it until a UI exists. Do not merge library rows into catalog.db (that would leak one family’s notes into the shared dictionary).
+**REMAINING:** `POST /curricula/import` (JSON/CSV tree) is unused by the SPA. Catalog `POST /from-isbn` is unused by the SPA; the form uses lookup + `POST /curricula`. Keep those as API-only until a UI exists or they are retired. Do not merge library rows into catalog.db.
 
 **DEPENDENCIES:** Auto-schedule, enrollments, catalog ISBN, unschedule/delete.
-
-**MIGRATION:** None required for the model.
-
-**RISK:** Low.
-
-**PRIORITY:** Low (cleanup unused import UI later).
 
 ---
 
@@ -191,89 +141,64 @@ Keep the settings list as an editor for edge cases (unenroll, date overrides). D
 
 **CURRENT:** Components of an edition (student text, workbook, answer key) optionally pointing at `book_editions.id` in catalog.db without a cross-DB FK.
 
-**PROBLEM:** Cross-DB integer ids cannot be enforced by SQLite. That is acceptable if the write path always creates both in one user action.
-
-**TARGET:** Keep resources as “what the parent holds.” Auto-schedule paces against the student text’s page count. Do not move resources into catalog.db (they are household-specific: which edition they bought).
+**REMAINING:** Orphan `book_edition_id` if catalog rows are deleted — do not delete catalog editions that tenant resources reference.
 
 **DEPENDENCIES:** Pacing, page mappings, classifications (deferred).
-
-**MIGRATION:** None.
-
-**RISK:** Orphan `book_edition_id` if catalog rows are deleted — do not delete catalog editions that tenant resources reference.
-
-**PRIORITY:** Low.
 
 ---
 
 ### Curriculum plans — KEEP
 
-**CURRENT:** `curriculum_plans` + `curriculum_lessons` (week, day, title, time slot, category). CSV import, PDF+Ollama, manual builder, archive, apply-to-calendar.
+**CURRENT:** `curriculum_plans` + `curriculum_lessons` (week, day, title, time slot, category). Capture methods:
 
-**PROBLEM:** Easy to confuse with `curricula` / auto-schedule. They are different homeschool objects: a **guide** vs a **book**. PDF status polling is a frontend concern, not a domain bug.
+| Method | HTTP | What runs |
+|---|---|---|
+| Manual builder | plan CRUD under `/api/curriculum` | Parent edits lessons |
+| CSV | `POST /api/curriculum/import-csv` | Inline insert |
+| PDF | `POST /api/curriculum/import-pdf` (202) | Background `process_pdf_curriculum_background`: extract text, Ollama → lessons. Worker opens its own tenant session. Terminal `ready` / `failed` commits one in-app parent notification in that same session |
+| Paper sheet | `GET /api/curriculum/paper-template` then `POST /api/curriculum/import-paper` (202) | Request: OpenCV ArUco flatten + QR (`parse_paper_upload`). Background: `extract_handwriting_from_slices` via Ollama vision (`llama3.2-vision` over `httpx`), own tenant session. Same terminal-status notification as PDF |
 
-**TARGET:** Keep plans as the structured-guide catalog. Apply always writes `assignments` (already). Do not generate `curriculum_units` from plans unless a future “link this guide to this book” feature needs it.
+Apply (`POST /api/curriculum/plans/{id}/apply`) always writes `assignments` (+ enrollment). Apply does not call Ollama.
 
-**DEPENDENCIES:** Calendar, exceptions (skipped days), students.
+Runtime deps for paper: `opencv-python-headless`, `numpy`, `qrcode` (`requirements.txt`). Template HTML: `app/templates/paper_template.html`.
 
-**MIGRATION:** None.
+**REMAINING:** Do not generate `curriculum_units` from plans unless a future “link this guide to this book” feature needs it. Paper vision must keep a **vision** model (`llama3.2-vision` today); pointing it at `OLLAMA_MODEL` (default `llama3.1`) would be wrong.
 
-**RISK:** Changing apply math reshapes family calendars.
-
-**PRIORITY:** Keep. PDF reliability is Medium.
+**DEPENDENCIES:** Calendar, exceptions (skipped days), students, optional Ollama.
 
 ---
 
 ### Assignments — KEEP
 
-**CURRENT:** The calendar event: student, title, date, status, notes, optional catalog/unit/resource ids, grade, evidence, `shared_group_uuid`.
+**CURRENT:** The calendar event: student, title, date, status, notes, optional tenant `curriculum_id` / resource / unit ids, grade, evidence, `shared_group_uuid`. New pacing commits and plan applies stamp `curriculum_id` (nullable integer, no FK; same pattern as Enrollment). Historical rows stay NULL. `PATCH /assignments/{id}/status` is allowed for a parent (syncs a shared group) or a child on their own row (does not sync siblings).
 
-**PROBLEM:** Parallel leftover `scheduled_work`. Status PATCH is parent-only.
+`ScheduledWork` / `EvidenceCapture` ORM models, unused read schemas, `ScheduleGrain`, and `WorkStatus` are **gone**. The live calendar is `assignments` only. Physical leftover SQLite tables `scheduled_work` / `evidence_captures` may still exist in older `tenant_*.db` files on other disks. `create_all` and boot schema patches do not drop those tables. Student and curriculum delete still clear leftover **rows** via `app/services/legacy_tables.py` (one implementation of each helper); that path never DROPs the tables.
 
-**TARGET:** `Assignment` is the only scheduled work object. Shared groups remain for sibling co-lessons. Child may set status on own rows.
+Operator retirement is `scripts/drop_legacy_tables.py` (helper `app/services/legacy_table_drop.py`). Default is dry-run. `--apply` DROPs a leftover table only when `COUNT(*) = 0`. It never DELETEs rows to empty a table. Non-empty tables are left untouched and reported as refused. Unopenable files are skipped (nothing in that file is dropped). Repeat runs are safe. Backup `tenant_*.db` before `--apply`; restore is copy-the-file-back. This host’s `./data/tenant_*.db` empty leftover tables were DROPped.
+
+**REMAINING:** Recalibrate and parent shared-group sync remain high blast radius. Non-empty leftover tables on other family disks stay until a separate data decision.
 
 **DEPENDENCIES:** Calendar, dashboard, evidence, homework help, portfolios, weekly PDF, recalibrate, attendance overlay.
-
-**MIGRATION:** Do not migrate `scheduled_work` into assignments unless production DBs have rows (likely empty). Then delete the old tables.
-
-**RISK:** Recalibrate and shared-group sync.
-
-**PRIORITY:** Critical as the domain center. High for child status.
 
 ---
 
 ### Pacing — KEEP
 
-**CURRENT:** Preview is pure arithmetic (`SyllabusGenerator`). Commit writes units, mappings, and assignments. Deadline vs pages-per-day. Skips exceptions and non-class weekdays.
+**CURRENT:** Preview is pure arithmetic (`SyllabusGenerator` in `app/services/ai_generator.py` — not an LLM). Commit writes units, mappings, assignments, and enrollments. Deadline vs pages-per-day. Skips exceptions and non-class weekdays. Comments say not to wire Ollama into commit.
 
-**PROBLEM:** Module named `ai_generator` is not AI. Comments describe a future LLM TOC split — that is a later enhancement, not a missing core.
-
-**TARGET:** Keep deterministic page-chunk pacing as the default (parents can edit titles before commit). Optional later: LLM titles from a TOC **behind the same preview contract**. Do not block scheduling on Ollama.
+**REMAINING:** Module filename `ai_generator.py` is misleading. Optional later: LLM titles from a TOC **behind the same preview contract**, still commitable with Ollama off. Tenant commit then catalog `page_count` commit are two engines (not one transaction).
 
 **DEPENDENCIES:** Curricula, resources, school year weekdays, exceptions, assignments.
-
-**MIGRATION:** Rename is cosmetic; do it only when touching the file.
-
-**RISK:** Commit transaction size (many assignments).
-
-**PRIORITY:** Low (rename). Keep the engine.
 
 ---
 
 ### Calendar — KEEP
 
-**CURRENT:** Per-student window (`/students/{id}/assignments`) and household “All Students” (`/calendar`, shared groups only). Day/week/month. Attendance and exceptions painted in the SPA.
+**CURRENT:** Per-student window (`/students/{id}/assignments`) and household “All Students” (`GET /api/calendar`, rows with `shared_group_uuid` only). Day/week/month. Attendance and exceptions painted in the SPA. All Students header copy: shared lessons only; private lessons appear on individual student calendars.
 
-**PROBLEM:** All-students hides private lessons by design (documented). That is a product choice, not a bug — call it out in the UI so parents are not surprised.
-
-**TARGET:** Keep two views. Shared group = lesson taught together. Private = one child. Copy in the All Students view: “shared lessons only.”
+**REMAINING:** Changing `/calendar` to include private lessons would clutter the family board. That is a product decision, not a bug.
 
 **DEPENDENCIES:** Assignments, attendance, exceptions, students.
-
-**MIGRATION:** UI copy only unless product wants private lessons on the family board (would be a query change).
-
-**RISK:** Changing `/calendar` to include private lessons would clutter the family board.
-
-**PRIORITY:** Low.
 
 ---
 
@@ -281,227 +206,155 @@ Keep the settings list as an editor for edge cases (unenroll, date overrides). D
 
 **CURRENT:** One row per student per day. Upsert from calendar cells. Present / Absent / Sick / Vacation.
 
-**PROBLEM:** Overlaps conceptually with exception kinds (sick, vacation). Parents can mark attendance and also paint a vacation exception.
-
-**TARGET:** Keep both: **exceptions** mean “not a school day / don’t schedule.” **Attendance** means “what we recorded for the log.” Auto-filling attendance from exceptions is a later convenience, not a merge of tables.
+**REMAINING:** Auto-filling attendance from vacation exceptions is a later convenience, not a merge of tables. Exceptions mean “not a school day / don’t schedule.” Attendance means “what we recorded for the log.”
 
 **DEPENDENCIES:** Portfolios, calendar UI.
 
-**MIGRATION:** None now.
-
-**RISK:** Low.
-
-**PRIORITY:** Low (auto-fill is DEFER).
-
 ---
 
-### Exceptions — CONSOLIDATE (APIs, not tables)
+### Exceptions — KEEP
 
-**CURRENT:** One table `calendar_exceptions`. Two HTTP surfaces:
+**CURRENT:** One table `calendar_exceptions`. One HTTP prefix `/api/exceptions` (`app/routers/exceptions.py`, parent-only):
 
-- `/exceptions` — list/create full records (settings, calendar overlay).
-- `/calendar/exceptions` — date set, toggle one day, import holidays (year grid).
+- `GET /api/exceptions` — list full records (settings list and calendar paint)
+- `POST /api/exceptions` — create a titled range
+- `GET /api/exceptions/dates` — household no-school date set (year grid; student-specific rows excluded)
+- `POST /api/exceptions/toggle` — add or remove one household day
+- `POST /api/exceptions/import-holidays` — public holidays into that date set
+
+Exception colors stay on `/api/settings/exception-colors`. There is no `PATCH`/`DELETE` for a titled row; the year-grid toggle can split a range. `/api/calendar` is the All Students assignment board and does not serve exceptions.
 
 Student-specific rows are excluded from the household “no-school” set used by pacing (correct).
 
-**PROBLEM:** Two APIs for one table. Toggle creates/deletes rows; the list UI creates titled ranges. Same idea, two dialects.
-
-**TARGET:** Keep one table. Prefer one router module with:
-
-- list/create/update/delete records
-- derived `dates` for the grid
-- toggle as “create or delete a one-day household holiday”
-- import-holidays as bulk create
-
-SPA can keep two screens (list vs year grid).
+**REMAINING:** None for HTTP prefixes. Optional later: update/delete of titled ranges if Settings needs an edit UI.
 
 **DEPENDENCIES:** Pacing, plan-apply, school-year grid, calendar paint.
 
-**MIGRATION:** Move handlers into one module; keep old paths as aliases until the SPA is updated.
-
-**RISK:** Holiday import duplicates; toggle vs range overlap.
-
-**PRIORITY:** Medium.
-
 ---
 
-### Evidence — REFACTOR
+### Evidence — KEEP (staging + authenticated files)
 
-**CURRENT:** Staging (`evidence_staging` + Chrome upload) → link to `assignment_evidence`. Direct upload on an assignment. Files under `{tenant_uuid}/{uuid}.webp|pdf`. Legacy `evidence_captures` unused for new writes. `/evidence` StaticFiles, no auth.
+**CURRENT:** Staging (`evidence_staging` + Chrome upload) → link to `assignment_evidence`. Direct upload on an assignment. Files under `{tenant_uuid}/{uuid}.webp|pdf`. Files are served by authenticated `GET /api/evidence/files/{tenant}/{filename}`. The public `/evidence` StaticFiles mount is gone. Extension upload uses a capture credential, not a parent session. Children may read only files attached to their assignments. Capture credentials receive 403 on file GET. Responses use `Cache-Control: private, no-store`.
 
-**PROBLEM:** Work samples are guessable if tenant UUID and filename leak. Staging + assignment evidence is the right product split (inbox vs filed).
+`evidence_captures` is not mapped. Physical leftover tables may remain on older tenant files until an operator dry-run / `--apply` (COUNT=0 only; never DELETE rows; not boot).
 
-**TARGET:** Keep staging inbox and assignment attachments. Serve files only with the same JWT (or short-lived signed URLs). Delete `evidence_captures` when unused. Extension uses an upload-scoped token.
+**REMAINING:** Non-empty leftover capture tables stay until a separate data decision. Capture tokens must be rotated if `JWT_SECRET` is rotated.
 
 **DEPENDENCIES:** Portfolios (attachments), calendar paperclip, extension.
-
-**MIGRATION:** Add an authenticated `GET /api/evidence/files/...` and point the SPA at it; then unmount public StaticFiles.
-
-**RISK:** Broken images in the UI during cutover; extension uploads.
-
-**PRIORITY:** Critical (auth). Keep the inbox model.
 
 ---
 
 ### Portfolios — KEEP
 
-**CURRENT:** Report types (state log, reading list, work samples, custom). HTML preview, WeasyPrint PDF, email via background SMTP. Window from school year dates. Books from enrollments.
+**CURRENT:** Report types (state log, reading list, work samples, custom). HTML preview, WeasyPrint PDF, email via background SMTP. Window from school year dates. Books from enrollments (created when work is scheduled). Empty-enrollment copy points at Settings → Enrollments.
 
-**PROBLEM:** Reading list empty without enrollments. Email credentials currently in compose. Custom report is POST-only (GET `/report` rejects custom) — fine.
-
-**TARGET:** Keep server-side PDF. After enrollments auto-create, reading lists fill. Do not move PDF generation to the browser (print CSS is a supplement, not a replacement for evaluator PDFs).
+**REMAINING:** Title-only historical plan-apply rows (no `curriculum_id`) still will not appear as books until Settings POST. Custom report is POST-only (GET `/report` rejects custom) — fine.
 
 **DEPENDENCIES:** Assignments, attendance, enrollments, school years, evidence, mail config.
-
-**MIGRATION:** Enrollment auto-create; secret handling.
-
-**RISK:** Email deliverability; PDF layout.
-
-**PRIORITY:** High for data completeness; Critical for mail secrets.
 
 ---
 
 ### Homework Help — KEEP
 
-**CURRENT:** Child-only sessions, Ollama tutor that refuses answers, parent notifications, lock after redirects, parent unlock.
+**CURRENT:** Child-only sessions, Ollama tutor that refuses answers, parent notifications, lock after redirects, parent unlock. Failures are logged; the path does not block scheduling.
 
-**PROBLEM:** Small test coverage. Depends on local Ollama. Otherwise aligned with the product.
-
-**TARGET:** Keep as a child feature with parent oversight. Fail gracefully when Ollama is down (already logged).
+**REMAINING:** Small test coverage (`tests/test_homework_help.py`). Prompt changes are product risk.
 
 **DEPENDENCIES:** Assignments, students, notifications, Ollama.
 
-**MIGRATION:** None.
-
-**RISK:** Prompt injection / answer leakage — treat prompt changes as product risk.
-
-**PRIORITY:** Low (stability). Keep.
-
 ---
 
-### AI / Ollama — KEEP (narrow)
+### AI / Ollama — KEEP (optional accelerator)
 
-**CURRENT:** Three uses: PDF → plan lessons (background), homework tutor, spark question (short timeout). Pacing “AI” is arithmetic.
+**CURRENT:** Ollama is **not** on the calendar write path. `SyllabusGenerator` / `pacing.py` do not import it. Boot and `GET /api/health` do not ping Ollama. Four call sites, two HTTP stacks:
 
-**PROBLEM:** One daemon, three timeouts and two client libraries (`httpx` and `ollama`). Easy to assume pacing needs the GPU box.
+| Use | Client | Model | Timeout / sync | On failure |
+|---|---|---|---|---|
+| PDF → plan lessons | `ollama.AsyncClient` via `ollama_chat.py` from `ai_curriculum_worker.py` | `settings.ollama_model` then `mistral` | Async; SDK default; background | Plan `failed` on a fresh session. HTTP 202 already returned |
+| Homework tutor | same helper from `homework_help.py` | Same fallback list | Async; on the child message request | Returns a canned hint; still commits the chat |
+| Spark question | `httpx` POST `/api/chat` in `spark.py` | `settings.ollama_model` only | Sync; 2.5s / 0.4s connect | `source=none`; dashboard does not wait on a long generate |
+| Paper handwriting | `httpx` POST `/api/chat` in `paper_vision_worker.py` | Hardcoded `llama3.2-vision` | Sync sequential; 120s; `images[]` | Plan `failed`. OpenCV slice already succeeded |
 
-**TARGET:** Ollama is an **optional accelerator**: PDF import and tutoring. Scheduling must work with it off. Spark stays best-effort. Do not put Ollama on the calendar write path.
+The two stacks are **intentional**. Spark cannot share the SDK’s long default timeout. Vision cannot share `OLLAMA_MODEL` (text). Vision posts `images` and must not overlap calls on a small GPU. PDF/homework share `app/services/ollama_chat.py` (`AsyncClient`, `format=` JSON schema, `OLLAMA_MODEL` then `mistral`). Spark/vision stay on `httpx`.
 
-**DEPENDENCIES:** Curriculum PDF import, homework help, spark.
+`OLLAMA_HOST` / `OLLAMA_MODEL` are optional. Config has no vision-model setting. Paper import geometry (OpenCV) does not need Ollama; transcription does.
 
-**MIGRATION:** Document `OLLAMA_HOST` as optional. PDF import already marks `failed`.
+**REMAINING:** Do not merge the stacks into one generic client. Do not set paper vision to `OLLAMA_MODEL`. Optional later: `OLLAMA_VISION_MODEL` (default `llama3.2-vision`).
 
-**RISK:** Background session lifecycle on PDF import.
-
-**PRIORITY:** Medium (PDF worker session). Keep the optional-AI stance.
+**DEPENDENCIES:** Curriculum PDF import, paper import, homework help, spark. Not book auto-schedule.
 
 ---
 
 ### Catalog / ISBN — KEEP
 
-**CURRENT:** Shared `book_editions` cache. Resolver: Open Library then Google Books. SPA: `POST /catalog/lookup-isbn` then `POST /curricula` with `sku`.
+**CURRENT:** Shared `catalog.db` ISBN dictionary (`works`, `book_editions`, publishers, authors). Resolver: Open Library then Google Books (`app/services/resolver.py`). Two HTTP prefixes sit on that dictionary:
 
-**PROBLEM:** `POST /catalog/from-isbn` duplicates “create library row from ISBN” that the form already does in two steps. Fine for API clients; confusing as two official paths.
+- `POST /catalog/lookup-isbn` — parent-only. Same `BookResolver.resolve` as `/books/resolve`, then projects a flat `ISBNLookupRead` for the Add curriculum form. Writes a cached `BookEdition` on a miss (commit on success). SPA calls this, then `POST /curricula` with `sku`.
+- `POST /catalog/from-isbn` — parent-only, API-only. Resolve with `commit=False`, then `create_curriculum_from_edition` (tenant `curricula` + `curriculum_editions` + student-text `curriculum_resources`). 404 if the identifier is not a resolvable ISBN / already-cached SKU. Does **not** create a manual SKU the way `POST /curricula` can. Tests call it (`tests/test_catalog_api.py`). SPA does not.
 
-**TARGET:** Keep shared catalog + household library. Canonical SPA path: lookup → save curricula. Keep `from-isbn` as a one-shot API or implement the SPA against it later — not both as equal UI paths.
+Household library create for the form is `POST /curricula` (`app/services/catalog.py` `create_curriculum`), not `/catalog/from-isbn`.
 
-**DEPENDENCIES:** Auto-schedule page counts, barcode extension-to-be.
+**REMAINING:** `from-isbn` is a one-shot API client path, not an equal UI path and not a `/books` alias. Keep it until a caller inventory outside this repo exists. Do not merge library rows into `catalog.db`.
 
-**MIGRATION:** Document the two-step path as canonical.
-
-**RISK:** Low.
-
-**PRIORITY:** Low.
+**DEPENDENCIES:** Auto-schedule page counts (`CurriculumResource.book_edition_id` → `BookEdition.page_count`).
 
 ---
 
-### Books — CONSOLIDATE (into catalog)
+### Books — KEEP (ISBN dictionary HTTP; not the household library)
 
-**CURRENT:** `/books/resolve`, `/books/isbn/{isbn}`, `/books/{id}` wrap the same resolver. SPA does not call them. Tests do.
+**CURRENT:** Parent-only `/books` on `catalog.db` `BookEdition` only. Does not create `Curriculum`, editions, resources, units, or assignments.
 
-**PROBLEM:** Two HTTP namespaces for one cache.
+| Method | Path | Writes | Response |
+|---|---|---|---|
+| POST | `/books/resolve` | Cache `BookEdition` (+ work/authors/publisher) on a miss | Full `BookEditionRead` |
+| GET | `/books/isbn/{isbn}` | None | Full `BookEditionRead` |
+| GET | `/books/{id}` | None | Full `BookEditionRead` |
 
-**TARGET:** Catalog is the public name (`/catalog/...`). Books routes can remain as aliases or be deprecated once tests use catalog. Do not build a separate “books” product surface.
+SPA, extension, and operator scripts do not call these. Tests do (`tests/test_books_api.py`). FastAPI OpenAPI documents them. Resolver fallback and cache behavior are also tested without HTTP in `tests/test_resolver.py`.
 
-**DEPENDENCIES:** Resolver, catalog lookup.
+`POST /books/resolve` shares `BookResolver` with `POST /catalog/lookup-isbn` but **not** the response shape. The two GET routes have **no** `/catalog` twin.
 
-**MIGRATION:** Point tests at catalog; keep books routes until then.
+**REMAINING:** Do not delete `/books/*` because the SPA is quiet. Do not point existing books tests at lookup-isbn (that would drop GET coverage and change the asserted body). Optional later: catalog GET twins that return the same `BookEditionRead`, then `/books/*` as aliases. That is an API project, not a domain merge.
 
-**RISK:** Low.
-
-**PRIORITY:** Low.
+**DEPENDENCIES:** Resolver. Pacing reads `book_id` from `GET /curricula/{id}/resources`, not from `/books/{id}`.
 
 ---
 
 ### Notifications — KEEP
 
-**CURRENT:** In-app list for homework-help started/redirect. Mark read.
+**CURRENT:** In-app list for homework-help started/redirect and for PDF/paper plan `ready` / `failed`. Plan rows are written in the worker’s tenant session when status leaves `processing` (not on the 202 request). `student_id` and `assignment_id` are null. Inbox click on a plan notification opens `#/curricula` on the pacing-guides tab. Mark read.
 
-**PROBLEM:** Not a general notification platform. That is appropriate.
+**REMAINING:** Do not add email/push until a parent asks.
 
-**TARGET:** Stay homework-help (and maybe PDF-plan-ready later). Do not add email/push until a parent asks.
-
-**DEPENDENCIES:** Homework help; optional plan status.
-
-**MIGRATION:** Optional: notify when PDF plan leaves `processing`.
-
-**RISK:** Low.
-
-**PRIORITY:** Low. COMPLETE only for “plan ready” if PDF import stays async.
+**DEPENDENCIES:** Homework help; PDF and paper curriculum workers.
 
 ---
 
-### Offline / PWA — KEEP (REFACTOR cache bust)
+### Offline / PWA — KEEP
 
-**CURRENT:** `sw.js` caches shell; IndexedDB outbox replays mutating `api()` calls. Does not cache `/api` or `/evidence`.
-
-**PROBLEM:** Cache URL query strings in `sw.js` do not match `index.html` (`widget-hug` vs `pdf-ocr`). Stale JS after deploy.
-
-**TARGET:** Keep shell + outbox. Single version token shared by HTML and SW (or hash-based cache). Never cache evidence or API JSON.
+**CURRENT:** `sw.js` caches shell; IndexedDB outbox replays mutating `api()` calls. Does not cache `/api` or `/evidence`. `SHELL_VERSION` is the single cache-bust token (currently `20260831-paper-import`). `index.html` and CSS query strings use that value. `SHELL_CACHE` is `curiculy-shell-${SHELL_VERSION}`. Tests fail if the strings drift.
 
 **DEPENDENCIES:** SPA `api()`, uploads.
 
-**MIGRATION:** Bump both strings together; or generate SW list from the same version constant.
-
-**RISK:** Users stuck on old `app.js`.
-
-**PRIORITY:** High (cache bust). Keep offline.
-
 ---
 
-### Chrome extension — KEEP (REFACTOR token)
+### Chrome extension — KEEP
 
-**CURRENT:** MV3 capture → `POST /api/evidence/staging`. Options: server URL + device token. Icons referenced, missing in tree.
+**CURRENT:** MV3 capture → `POST /api/evidence/staging` with a capture credential (`scope=evidence:write`). Options: server URL + device token (the capture JWT). Toolbar and options icons are PNGs under `extension/icons/` (16/32/48/128 plus `logo.png`).
 
-**PROBLEM:** Token is a parent JWT. `host_permissions` are broad (needed for screenshots on arbitrary curriculum sites).
+**REMAINING:** `host_permissions` are broad (needed for screenshots on arbitrary curriculum sites). Families still pasting an old parent JWT keep a full parent session until they generate a capture token.
 
-**TARGET:** Keep one-click capture into the unsorted inbox. Scoped token. Restore icons. Do not turn the extension into a second app.
-
-**DEPENDENCIES:** Evidence staging, parent JWT today.
-
-**MIGRATION:** New token endpoint; extension settings field stays “device token.”
-
-**RISK:** Capture flow until tokens migrate.
-
-**PRIORITY:** High (token). Medium (icons).
+**DEPENDENCIES:** Evidence staging, capture-token endpoints.
 
 ---
 
 ### Compliance — DEFER
 
-**CURRENT:** `jurisdictions`, `compliance_packets`, `build_packet()` raises `NotImplementedError`.
+**CURRENT:** `jurisdictions`, `compliance_packets`, `build_packet()` raises `NotImplementedError`. `create_app()` description still says “compliance foundation” (cosmetic). Portfolios already produce evaluator PDFs.
 
-**PROBLEM:** Empty tables and a stub. Portfolios already produce evaluator PDFs.
-
-**TARGET:** Do not build a jurisdiction rules engine until a specific state form is a paying requirement. When needed, generate packets **from assignments + attendance + evidence**, same as portfolios, with a state template.
+**REMAINING:** Do not build a jurisdiction rules engine until a specific state form is a paying requirement.
 
 **DEPENDENCIES:** None in the live product.
-
-**MIGRATION:** Leave tables. Do not expose UI.
-
-**RISK:** None if deferred.
-
-**PRIORITY:** Low. Defer.
 
 ---
 
@@ -509,134 +362,94 @@ SPA can keep two screens (list vs year grid).
 
 **CURRENT:** Catalog `subject_taxonomies`, `reporting_categories`; tenant `curriculum_classifications`. Tests only. Assignments may store `subject_taxonomy_id`; pacing can pass it; no CRUD API.
 
-**PROBLEM:** Transcript-ready taxonomy without a product surface.
-
-**TARGET:** Optional subject string on curricula/assignments is enough today. Hierarchical taxonomy when a state report needs buckets. Until then, do not build a taxonomy admin UI.
+**REMAINING:** Hierarchical taxonomy when a state report needs buckets. Until then, free-text `subject` is enough. Do not build a taxonomy admin UI.
 
 **DEPENDENCIES:** Assignment optional FK, tests.
 
-**MIGRATION:** Leave columns. Ignore in UI.
-
-**RISK:** None if deferred.
-
-**PRIORITY:** Low. Defer.
-
 ---
 
-### Database architecture — REFACTOR (process, not engine)
+### Database architecture — KEEP (process leftover: patch discipline)
 
-**CURRENT:** Three SQLite files. SQLAlchemy 2. Cross-DB ids without FKs. `init_databases()` on boot.
+**CURRENT:** Three SQLite files. SQLAlchemy 2. Cross-DB ids without FKs. `init_databases()` on boot runs `create_all` plus the ordered patches in `app/schema_patches.py` on catalog, admin, the shared tenant file, and every `tenant_*.db`. Column patches are additive. One documented retirement drops leftover `household_settings` date columns after backfilling `SchoolYear` when a household has dates and no named year. It does not DROP leftover `scheduled_work` / `evidence_captures` (that is an operator script, never boot).
 
-**PROBLEM:** Schema evolution is manual ALTER lists in `db.py` plus unused Alembic files. Easy to add a model field and forget the ALTER for existing tenant files.
-
-**TARGET:** Keep SQLite three-file layout. One **explicit** schema story:
-
-- Either Alembic runs against catalog, admin, **and each tenant file**, or
-- `create_all` + a single ordered patch module that is the documented source of truth — and **stop adding Alembic revisions that never run**.
-
-Prefer Alembic-for-real if more than one person ships schema, because tenant glob (`tenant_*.db`) is already in `init_databases`.
+**REMAINING:** A model field without a matching patch is missing on old tenant files. That is patch discipline, not a second runner.
 
 **DEPENDENCIES:** Entire backend.
 
-**MIGRATION:** See `TECHNICAL_DEBT.md`. Do not change engines.
-
-**RISK:** Corrupt or diverging tenant files.
-
-**PRIORITY:** High.
-
 ---
 
-### Alembic / migrations — CONSOLIDATE
+### Alembic / migrations — ARCHIVE (not the runner)
 
-**CURRENT:** Revisions 0001–0012 describe history. `env.py` only calls `init_databases()`. `alembic.ini` points at catalog.db.
+**CURRENT:** Revisions 0001–0012 remain in `alembic/versions/` as archaeology. `env.py` refuses `alembic upgrade`. `alembic.ini` `sqlalchemy.url` is `sqlite:///:memory:`. Runtime schema is `init_databases()` → `create_all` + `app.schema_patches`.
 
-**PROBLEM:** Looks like migrations exist. They do not run. 0001 does not match live models.
-
-**TARGET:** Pick one. Recommended: make Alembic the runner for all three bases, including a loop over `tenant_*.db`, **or** delete the false impression (archive revisions, document `db.py` patches). Do not maintain both.
+**REMAINING:** Someone generating a new revision might assume it runs. `alembic/README.md` says not to. A later Alembic-for-real is allowed only as a dedicated session with backups; never replay 0001.
 
 **DEPENDENCIES:** Deploy/entrypoint.
 
-**MIGRATION:** If adopting Alembic, stamp existing DBs as “head equivalent to create_all” rather than replaying 0001.
-
-**RISK:** Replaying old revisions against live files would be destructive.
-
-**PRIORITY:** High (honesty of process).
-
 ---
 
-### Frontend architecture — KEEP (REFACTOR edges)
+### Frontend architecture — KEEP
 
-**CURRENT:** One HTML shell, one `app.js`, hash routes, global `state`, `data-action` handlers. Chart.js CDN.
+**CURRENT:** One HTML shell, one `app.js`, hash routes, global `state`, `data-action` handlers. Chart.js CDN. Logo at `static/curiculy-logo.png`. Shell assets share `SHELL_VERSION`. No bundler — a fit for this repo (Docker bind-mounts JS; no npm in production).
 
-**PROBLEM:** ~8500 lines in one file. Missing logo. Cache bust. No bundler — that is a **fit** for this repo (Docker bind-mounts JS; no npm in production).
-
-**TARGET:** Stay a server-rendered shell + vanilla SPA until a second client (mobile native) exists. Split `app.js` by feature only when two people regularly collide. Fix assets and SW versions. Do not introduce React/Vue as an architecture goal.
+**REMAINING:** Split `app.js` by feature only when two people regularly collide. Do not introduce React/Vue as an architecture goal.
 
 **DEPENDENCIES:** All UX.
 
-**MIGRATION:** Mechanical file split later; behavior unchanged.
-
-**RISK:** Hash routing and global state make a framework rewrite high-cost and low-value.
-
-**PRIORITY:** High for assets/SW. Low for splitting JS.
-
 ---
 
-### API architecture — KEEP (REFACTOR duplicates)
+### API architecture — KEEP
 
-**CURRENT:** REST `/api`, Pydantic, router-per-feature. Assignments spread across path prefixes by design.
+**CURRENT:** REST `/api`, Pydantic, router-per-feature. Assignments spread across path prefixes by design. Calendar exceptions live only under `/api/exceptions`.
 
-**PROBLEM:** Duplicate exception and book/catalog surfaces. Some power endpoints unused by UI.
-
-**TARGET:** Keep REST and FastAPI. Consolidate exception routers. Treat unused endpoints as API-only until a UI exists. Do not add GraphQL or a BFF.
+**REMAINING:** `/books` and `/catalog` share the ISBN dictionary but not HTTP contracts (see Catalog / Books). Unused power endpoints (`from-isbn`, `POST /curricula/import`) stay until a UI or an explicit retirement.
 
 **DEPENDENCIES:** SPA, extension, tests.
 
-**MIGRATION:** Aliases then delete unused public paths if nothing external calls them.
+---
 
-**RISK:** Extension and any unpublished API clients.
+### Testing — KEEP (in-memory API client; file JWT tests separate)
 
-**PRIORITY:** Medium.
+**CURRENT:** Pytest + TestClient. Baseline **892 passed, 0 failed, 0 skipped**. Default `conftest.py` `client` is an in-memory catalog+tenant+admin DB (`StaticPool`) and overrides `get_tenant_db` / `get_current_user`. That is the bulk of the suite and is intentional. `auth_client` in `tests/test_auth.py` uses real `admin.db` + `tenant_{uuid}.db` under pytest `tmp_path` without overriding `get_tenant_db` (login, register, persistence across a fresh sqlite3 connection, two-household isolation). Capture, child status, kid auth, and homework-help HTTP tests reuse that fixture. Schema tests and leftover-table DROP use throwaway SQLite files. Evidence file GET is tested authenticated. Paper intake has `test_paper_parser.py`, `test_paper_template.py`, `test_paper_vision_worker.py`. Household identity: `test_household_api.py`. Shell/README/icons/CI: `test_shell.py`. Process health: `tests/test_health.py`. GitHub Actions runs the Compose `tests` service.
+
+**REMAINING:** Homework-help coverage is thin.
+
+**DEPENDENCIES:** Compose `tests` profile (bind-mounts `README.md`, `extension/`, `sw.js`, `.github/`).
 
 ---
 
-### Testing — REFACTOR
+### Deployment — KEEP (Compose + GitHub Actions tests)
 
-**CURRENT:** Pytest + TestClient. One in-memory SQLite for catalog+tenant+admin. Auth often overridden.
+**CURRENT:** Docker Compose, port 3040, bind-mounts, evidence on a volume, Ollama via `host.docker.internal`. Secrets from env or a gitignored `.env`. Root `README.md` documents `.env`, `JWT_SECRET`, compose port 3040, first invite (`tenant_uuid` required on `invite_keys`), and the test command. `GET /api/health` is unauthenticated process health: `SELECT 1` on `catalog.db` and `admin.db` only (`app/routers/health.py`, `app/services/db_health.py`). It does not open household `tenant_{uuid}.db` files, the shared `tenant.db`, or Ollama. Compose and the Dockerfile do not define a `healthcheck`. No nginx in repo. GitHub Actions (`.github/workflows/tests.yml`) runs `docker compose --profile dev run --rm -T tests pytest -q --tb=line` on push and pull request. That image is Python 3.12 (`Dockerfile` `dev` target). CI does not inject production secrets, SMTP, or Ollama; `tests/conftest.py` sets a local JWT signing value. Tenant SQLite files are created in pytest tmp paths.
 
-**PROBLEM:** Does not prove `tenant_{uuid}.db` routing, invite provision, or evidence StaticFiles auth. Homework-help coverage is thin.
-
-**TARGET:** Keep fast in-memory tests as the default. Add a small **integration** module that uses real tenant file URLs and JWT without overriding `get_tenant_db`. Test evidence file GET once it is authenticated.
-
-**DEPENDENCIES:** CI (when added).
-
-**MIGRATION:** Additive tests.
-
-**RISK:** Slow suite if every test uses files — keep file tests few.
-
-**PRIORITY:** Medium.
-
----
-
-### Deployment — REFACTOR
-
-**CURRENT:** Docker Compose, port 3040, bind-mounts, evidence on a large array, Ollama via `host.docker.internal`. No nginx, CI, or README in repo.
-
-**PROBLEM:** Secrets in compose. No documented bootstrap (first admin, first invite). Bind-mounts are good for this host, not a generic public deploy.
-
-**TARGET:** Compose remains the homelab/SaaS-single-node shape. Secrets from env or a file not in git. Document: create first admin, generate invite, set `JWT_SECRET`, optional Ollama. Add CI running pytest on the `dev` image. Reverse proxy can stay outside the repo until there are multiple services.
+**REMAINING:** Reverse proxy can stay outside the repo. Rotate the mailbox password if an old committed password was ever used.
 
 **DEPENDENCIES:** All runtime.
 
-**MIGRATION:** Move secrets; add README; optional CI.
+---
 
-**RISK:** Mail stops until env is set (correct).
+## Environment variables
 
-**PRIORITY:** Critical (secrets). High (README/bootstrap).
+Copy `.env.example` to `.env` (gitignored). Compose interpolates these into the `api` container. Do not put real passwords or keys in `docker-compose.yml`.
+
+| Variable | Required | Notes |
+|---|---|---|
+| `JWT_SECRET` | Yes, when `DEV_MODE` is false | Long random string, at least 32 characters. Known placeholders and the development default are rejected. Never log this value. |
+| `DEV_MODE` | No (default `false`) | Local-only. Skips JWT auth and allows an empty `JWT_SECRET` (explicit development signing key). Do not enable for a real family. |
+| `MAIL_USERNAME` | No | SMTP user for portfolio email. Empty disables authenticated send. |
+| `MAIL_PASSWORD` | No | SMTP password. Comes only from the environment. Never log this value. |
+| `MAIL_SERVER` | No | Defaults to `smtp-relay.brevo.com` in compose. |
+| `MAIL_PORT` | No | Defaults to `587` in compose. |
+| `MAIL_FROM` / `MAIL_FROM_NAME` | No | Envelope identity, not a secret. |
+| `GOOGLE_BOOKS_API_KEY` | No | Improves ISBN lookup rate limits. Never log this value. |
+| `CAPTURE_TOKEN_EXPIRE_DAYS` | No (default `365`) | Lifetime of a newly issued Chrome capture credential. |
+| `OLLAMA_HOST` / `OLLAMA_MODEL` | No | Optional PDF parse, tutoring, spark (text). Paper vision uses hardcoded `llama3.2-vision`, not `OLLAMA_MODEL`. |
+
+Database URLs, `EVIDENCE_DIR`, `INDEX_HTML_PATH`, and `STATIC_DIR` are set in compose for the container layout.
 
 ---
 
-## Target runtime shape
+## Runtime shape
 
 ```text
 Parents / kids / extension
@@ -644,28 +457,38 @@ Parents / kids / extension
         ▼
    HTTPS (future proxy) → FastAPI :80
         │
-        ├── JWT → admin.db (who) + tenant_{uuid}.db (planner)
+        ├── JWT → admin.db (who, capture tokens) + tenant_{uuid}.db (planner)
         ├── ISBN cache → catalog.db
         ├── files → evidence/{tenant_uuid}/
-        ├── optional Ollama (PDF, tutor, spark)
+        ├── optional Ollama (PDF, paper vision, tutor, spark)
         └── optional SMTP (portfolio email)
 
 SPA: index.html + /static + /sw.js
 ```
 
-Still one process. Still SQLite. Still two curriculum intakes. Still one calendar object: **assignment**.
+Still one process. Still SQLite. Still two curriculum objects (book vs guide). Still one calendar object: **assignment**.
 
 ---
 
-## Target data flow (canonical)
+## Data flow (canonical)
 
 ```text
 ISBN / title  → catalog.db (edition) → tenant curricula (library)
 Book pages    → pacing preview/commit → assignments (+ enrollment)
-PDF / CSV / builder → curriculum_plans → apply → assignments (+ enrollment)
+CSV / PDF / paper sheet / builder → curriculum_plans → apply → assignments (+ enrollment)
 Chrome shot   → evidence_staging → link → assignment_evidence
 Assignments   → calendar, kid My work, dashboard, recalibrate
 Assignments + attendance + evidence + enrollments → portfolio PDF
+```
+
+Paper sheet detail:
+
+```text
+GET /api/curriculum/paper-template  → printable PDF (ArUco + qrcode)
+POST /api/curriculum/import-paper   → OpenCV slice on the request
+                                  → Ollama vision in a background worker
+                                  → curriculum_lessons on a new tenant Session
+                                  → parent Apply → assignments
 ```
 
 Anything that does not feed `assignments` or the library/plans that generate them is either settings (year, weekdays, exceptions) or deferred (compliance, taxonomy).

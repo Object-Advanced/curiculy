@@ -1,4 +1,16 @@
-"""Household school-year bounds, class days, and calendar exceptions.
+"""Operational school year, class days, and calendar exceptions.
+
+Field split:
+
+- School-year identity: ``SchoolYear.id``, ``name``, ``household_id``.
+- School-year dates: ``SchoolYear.start_date``, ``SchoolYear.end_date``.
+  The operational year is the latest by start date, then id.
+- Scheduling preferences: ``HouseholdSettings.weekdays``.
+- UI preferences: ``HouseholdSettings.exception_colors``.
+
+``HouseholdSettings`` does not store school-year dates. Leftover
+``start_date`` / ``end_date`` columns on older tenant files are retired by
+``app.schema_patches.retire_household_settings_date_columns``.
 
 The settings calendar is household-wide: student-specific sick days stay on
 the existing exceptions list and do not appear as global no-school days.
@@ -66,22 +78,119 @@ def _latest_school_year(db: Session, household_id: int) -> SchoolYear | None:
     )
 
 
-def load_school_year_settings(db: Session) -> tuple[date, date, list[int], int | None]:
-    household = get_default_household(db)
-    row = (
+def _settings_for_household(db: Session, household_id: int) -> HouseholdSettings | None:
+    return (
         db.query(HouseholdSettings)
-        .filter(HouseholdSettings.household_id == household.id)
+        .filter(HouseholdSettings.household_id == household_id)
         .first()
     )
-    year = _latest_school_year(db, household.id)
-    if row is not None:
-        return row.start_date, row.end_date, parse_weekdays(row.weekdays), (
-            year.id if year is not None else None
+
+
+def _ensure_settings_row(
+    db: Session,
+    household: Household,
+    *,
+    weekdays: list[int] | None = None,
+) -> HouseholdSettings:
+    """Return the household settings row, creating it when missing.
+
+    Weekdays are only overwritten when the caller is saving class days.
+    """
+    row = _settings_for_household(db, household.id)
+    if row is None:
+        row = HouseholdSettings(
+            household_id=household.id,
+            weekdays=encode_weekdays(weekdays or list(DEFAULT_CLASS_WEEKDAYS)),
         )
+        db.add(row)
+        return row
+    if weekdays is not None:
+        row.weekdays = encode_weekdays(weekdays)
+    return row
+
+
+def ensure_operational_school_year(db: Session) -> SchoolYear | None:
+    """Return the latest named year, or None if this household has none yet.
+
+    Does not invent a year from household settings. Leftover settings date
+    columns on older files are promoted to ``SchoolYear`` during schema apply.
+    """
+    household = get_default_household(db)
+    return _latest_school_year(db, household.id)
+
+
+def require_operational_school_year(db: Session) -> SchoolYear:
+    """Latest named year, creating one in the current transaction if needed.
+
+    Does not commit. Pacing commit and plan-apply must use this so a failed
+    write rolls the year back with the assignments and enrollments.
+    """
+    household = get_default_household(db)
+    year = _latest_school_year(db, household.id)
     if year is not None:
-        return year.start_date, year.end_date, list(DEFAULT_CLASS_WEEKDAYS), year.id
+        return year
     start, end = default_school_year_bounds()
-    return start, end, list(DEFAULT_CLASS_WEEKDAYS), None
+    year = SchoolYear(
+        household_id=household.id,
+        name=school_year_name(start, end),
+        start_date=start,
+        end_date=end,
+    )
+    db.add(year)
+    db.flush()
+    return year
+
+
+def create_named_school_year(
+    db: Session, name: str, start_date: date, end_date: date
+) -> SchoolYear:
+    if end_date < start_date:
+        raise ValueError("end_date must be on or after start_date")
+    household = get_default_household(db)
+    year = SchoolYear(
+        household_id=household.id,
+        name=name,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    db.add(year)
+    db.flush()
+    db.commit()
+    db.refresh(year)
+    return year
+
+
+def update_named_school_year(
+    db: Session,
+    year: SchoolYear,
+    *,
+    name: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> SchoolYear:
+    if name is not None:
+        year.name = name
+    if start_date is not None:
+        year.start_date = start_date
+    if end_date is not None:
+        year.end_date = end_date
+    if year.end_date < year.start_date:
+        raise ValueError("end_date must be on or after start_date")
+    db.flush()
+    db.commit()
+    db.refresh(year)
+    return year
+
+
+def load_school_year_settings(db: Session) -> tuple[date, date, list[int], int | None]:
+    household = get_default_household(db)
+    year = ensure_operational_school_year(db)
+    row = _settings_for_household(db, household.id)
+    weekdays = parse_weekdays(row.weekdays) if row is not None else list(DEFAULT_CLASS_WEEKDAYS)
+    if year is not None:
+        return year.start_date, year.end_date, weekdays, year.id
+    start, end = default_school_year_bounds()
+    return start, end, weekdays, None
 
 
 def save_school_year_settings(
@@ -89,24 +198,6 @@ def save_school_year_settings(
 ) -> tuple[date, date, list[int], int | None]:
     household = get_default_household(db)
     stored = encode_weekdays(weekdays)
-    row = (
-        db.query(HouseholdSettings)
-        .filter(HouseholdSettings.household_id == household.id)
-        .first()
-    )
-    if row is None:
-        row = HouseholdSettings(
-            household_id=household.id,
-            start_date=start_date,
-            end_date=end_date,
-            weekdays=stored,
-        )
-        db.add(row)
-    else:
-        row.start_date = start_date
-        row.end_date = end_date
-        row.weekdays = stored
-
     year = _latest_school_year(db, household.id)
     if year is None:
         year = SchoolYear(
@@ -119,7 +210,7 @@ def save_school_year_settings(
     else:
         year.start_date = start_date
         year.end_date = end_date
-
+    _ensure_settings_row(db, household, weekdays=weekdays)
     db.commit()
     db.refresh(year)
     return start_date, end_date, parse_weekdays(stored), year.id
@@ -150,11 +241,7 @@ def encode_exception_colors(colors: dict[str, str]) -> str:
 
 def _settings_row(db: Session) -> HouseholdSettings | None:
     household = get_default_household(db)
-    return (
-        db.query(HouseholdSettings)
-        .filter(HouseholdSettings.household_id == household.id)
-        .first()
-    )
+    return _settings_for_household(db, household.id)
 
 
 def load_exception_colors(db: Session) -> dict[str, str]:
@@ -176,11 +263,9 @@ def save_exception_colors(db: Session, updates: dict[str, str | None]) -> dict[s
         current[kind] = value
     encoded = encode_exception_colors(current)
     if row is None:
-        start, end, weekdays, _year_id = load_school_year_settings(db)
+        _start, _end, weekdays, _year_id = load_school_year_settings(db)
         row = HouseholdSettings(
             household_id=household.id,
-            start_date=start,
-            end_date=end,
             weekdays=encode_weekdays(weekdays),
             exception_colors=encoded,
         )

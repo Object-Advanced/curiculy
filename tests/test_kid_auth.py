@@ -179,6 +179,14 @@ def test_child_cannot_access_parent_routes_or_siblings(auth_client: TestClient) 
     child = _child_token(auth_client, ada["id"])
     headers = bearer(child)
     assert auth_client.get("/api/household", headers=headers).status_code == 403
+    assert (
+        auth_client.patch(
+            "/api/household",
+            headers=headers,
+            json={"name": "Nope"},
+        ).status_code
+        == 403
+    )
     assert auth_client.get("/api/students", headers=headers).status_code == 403
     assert auth_client.get("/api/dashboard/stats", headers=headers).status_code == 403
     own = auth_client.get(f"/api/students/{ada['id']}/assignments", headers=headers)
@@ -187,14 +195,22 @@ def test_child_cannot_access_parent_routes_or_siblings(auth_client: TestClient) 
     other = auth_client.get(f"/api/students/{blaise['id']}/assignments", headers=headers)
     assert other.status_code == 404
     assert auth_client.get(f"/api/assignments/{blaise_work['id']}", headers=headers).status_code == 404
+    sibling_status = auth_client.patch(
+        f"/api/assignments/{blaise_work['id']}/status",
+        headers=headers,
+        json={"status": AssignmentStatus.COMPLETED.value},
+    )
+    assert sibling_status.status_code == 404
     mine = auth_client.get(f"/api/assignments/{ada_work['id']}", headers=headers)
     assert mine.status_code == 200
-    blocked = auth_client.patch(
+    completed = auth_client.patch(
         f"/api/assignments/{ada_work['id']}/status",
         headers=headers,
         json={"status": AssignmentStatus.COMPLETED.value},
     )
-    assert blocked.status_code == 403
+    assert completed.status_code == 200
+    assert completed.json()["status"] == AssignmentStatus.COMPLETED.value
+    assert completed.json()["id"] == ada_work["id"]
 
 
 def test_parent_switches_to_child_without_password(auth_client: TestClient) -> None:

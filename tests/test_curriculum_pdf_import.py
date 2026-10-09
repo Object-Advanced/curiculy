@@ -7,12 +7,75 @@ import pymupdf as fitz
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
-from app.models import CurriculumLesson, CurriculumPlan
+from app.enums import CurriculumPlanStatus, ParentNotificationType
+from app.models import CurriculumLesson, CurriculumPlan, ParentNotification
 from app.schemas.curriculum_plans import AIParsedCurriculum, AIParsedLesson
-from app.services.ai_curriculum_worker import parse_text_with_ollama
+from app.services.ai_curriculum_worker import (
+    parse_text_with_ollama,
+    process_pdf_curriculum_background,
+)
 from app.services.pdf_parser import extract_text_from_pdf, is_sparse_curriculum_text
+
+
+def _see_worker_commit(db: Session) -> None:
+    """The worker commits on its own Session; drop this identity map."""
+    db.expire_all()
+
+
+def _assert_one_plan_notification(
+    session: Session, *, ready: bool, plan_title: str
+) -> ParentNotification:
+    rows = session.query(ParentNotification).order_by(ParentNotification.id).all()
+    assert len(rows) == 1
+    note = rows[0]
+    expected = (
+        ParentNotificationType.CURRICULUM_PLAN_READY
+        if ready
+        else ParentNotificationType.CURRICULUM_PLAN_FAILED
+    )
+    other = (
+        ParentNotificationType.CURRICULUM_PLAN_FAILED
+        if ready
+        else ParentNotificationType.CURRICULUM_PLAN_READY
+    )
+    assert note.type == expected
+    assert note.student_id is None
+    assert note.assignment_id is None
+    assert plan_title in note.body
+    assert "Traceback" not in note.body
+    if ready:
+        assert note.title == "Curriculum plan is ready"
+    else:
+        assert note.title == "Curriculum plan processing failed"
+    assert session.query(ParentNotification).filter_by(type=other).count() == 0
+    return note
+
+
+def _tracked_opener(engine: Engine, expected_tenant: str, expected_demo_key: str | None):
+    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    opened: list[Session] = []
+    close_calls: list[int] = []
+
+    def opener(tenant_uuid: str, demo_key: str | None = None) -> Session:
+        assert tenant_uuid == expected_tenant
+        assert demo_key == expected_demo_key
+        session = factory()
+        index = len(close_calls)
+        close_calls.append(0)
+        inner_close = session.close
+
+        def close() -> None:
+            close_calls[index] += 1
+            inner_close()
+
+        session.close = close  # type: ignore[method-assign]
+        opened.append(session)
+        return session
+
+    return opener, opened, close_calls, factory
 
 
 def _pdf_bytes(text: str) -> bytes:
@@ -325,6 +388,7 @@ class TestImportCurriculumPdf:
 
         assert response.status_code == 202
         plan_id = response.json()["plan_id"]
+        _see_worker_commit(db)
         plan = db.get(CurriculumPlan, plan_id)
         assert plan is not None
         assert plan.status == "ready"
@@ -339,6 +403,14 @@ class TestImportCurriculumPdf:
         assert lessons[0].pages == "7-10"
         assert lessons[0].time_slot == "9:00-9:45"
         assert lessons[0].category == "Daily Work"
+        _assert_one_plan_notification(db, ready=True, plan_title="guide")
+        inbox = client.get("/api/notifications")
+        assert inbox.status_code == 200
+        payload = inbox.json()
+        assert payload["unread_count"] == 1
+        assert payload["notifications"][0]["type"] == "curriculum_plan_ready"
+        assert payload["notifications"][0]["student_id"] is None
+        assert payload["notifications"][0]["assignment_id"] is None
 
     def test_background_worker_saves_a_replicated_daily_routine(
         self, client: TestClient, db: Session
@@ -366,6 +438,7 @@ class TestImportCurriculumPdf:
 
         assert response.status_code == 202
         plan_id = response.json()["plan_id"]
+        _see_worker_commit(db)
         plan = db.get(CurriculumPlan, plan_id)
         assert plan is not None
         assert plan.status == "ready"
@@ -395,10 +468,12 @@ class TestImportCurriculumPdf:
                     "file": ("empty-guide.pdf", _pdf_bytes("nothing"), "application/pdf")
                 },
             )
+        _see_worker_commit(db)
         plan = db.get(CurriculumPlan, response.json()["plan_id"])
         assert plan is not None
         assert plan.status == "failed"
         assert plan.total_weeks == 1
+        _assert_one_plan_notification(db, ready=False, plan_title="empty-guide")
 
     def test_ollama_error_marks_the_plan_failed(
         self, client: TestClient, db: Session
@@ -414,9 +489,11 @@ class TestImportCurriculumPdf:
                 },
             )
         assert response.status_code == 202
+        _see_worker_commit(db)
         plan = db.get(CurriculumPlan, response.json()["plan_id"])
         assert plan is not None
         assert plan.status == "failed"
+        _assert_one_plan_notification(db, ready=False, plan_title="bad-ai")
 
     def test_corrupt_pdf_does_not_fail_the_request(
         self, client: TestClient, db: Session
@@ -427,10 +504,230 @@ class TestImportCurriculumPdf:
         )
         assert response.status_code == 202
         plan_id = response.json()["plan_id"]
+        _see_worker_commit(db)
         plan = db.get(CurriculumPlan, plan_id)
         assert plan is not None
         assert plan.status == "failed"
         assert db.query(CurriculumLesson).filter_by(plan_id=plan_id).count() == 0
+        _assert_one_plan_notification(db, ready=False, plan_title="bad")
+
+    def test_queues_the_worker_with_tenant_identity_not_the_request_session(
+        self, client: TestClient
+    ) -> None:
+        captured: dict[str, object] = {}
+
+        async def fake_worker(
+            plan_id: int,
+            file_bytes: bytes,
+            tenant_uuid: str,
+            demo_key: str | None = None,
+        ) -> None:
+            captured["plan_id"] = plan_id
+            captured["tenant_uuid"] = tenant_uuid
+            captured["demo_key"] = demo_key
+            captured["bytes_len"] = len(file_bytes)
+
+        with patch(
+            "app.routers.curriculum_plans.process_pdf_curriculum_background",
+            new=fake_worker,
+        ):
+            response = client.post(
+                "/api/curriculum/import-pdf",
+                files={
+                    "file": ("guide.pdf", _pdf_bytes("Lesson 1"), "application/pdf")
+                },
+            )
+
+        assert response.status_code == 202
+        assert captured["plan_id"] == response.json()["plan_id"]
+        assert captured["tenant_uuid"] == "test"
+        assert captured["demo_key"] == "test"
+        assert captured["bytes_len"] > 0
+        assert "db" not in captured
+
+    def test_processing_request_does_not_create_a_notification(
+        self, client: TestClient, db: Session
+    ) -> None:
+        async def fake_worker(
+            plan_id: int,
+            file_bytes: bytes,
+            tenant_uuid: str,
+            demo_key: str | None = None,
+        ) -> None:
+            return None
+
+        with patch(
+            "app.routers.curriculum_plans.process_pdf_curriculum_background",
+            new=fake_worker,
+        ):
+            response = client.post(
+                "/api/curriculum/import-pdf",
+                files={
+                    "file": ("guide.pdf", _pdf_bytes("Lesson 1"), "application/pdf")
+                },
+            )
+
+        assert response.status_code == 202
+        plan = db.get(CurriculumPlan, response.json()["plan_id"])
+        assert plan is not None
+        assert plan.status == "processing"
+        assert db.query(ParentNotification).count() == 0
+        inbox = client.get("/api/notifications")
+        assert inbox.status_code == 200
+        assert inbox.json()["unread_count"] == 0
+        assert inbox.json()["notifications"] == []
+
+
+class TestPdfWorkerOwnsItsSession:
+    async def test_success_does_not_use_the_closed_request_session(
+        self, engine: Engine, db: Session
+    ) -> None:
+        plan = CurriculumPlan(
+            title="Guide",
+            status=CurriculumPlanStatus.PROCESSING,
+        )
+        db.add(plan)
+        db.commit()
+        plan_id = plan.id
+        request_session = db
+        db.close()
+
+        opener, opened, close_calls, factory = _tracked_opener(
+            engine, "household-a", "jti-a"
+        )
+        parsed = AIParsedCurriculum(
+            lessons=[
+                AIParsedLesson(
+                    week_number=1,
+                    day_number=1,
+                    title="Lesson 1",
+                    pages="7-10",
+                )
+            ]
+        )
+        with patch(
+            "app.services.ai_curriculum_worker.open_tenant_session",
+            side_effect=opener,
+        ), patch(
+            "app.services.ai_curriculum_worker.parse_text_with_ollama",
+            new=AsyncMock(return_value=parsed),
+        ):
+            await process_pdf_curriculum_background(
+                plan_id,
+                _pdf_bytes("Lesson 1"),
+                "household-a",
+                "jti-a",
+            )
+
+        assert opened
+        assert request_session not in opened
+        assert close_calls == [1]
+
+        verify = factory()
+        try:
+            saved = verify.get(CurriculumPlan, plan_id)
+            assert saved is not None
+            assert saved.status == CurriculumPlanStatus.READY
+            lessons = (
+                verify.query(CurriculumLesson).filter_by(plan_id=plan_id).all()
+            )
+            assert [lesson.title for lesson in lessons] == ["Lesson 1"]
+            _assert_one_plan_notification(verify, ready=True, plan_title="Guide")
+        finally:
+            verify.close()
+
+    async def test_failure_marks_failed_on_a_fresh_session(
+        self, engine: Engine, db: Session
+    ) -> None:
+        plan = CurriculumPlan(
+            title="Guide",
+            status=CurriculumPlanStatus.PROCESSING,
+        )
+        db.add(plan)
+        db.commit()
+        plan_id = plan.id
+        request_session = db
+        db.close()
+
+        opener, opened, close_calls, factory = _tracked_opener(
+            engine, "household-a", "jti-a"
+        )
+        with patch(
+            "app.services.ai_curriculum_worker.open_tenant_session",
+            side_effect=opener,
+        ), patch(
+            "app.services.ai_curriculum_worker.parse_text_with_ollama",
+            new=AsyncMock(side_effect=ValueError("invalid JSON")),
+        ):
+            await process_pdf_curriculum_background(
+                plan_id,
+                _pdf_bytes("Lesson 1"),
+                "household-a",
+                "jti-a",
+            )
+
+        assert len(opened) == 2
+        assert request_session not in opened
+        assert close_calls == [1, 1]
+
+        verify = factory()
+        try:
+            saved = verify.get(CurriculumPlan, plan_id)
+            assert saved is not None
+            assert saved.status == CurriculumPlanStatus.FAILED
+            assert (
+                verify.query(CurriculumLesson).filter_by(plan_id=plan_id).count()
+                == 0
+            )
+            _assert_one_plan_notification(verify, ready=False, plan_title="Guide")
+        finally:
+            verify.close()
+
+    async def test_empty_parse_marks_failed_without_the_request_session(
+        self, engine: Engine, db: Session
+    ) -> None:
+        plan = CurriculumPlan(
+            title="Guide",
+            status=CurriculumPlanStatus.PROCESSING,
+        )
+        db.add(plan)
+        db.commit()
+        plan_id = plan.id
+        db.close()
+
+        opener, opened, close_calls, factory = _tracked_opener(
+            engine, "household-a", None
+        )
+        with patch(
+            "app.services.ai_curriculum_worker.open_tenant_session",
+            side_effect=opener,
+        ), patch(
+            "app.services.ai_curriculum_worker.parse_text_with_ollama",
+            new=AsyncMock(return_value=AIParsedCurriculum(lessons=[])),
+        ):
+            await process_pdf_curriculum_background(
+                plan_id,
+                _pdf_bytes("nothing"),
+                "household-a",
+                None,
+            )
+
+        assert len(opened) == 1
+        assert close_calls == [1]
+
+        verify = factory()
+        try:
+            saved = verify.get(CurriculumPlan, plan_id)
+            assert saved is not None
+            assert saved.status == CurriculumPlanStatus.FAILED
+            assert saved.total_weeks == 1
+            assert (
+                verify.query(CurriculumLesson).filter_by(plan_id=plan_id).count()
+                == 0
+            )
+            _assert_one_plan_notification(verify, ready=False, plan_title="Guide")
+        finally:
+            verify.close()
 
 
 class TestParseTextWithOllama:
@@ -452,7 +749,7 @@ class TestParseTextWithOllama:
             return_value={"message": {"content": json.dumps(payload)}}
         )
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient",
+            "app.services.ollama_chat.ollama.AsyncClient",
             return_value=mock_client,
         ):
             result = await parse_text_with_ollama(
@@ -484,7 +781,7 @@ class TestParseTextWithOllama:
             ]
         )
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient",
+            "app.services.ollama_chat.ollama.AsyncClient",
             return_value=mock_client,
         ):
             result = await parse_text_with_ollama("Day 1: Lesson 1")
@@ -494,9 +791,22 @@ class TestParseTextWithOllama:
         assert mock_client.chat.await_args_list[1].kwargs["model"] == "mistral"
         assert result.lessons[0].title == "Lesson 1"
 
+    async def test_non_missing_model_error_is_not_a_fallback(self) -> None:
+        mock_client = MagicMock()
+        mock_client.chat = AsyncMock(side_effect=ConnectionError("ollama down"))
+        with patch(
+            "app.services.ollama_chat.ollama.AsyncClient",
+            return_value=mock_client,
+        ):
+            with pytest.raises(ConnectionError, match="ollama down"):
+                await parse_text_with_ollama("Day 1: Lesson 1")
+
+        mock_client.chat.assert_awaited_once()
+        assert mock_client.chat.await_args.kwargs["model"] == "llama3.1"
+
     async def test_empty_text_skips_the_model(self) -> None:
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient"
+            "app.services.ollama_chat.ollama.AsyncClient"
         ) as factory:
             result = await parse_text_with_ollama("   ")
         factory.assert_not_called()
@@ -504,7 +814,7 @@ class TestParseTextWithOllama:
 
     async def test_cover_page_week_count_skips_the_model(self) -> None:
         with patch(
-            "app.services.ai_curriculum_worker.ollama.AsyncClient"
+            "app.services.ollama_chat.ollama.AsyncClient"
         ) as factory:
             result = await parse_text_with_ollama(
                 "Abeka K4\n36 weeks\nTeacher Edition"

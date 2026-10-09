@@ -1,4 +1,4 @@
-"""Book catalog endpoints.
+"""Book catalog endpoints (API-only; the SPA uses ``/catalog/lookup-isbn``).
 
 ``POST /books/resolve`` is the scanner's entry point; the two ``GET`` routes read
 back what resolution stored. Resolution always returns 200, whether the edition

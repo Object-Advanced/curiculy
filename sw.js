@@ -1,11 +1,17 @@
-/* Curiculy service worker: app shell cache + IndexedDB outbox replay. */
+/* Curiculy service worker: app shell cache + IndexedDB outbox replay.
 
-const SHELL_CACHE = "curiculy-shell-v20";
+SHELL_VERSION is the one cache-bust token. index.html and CSS query strings
+must use the same value. Changing it also renames SHELL_CACHE so activate()
+drops the previous shell instead of mixing old and new URLs.
+*/
+const SHELL_VERSION = "20260831-paper-import";
+const SHELL_CACHE = `curiculy-shell-${SHELL_VERSION}`;
 const SHELL_URLS = [
   "/",
-  "/static/js/app.js?v=20260828-widget-hug",
-  "/static/css/app.css?v=20260828-widget-hug",
-  "/static/curiculy-logo.png?v=20260826-new-logo",
+  `/static/js/app.js?v=${SHELL_VERSION}`,
+  `/static/css/app.css?v=${SHELL_VERSION}`,
+  `/static/curiculy-logo.png?v=${SHELL_VERSION}`,
+  `/static/night-mountains.jpg?v=${SHELL_VERSION}`,
 ];
 
 const SYNC_DB_NAME = "curiculy-sync";
@@ -119,7 +125,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
-      await Promise.all(SHELL_URLS.map((url) => cache.add(url).catch(() => {})));
+      await cache.addAll(SHELL_URLS);
       await self.skipWaiting();
     })()
   );

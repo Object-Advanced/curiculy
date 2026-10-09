@@ -675,7 +675,7 @@ class TestCalendarPayload:
         assert tile["subject_name"] == "Reading"
         assert tile["resource_title"] == "Student Text"
         assert tile["unit_title"] == "Lesson 1: Sequences"
-        assert tile["curriculum_id"] == furnished.curriculum_id
+        assert tile["curriculum_id"] == furnished.resolved_curriculum_id()
         assert tile["grade"]["score_value"] == "18/20"
         assert tile["grade"]["score_type"] == "points"
         assert tile["evidence_count"] == 2
@@ -1185,6 +1185,51 @@ class TestAssignmentStatusPatch:
         assert response.json()["status"] == "completed"
         assert client.get(f"/api/assignments/{sibling.id}").json()["status"] == "completed"
         assert client.get(f"/api/assignments/{unrelated.id}").json()["status"] == "assigned"
+
+    def test_a_child_completing_a_shared_assignment_does_not_mark_siblings(
+        self,
+        client: TestClient,
+        db: Session,
+        student: Student,
+        other_student: Student,
+    ) -> None:
+        from app.core.security import CurrentUser, get_current_user
+
+        group = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        target = Assignment(
+            student_id=student.id,
+            title="Shared lesson",
+            scheduled_date=ANCHOR,
+            shared_group_uuid=group,
+        )
+        sibling = Assignment(
+            student_id=other_student.id,
+            title="Shared lesson",
+            scheduled_date=ANCHOR,
+            shared_group_uuid=group,
+        )
+        db.add_all([target, sibling])
+        db.commit()
+
+        client.app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+            email="kid@local",
+            tenant_uuid="test",
+            role="child",
+            student_id=student.id,
+        )
+        try:
+            response = client.patch(
+                f"/api/assignments/{target.id}/status",
+                json={"status": "completed"},
+            )
+        finally:
+            client.app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+                email="test@local", tenant_uuid="test", jti="test"
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "completed"
+        assert client.get(f"/api/assignments/{sibling.id}").json()["status"] == "assigned"
 
     def test_reopening_a_shared_assignment_reopens_the_siblings(
         self,

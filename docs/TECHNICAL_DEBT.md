@@ -1,218 +1,101 @@
 # Curiculy Technical Debt
 
+The architecture-hardening / cleanup phase is **closed**. Dual exception HTTP prefixes were consolidated under `/api/exceptions`. Duplicate helpers in `app/services/legacy_tables.py` were removed. Capture JWTs cannot open a tenant file through `get_tenant_db`; staging uses `get_staging_tenant_db`. School-year dates live only on `SchoolYear`; leftover `household_settings` date columns are retired on boot after a safe backfill. New pacing commits and plan applies stamp `assignments.curriculum_id`. Operator scripts exist for historical book-paced (and stored-id) enrollments and for COUNT=0 leftover-table DROP; this host’s `./data/tenant_*.db` empty leftover tables were DROPped and two proven enrollments were inserted. Title-only historical plan assignments remain unlinked by design. Resolved hardening items live in `docs/ARCHITECTURE.md` and `docs/IMPLEMENTATION_RECONCILIATION.md`. Do not re-list them here as open.
+
+What remains is **ongoing operational caution** and **optional product polish**, not an open hardening backlog.
+
 Ordered by **importance to a homeschool product**, not by abstract purity.
 
-Confidence: **CONFIRMED** / **LIKELY** / **POSSIBLE** as in the audit.
-
----
-
-## Critical
-
-### 1. SMTP credentials must stay out of git
-
-**CONFIRMED (fixed in tree).** Compose now interpolates `MAIL_USERNAME` and `MAIL_PASSWORD` from the environment. Copy `.env.example` to `.env` (gitignored).
-
-**Why it matters:** Those values were previously committed. Rotate the mailbox password if this tree was ever copied or pushed before the rewrite.
-
-**Target:** Env or a gitignored secret file only. Never put real passwords in `docker-compose.yml`.
-
----
-
-### 2. `/evidence` is public StaticFiles
-
-**CONFIRMED.** `app/main.py` mounts the evidence directory with no JWT.
-
-**Why it matters:** Work samples are the most sensitive family data after passwords. UUID filenames are not access control.
-
-**Target:** Authenticated file route or signed URLs. Then remove the public mount.
-
----
-
-### 3. Weak JWT secret defaults
-
-**CONFIRMED.** `app/config.py` defaults `jwt_secret` to `insecure-dev-secret`. Compose uses a placeholder if `JWT_SECRET` is unset.
-
-**Why it matters:** Tokens are household keys (planner + evidence + children).
-
-**Target:** Refuse to boot in non-dev without a strong secret.
+Confidence: **CONFIRMED** unless noted.
 
 ---
 
 ## High
 
-### 4. Schema evolution is informal
+### 4. Schema patch discipline
 
-**CONFIRMED.** Boot runs `create_all` plus `ALTER` lists in `app/db.py`. Alembic `env.py` does not replay revisions. Existing `tenant_*.db` files only gain columns if the ALTER list includes them.
+Runtime is `create_all` + `app.schema_patches`. Forgetting an ALTER on a new model column leaves old `tenant_*.db` files lagging. Dual Alembic/patch runners are **not** the remaining problem (`alembic upgrade` is refused).
 
-**Why it matters:** The next column added in a model will work on new tenants and silently miss old ones unless someone updates `_ensure_tenant_schema`.
+**Why it matters:** A family file can miss a column the code expects.
 
-**Target:** One process — real Alembic over catalog, admin, and every `tenant_*.db`, **or** a single documented patch module and no Alembic theater.
-
-**Risk:** Replaying revision `0001` against live files would be wrong (old shape).
-
----
-
-### 5. Extension stores a parent JWT
-
-**CONFIRMED.** Capture uses `Authorization: Bearer` with the options “device token.”
-
-**Why it matters:** A school Chromebook token is a full parent session (calendar, students, mail trigger, etc.).
-
-**Target:** Token that can only `POST /api/evidence/staging` (and maybe GET health).
-
----
-
-### 6. Children cannot complete assignments
-
-**CONFIRMED.** `PATCH /api/assignments/{id}/status` uses `require_parent`. Kid UI has no complete checkbox that can succeed.
-
-**Why it matters:** “My work” is a viewer, not a checklist. Homeschool kids checking boxes is a core loop.
-
-**Target:** Child may PATCH status (and only status) on their `student_id`.
-
----
-
-### 7. Two school-year date sources
-
-**CONFIRMED.** `school_years` and `household_settings` both store start/end. Wizard writes years; the modal writes settings and then copies onto the latest year.
-
-**Why it matters:** Pacing uses settings weekdays + dates; portfolios use `SchoolYear` ids. Drift = wrong window on evaluator PDFs vs generated lessons.
-
-**Target:** See `ARCHITECTURE.md` — year dates on `SchoolYear`; settings keep weekdays and colors.
-
----
-
-### 8. Enrollments not created when work is scheduled
-
-**CONFIRMED.** Pacing and plan-apply do not insert `enrollments`. Portfolios build reading lists from enrollments.
-
-**Why it matters:** Parents who only auto-schedule get empty book lists on state logs.
-
-**Target:** Insert enrollment on commit/apply; keep the settings form as override.
-
----
-
-### 9. Service worker cache bust mismatch
-
-**CONFIRMED.** `sw.js` shells `app.js?v=20260828-widget-hug`; `index.html` loads `?v=20260828-pdf-ocr`.
-
-**Why it matters:** After deploy, the SW may keep old JS while HTML asks for new (or the reverse), producing “fixed in code, not on the iPad” bugs.
-
-**Target:** One version string.
-
----
-
-### 10. Missing brand and extension icons
-
-**CONFIRMED.** HTML and extension manifest reference PNG files not in the tree.
-
-**Why it matters:** Broken favicon; Chrome may refuse or ugly-default the extension.
-
-**Target:** Add assets or remove references.
+**Next step:** Every new column: model + patch + test (fresh file, old file, second apply, rows kept).
 
 ---
 
 ## Medium
 
-### 11. Dual exception HTTP APIs
+### 7. Two ISBN HTTP namespaces; unused import APIs
 
-**CONFIRMED.** `/exceptions` vs `/calendar/exceptions` on the same table.
+Not two product concepts. `/books/*` and `POST /catalog/lookup-isbn` both wrap `BookResolver` over `catalog.db` `book_editions`. “Book” here means a shared `BookEdition` (ISBN/barcode dictionary), not a household `Curriculum`.
 
-**Why it matters:** Two places to get toggle vs titled range wrong.
+- SPA: `POST /catalog/lookup-isbn` (flat form fields) then `POST /curricula` with `sku`.
+- `/books/resolve` returns full `BookEditionRead`. `GET /books/isbn/{isbn}` and `GET /books/{id}` have no catalog twin.
+- `POST /catalog/from-isbn` is a one-shot **library** create (resolve-or-404). `POST /curricula` can also save a custom SKU without providers. They are not equivalent.
+- `POST /curricula/import` builds a unit tree. SPA unused; tests use it.
 
-**Target:** One router, two SPA screens.
+**Why it matters:** Deleting `/books/*` because the SPA is quiet would remove the only GET dictionary reads and change OpenAPI. Pointing books tests at lookup-isbn would drop GET coverage and assert a different body.
 
----
-
-### 12. PDF import reuses the request Session in a background task
-
-**CONFIRMED** by comments in `ai_curriculum_worker.py`.
-
-**Why it matters:** FastAPI may close the yield-session when the request ends, depending on version/behavior. Failed or half-written plans.
-
-**Target:** Open a new tenant session inside the worker from `tenant_uuid` / plan id.
+**Next step:** Keep all three HTTP surfaces. Optional later: catalog GET twins with the same `BookEditionRead`, then `/books/*` as aliases. Do not remove `/curricula/import` until a UI or a retirement decision.
 
 ---
 
-### 13. Dead parallel work/evidence tables
+### 8. Dual Ollama HTTP stacks (intentional) and a hardcoded vision model
 
-**CONFIRMED.** `ScheduledWork`, `EvidenceCapture` are cleaned on delete but not written by pacing/UI. `ScheduledWorkRead` has no router.
+PDF worker and homework help share `app/services/ollama_chat.py` (`ollama.AsyncClient`, JSON-schema `format=`, `OLLAMA_MODEL` then `mistral`). Spark and paper vision use raw `httpx` POST `/api/chat` because they need timeouts and payloads the SDK path does not use: spark 2.5s/0.4s fail-open; vision 120s, `images[]`, sequential, `llama3.2-vision`.
 
-**Why it matters:** Next feature may “complete” the old model by mistake.
+**Why it matters:** Forcing one generic client could block the kid spark GET or send a text model at photographed cells. Setting vision to `OLLAMA_MODEL` (`llama3.1` by default) would break handwriting OCR even when text extras work.
 
-**Target:** After confirming empty tables in real DBs, drop models and delete-cleanup branches.
-
----
-
-### 14. Unused public endpoints
-
-**CONFIRMED.** SPA never calls `POST /catalog/from-isbn`, `/books/*`, `POST /curricula/import`.
-
-**Why it matters:** Two ways to do ISBN → library. Tests keep books routes alive.
-
-**Target:** Document API-only vs canonical SPA path; eventually alias books under catalog.
-
----
-
-### 15. Tests do not prove tenant files
-
-**CONFIRMED.** `conftest.py` uses one memory DB and often overrides the current user.
-
-**Why it matters:** Provisioning `tenant_{uuid}.db` and JWT routing can break without a red test.
-
-**Target:** A few integration tests with real file URLs.
-
----
-
-### 16. `ai_generator` name vs behavior
-
-**CONFIRMED.** Arithmetic page split. Comments still promise an LLM.
-
-**Why it matters:** Future contributors will wire Ollama into commit and make scheduling depend on a daemon.
-
-**Target:** Keep math as default; LLM titles optional later.
-
----
-
-### 17. Compliance and taxonomy stubs
-
-**CONFIRMED.** `NotImplementedError` modules; taxonomy tests without APIs.
-
-**Why it matters:** Looks like unfinished MVP. It is leftover foundation.
-
-**Target:** Defer. Do not build admin UIs.
+**Next step:** Do not wire Ollama into `SyllabusGenerator`. Do not merge the two stacks. Optional later: `OLLAMA_VISION_MODEL` defaulting to `llama3.2-vision`.
 
 ---
 
 ## Low
 
-### 18. Color palettes duplicated in JS and Python
+### 13. Color palettes duplicated in JS and Python
 
 **LIKELY** drift if one side changes.
 
-### 19. Health check skips tenant DB
+### 14. `ai_generator.py` filename vs arithmetic
 
-**CONFIRMED.** Catalog + admin only.
+Comments are correct. Rename when the file is already being edited.
 
-### 20. Register does not return a JWT
+### 15. Homework-help test volume
 
-**CONFIRMED.** Extra login step.
+Small module. Prompts are high-risk if changed without tests.
 
-### 21. All Students calendar shows shared lessons only
+### 16. Cross-DB integer ids without FK
 
-**CONFIRMED** by design. Debt is **documentation/copy**, not a merge of queries.
+**Intentional.** Never delete catalog editions that tenant resources reference. Tenant `assignments.curriculum_id` and `enrollments.curriculum_id` are the same pattern (integer, no FK, tenant `curricula`).
 
-### 22. No README / CI in repo
+### 17. Pacing commit is two engines, not one transaction
 
-**CONFIRMED.** Bootstrap of first admin + invite is tribal knowledge.
+`SyllabusCommitter` commits the tenant session (assignments, units, enrollments) then the catalog session (book `page_count`). If the catalog commit failed, the calendar would still be complete. Tests share one memory DB, so the split is invisible there.
 
-### 23. Homework-help test volume
+Do not wrap catalog and tenant in one transaction (they are different SQLite files).
 
-**CONFIRMED** small module. Prompts are high-risk if changed without tests.
+### 18. JWT strength is length + denylist, not entropy
 
-### 24. Cross-DB integer ids without FK
+A 32-character string of a single letter is accepted in non-dev. Good enough to stop silent Compose defaults.
 
-**CONFIRMED** and **intentional**. Debt is operational: never delete catalog editions that tenants reference.
+### 19. `DEV_MODE=true` skips JWT
+
+Full parent/admin bypass. Local-only. Dangerous if left on for a real family.
+
+### 20. FastAPI description still says “compliance foundation”
+
+`create_app()` title/description. Cosmetic. Portfolios are the printable-record product. Compliance `build_packet()` raises `NotImplementedError`.
+
+### 21. Compliance and taxonomy stubs
+
+`NotImplementedError` modules; taxonomy tests without APIs. **DEFER.** Do not build admin UIs.
+
+### 22. Passlib `crypt` deprecation
+
+Suite warning from third-party `passlib`. Not Curiculy code.
+
+### 23. Operator mailbox rotation
+
+If this tree was copied when a mailbox password was still in Compose, rotate that mailbox. Not a code defect today.
 
 ---
 
@@ -223,15 +106,23 @@ These look messy in a generic audit and are **correct for Curiculy**:
 | Item | Why keep |
 |---|---|
 | SQLite per family | Isolation, backup, privacy |
-| Two curriculum intakes | Books vs vendor grids |
+| `/api/health` is catalog.db + admin.db | Process liveness, not household-file health. One wedged `tenant_{uuid}.db` must not 500 the probe, hide the SPA as down, or (if a container probe is added later) restart every family. Shared `tenant.db` is DEV_MODE only and is also not pinged. |
+| Two curriculum objects (book vs week/day guide, including paper capture) | Books vs vendor grids vs handwritten sheets |
 | Vanilla `app.js` | No npm in the image; bind-mount deploys |
 | Demo in-memory DB | Try-before-invite without leftover files |
+| Default pytest `client` is in-memory | Intentional. Fast API tests share one StaticPool DB and override `get_tenant_db`. JWT → admin user → `tenant_{uuid}.db` is `auth_client` (`test_auth.py` and plugins). Schema patches and leftover DROP use `tmp_path` files. Do not convert the suite. |
+| Capture JWT can open a tenant file | Not equivalent to a parent session. `get_current_user` and therefore `get_tenant_db` refuse `role=evidence` / `scope=evidence:write`. Only `POST /api/evidence/staging` uses `get_staging_tenant_db` + `require_staging_upload`. |
 | Invite-only registration | Matches current go-to-market |
 | String grades | Homeschool scores are not one numeric scale |
 | Staging evidence inbox | Extension captures are not yet lessons |
+| Child completing a shared lesson without sibling sync | Documented rule |
+| All Students showing shared lessons only | Documented query + UI copy |
+| Boot not DROPping leftover `scheduled_work` / `evidence_captures` | Operator COUNT=0 script; nonempty tables must be refused. This host’s empty leftover tables were DROPped. |
+| `HouseholdSettings` start/end date columns | Already removed from the model. Leftover physical columns on old `tenant_*.db` files are backfilled into `SchoolYear` (only when that household has no named year) and then dropped on boot. Weekdays and exception colors stay on settings. |
+| Title-only historical plan assignments | Cannot prove a curriculum. New applies stamp `curriculum_id`. Do not infer from titles. |
 
 ---
 
 ## Suggested burn-down order
 
-See `docs/ROADMAP.md`. Do not mix a schema-engine rewrite with a UI redesign. Secrets and evidence auth first.
+See `docs/ROADMAP.md`. Hardening/cleanup is closed. GitHub Actions runs the Compose pytest suite. `/books` vs catalog and dual Ollama stacks are documented KEEP. Remaining items are optional product polish and the cautions above. Do not mix a schema-engine rewrite with a UI redesign.

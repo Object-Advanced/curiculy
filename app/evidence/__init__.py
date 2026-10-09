@@ -15,6 +15,17 @@ from app.config import settings
 MAX_IMAGE_DIMENSION = 1600
 WEBP_QUALITY = 80
 _PDF_CONTENT_TYPE = "application/pdf"
+_MEDIA_TYPES = {
+    ".webp": "image/webp",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".bmp": "image/bmp",
+    ".svg": "image/svg+xml",
+    ".avif": "image/avif",
+    ".pdf": "application/pdf",
+}
 
 
 def evidence_root() -> Path:
@@ -78,3 +89,58 @@ def store_capture(
     destination = _tenant_dir(tenant_uuid) / filename
     destination.write_bytes(payload)
     return relative_path
+
+
+def stored_relative_path(file_path: str | None) -> str | None:
+    """Turn a DB file_path into ``tenant/filename`` under the evidence volume.
+
+    Rejects traversal and anything that is not exactly one tenant folder plus a
+    file name. Does not touch the disk.
+    """
+    if not file_path or not str(file_path).strip():
+        return None
+    relative = Path(str(file_path).replace("\\", "/").lstrip("/"))
+    parts = relative.parts
+    if len(parts) >= 2 and parts[0] == "data" and parts[1] == "evidence":
+        relative = Path(*parts[2:])
+        parts = relative.parts
+    if len(parts) != 2 or ".." in parts:
+        return None
+    tenant, filename = parts
+    if not tenant or tenant in {".", ".."}:
+        return None
+    if not filename or filename in {".", ".."} or Path(filename).name != filename:
+        return None
+    if Path(tenant).name != tenant:
+        return None
+    return f"{tenant}/{filename}"
+
+
+def resolve_evidence_file(
+    file_path: str | None,
+    *,
+    tenant_uuid: str | None = None,
+) -> Path | None:
+    """Absolute file on the evidence volume, or None if it is missing/unsafe.
+
+    When ``tenant_uuid`` is set, the path must live in that household's folder.
+    """
+    relative = stored_relative_path(file_path)
+    if relative is None:
+        return None
+    tenant, filename = relative.split("/", 1)
+    if tenant_uuid is not None and tenant != tenant_uuid:
+        return None
+    root = evidence_root().resolve()
+    candidate = (root / tenant / filename).resolve()
+    try:
+        candidate.relative_to(root / tenant)
+    except ValueError:
+        return None
+    if candidate.is_file():
+        return candidate
+    return None
+
+
+def evidence_media_type(path: Path) -> str:
+    return _MEDIA_TYPES.get(path.suffix.lower(), "application/octet-stream")

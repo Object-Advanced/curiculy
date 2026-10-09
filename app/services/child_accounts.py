@@ -31,7 +31,7 @@ def is_child(user: CurrentUser) -> bool:
 
 
 def is_parent(user: CurrentUser) -> bool:
-    return not is_child(user)
+    return user.role == UserRole.PARENT.value
 
 
 def _as_utc(value: datetime) -> datetime:

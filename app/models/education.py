@@ -147,8 +147,15 @@ class Assignment(TimestampMixin, TenantBase):
         nullable=False,
         index=True,
     )
-    # Catalog ids are stored without ForeignKey(); SQLite cannot enforce them
-    # across catalog.db and tenant.db, and SQLAlchemy cannot join the engines.
+    # Tenant library / resource / unit ids are integers without ForeignKey().
+    # Resource and unit ids were stored that way when the comment assumed a
+    # catalog split; they actually point at tenant rows. ``curriculum_id``
+    # likewise points at tenant ``curricula`` (same pattern as Enrollment).
+    curriculum_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        index=True,
+    )
     curriculum_resource_id: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
@@ -252,8 +259,13 @@ class Assignment(TimestampMixin, TenantBase):
     def unit_title(self) -> str | None:
         return self.curriculum_unit.title if self.curriculum_unit else None
 
-    @property
-    def curriculum_id(self) -> int | None:
+    def resolved_curriculum_id(self) -> int | None:
+        """Stored library id, else one derived from an attached resource or unit.
+
+        Historical plan-apply rows have neither. Do not infer from title.
+        """
+        if self.curriculum_id is not None:
+            return self.curriculum_id
         if self.curriculum_resource is not None:
             edition = self.curriculum_resource.curriculum_edition
             if edition is not None:

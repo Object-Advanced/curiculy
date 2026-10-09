@@ -24,6 +24,7 @@ from app.models import (
     CurriculumPageMapping,
     CurriculumResource,
     CurriculumUnit,
+    Enrollment,
     Household,
     Student,
     SubjectTaxonomy,
@@ -920,6 +921,10 @@ class TestCommitEndpoint:
         assert assignments[0].title == "Lesson 1: Saxon Math 3 (pp. 1-40)"
         assert all(item.curriculum_unit_id is not None for item in assignments)
         assert all(item.curriculum_resource_id is not None for item in assignments)
+        assert all(
+            item.curriculum_id == curriculum_edition.curriculum_id
+            for item in assignments
+        )
         assert all(item.shared_group_uuid is None for item in assignments)
 
     def test_student_ids_write_identical_lessons_tagged_with_a_group_uuid(
@@ -1294,6 +1299,7 @@ class TestCommitEndpoint:
         assert count(db, CurriculumPageMapping) == 0
         assert count(db, Assignment) == 0
         assert count(db, CurriculumResource) == 0
+        assert count(db, Enrollment) == 0
 
 
 class TestPreviewThenCommit:

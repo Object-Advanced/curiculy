@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libwebp7 \
         shared-mime-info \
         fonts-dejavu-core \
+        libgomp1 \
+        libglib2.0-0 \
         tesseract-ocr \
         tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
@@ -25,6 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app
+COPY scripts ./scripts
 COPY index.html .
 COPY sw.js .
 COPY static ./static

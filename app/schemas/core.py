@@ -1,11 +1,41 @@
-from datetime import date, datetime
+from datetime import date
 from re import fullmatch
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
-from app.enums import CurriculumSource, ExceptionKind, ScheduleGrain, UnitKind, WorkStatus
+from app.enums import CurriculumSource, ExceptionKind
 
 _HEX_COLOR = r"^#[0-9A-Fa-f]{6}$"
+
+HOUSEHOLD_ICON_LETTER = "letter"
+HOUSEHOLD_ICONS = frozenset(
+    {
+        HOUSEHOLD_ICON_LETTER,
+        "apple",
+        "books",
+        "pencil",
+        "backpack",
+        "school",
+        "notebook",
+        "cap",
+        "crayon",
+        "globe",
+        "abacus",
+        "telescope",
+        "tree",
+    }
+)
+
+
+def household_letter(name: str | None) -> str:
+    """Sidebar letter: skip a leading “The”, then take the first character."""
+    words = [part for part in str(name or "").split() if part]
+    if not words:
+        return "C"
+    if words[0].casefold() == "the" and len(words) > 1:
+        words = words[1:]
+    letter = words[0][0]
+    return letter.upper() if letter else "C"
 
 
 class ORMModel(BaseModel):
@@ -22,6 +52,47 @@ class HouseholdRead(ORMModel):
     id: int
     name: str
     jurisdiction_id: int | None
+    icon: str | None = None
+
+    @computed_field
+    @property
+    def letter(self) -> str:
+        return household_letter(self.name)
+
+
+class HouseholdUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    icon: str | None = Field(default=None, max_length=32)
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("name is required")
+        return cleaned
+
+    @field_validator("icon")
+    @classmethod
+    def _normalize_icon(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().lower()
+        if not cleaned:
+            return HOUSEHOLD_ICON_LETTER
+        if cleaned in {"auto", HOUSEHOLD_ICON_LETTER}:
+            return HOUSEHOLD_ICON_LETTER
+        if cleaned not in HOUSEHOLD_ICONS:
+            raise ValueError("unknown household icon")
+        return cleaned
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self) -> "HouseholdUpdate":
+        if self.name is None and self.icon is None:
+            raise ValueError("at least one field is required")
+        return self
 
 
 class StudentCreate(BaseModel):
@@ -97,6 +168,18 @@ class SchoolYearCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     start_date: date
     end_date: date
+
+
+class SchoolYearUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self) -> "SchoolYearUpdate":
+        if self.name is None and self.start_date is None and self.end_date is None:
+            raise ValueError("at least one field is required")
+        return self
 
 
 class SchoolYearRead(ORMModel):
@@ -259,28 +342,3 @@ class CalendarExceptionRead(ORMModel):
     start_date: date
     end_date: date
     notes: str | None
-
-
-class CurriculumUnitRead(ORMModel):
-    id: int
-    curriculum_edition_id: int
-    parent_id: int | None
-    kind: UnitKind
-    label: str | None
-    title: str
-    sort_order: int
-    depth: int
-    estimated_minutes: int | None
-    estimated_sessions: int | None
-
-
-class ScheduledWorkRead(ORMModel):
-    id: int
-    enrollment_id: int
-    student_id: int
-    unit_id: int | None
-    grain: ScheduleGrain
-    due_date: date
-    title: str
-    status: WorkStatus
-    created_at: datetime
