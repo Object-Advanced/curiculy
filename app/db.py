@@ -1,4 +1,8 @@
+import tempfile
+import time
+from collections import OrderedDict
 from collections.abc import Generator
+from hashlib import sha256
 from pathlib import Path
 from re import compile as regexp
 from threading import Lock
@@ -8,14 +12,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.config import settings
 
 _SAFE_TENANT = regexp(r"^[A-Za-z0-9_-]{1,64}$")
 _lock = Lock()
 _file_makers: dict[str, sessionmaker] = {}
-_demo_makers: dict[str, sessionmaker] = {}
+
+# Demo households are throwaway SQLite files, not one shared in-memory
+# connection: the SPA sends requests in parallel, and a single connection used
+# from several threads corrupts reads. Only the most recently used demos are
+# kept; older files are deleted.
+DEMO_HOUSEHOLD_LIMIT = 64
+_demo_households: OrderedDict[str, tuple[sessionmaker, Engine, Path]] = OrderedDict()
 
 
 def _connect_args(url: str) -> dict[str, bool]:
@@ -34,13 +43,7 @@ def _ensure_sqlite_path(url: str) -> None:
     Path(database).parent.mkdir(parents=True, exist_ok=True)
 
 
-def _engine(url: str, *, memory: bool = False) -> Engine:
-    if memory:
-        return create_engine(
-            url,
-            connect_args=_connect_args(url),
-            poolclass=StaticPool,
-        )
+def _engine(url: str) -> Engine:
     return create_engine(url, connect_args=_connect_args(url))
 
 
@@ -71,7 +74,6 @@ from app.schema_patches import (  # noqa: E402
     apply_admin_schema as _ensure_admin_schema,
     apply_catalog_schema as _ensure_catalog_schema,
     apply_tenant_schema as _ensure_tenant_schema,
-    sqlite_table_columns as _sqlite_table_columns,
 )
 
 
@@ -144,18 +146,45 @@ def provision_tenant(tenant_uuid: str) -> None:
     _file_tenant_maker(tenant_file_url(tenant_uuid))
 
 
+def demo_data_dir() -> Path:
+    path = Path(tempfile.gettempdir()) / "curiculy-demo"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _delete_sqlite_file(path: Path) -> None:
+    for suffix in ("", "-journal", "-wal", "-shm"):
+        Path(f"{path}{suffix}").unlink(missing_ok=True)
+
+
 def _demo_maker(demo_key: str) -> sessionmaker:
-    """One in-memory schema per demo JWT. Gone when the process restarts."""
+    """One throwaway household file per demo JWT, evicted least recently used."""
     import app.models  # noqa: F401
 
     with _lock:
-        maker = _demo_makers.get(demo_key)
-        if maker is None:
-            engine = _engine("sqlite:///:memory:", memory=True)
-            TenantBase.metadata.create_all(engine)
-            maker = _sessionmaker(engine)
-            _demo_makers[demo_key] = maker
+        entry = _demo_households.get(demo_key)
+        if entry is not None:
+            _demo_households.move_to_end(demo_key)
+            return entry[0]
+        digest = sha256(demo_key.encode()).hexdigest()[:32]
+        path = demo_data_dir() / f"demo_{digest}.db"
+        engine = _engine(f"sqlite:///{path}")
+        _ensure_tenant_schema(engine)
+        maker = _sessionmaker(engine)
+        _demo_households[demo_key] = (maker, engine, path)
+        while len(_demo_households) > DEMO_HOUSEHOLD_LIMIT:
+            _, (_, old_engine, old_path) = _demo_households.popitem(last=False)
+            old_engine.dispose()
+            _delete_sqlite_file(old_path)
         return maker
+
+
+def purge_stale_demo_households() -> None:
+    """Delete demo files older than a demo token can live (left by a restart)."""
+    cutoff = time.time() - settings.demo_token_expire_minutes * 60
+    for path in demo_data_dir().glob("demo_*.db"):
+        if path.stat().st_mtime < cutoff:
+            _delete_sqlite_file(path)
 
 
 def open_tenant_session(tenant_uuid: str, demo_key: str | None = None) -> Session:
@@ -202,6 +231,7 @@ def init_databases() -> None:
         finally:
             engine.dispose()
     _admin_maker()
+    purge_stale_demo_households()
 
 
 # JWT helpers live in ``app.core.security``; imported here after ``get_admin_db``
