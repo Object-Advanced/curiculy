@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.security import CurrentUser, get_current_user, require_parent
-from app.db import get_tenant_db
+from app.core.deps import get_tenant_db
 from app.enums import HomeworkHelpMessageRole, HomeworkHelpStatus, UserRole
 from app.models import Assignment, HomeworkHelpMessage, HomeworkHelpSession, Student
 from app.schemas.homework import (

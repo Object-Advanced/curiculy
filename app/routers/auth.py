@@ -17,7 +17,8 @@ from app.core.security import (
     require_parent,
     verify_password,
 )
-from app.db import get_admin_db, get_tenant_db, open_tenant_session, provision_tenant
+from app.db import get_admin_db, open_tenant_session, provision_tenant
+from app.core.deps import get_tenant_db
 from app.enums import UserRole
 from app.models import Student
 from app.models.admin import InviteKey, User

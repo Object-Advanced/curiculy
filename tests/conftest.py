@@ -30,7 +30,8 @@ from sqlalchemy.pool import StaticPool
 import app.models  # noqa: F401  (registers every mapper before create_all)
 import app.models.admin  # noqa: F401
 from app.core.security import CurrentUser, get_current_user, require_staging_upload
-from app.db import AdminBase, CatalogBase, TenantBase, get_admin_db, get_catalog_db, get_staging_tenant_db, get_tenant_db
+from app.db import AdminBase, CatalogBase, TenantBase, get_admin_db, get_catalog_db
+from app.core.deps import get_staging_tenant_db, get_tenant_db
 from app.main import create_app
 
 

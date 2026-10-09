@@ -19,7 +19,7 @@ from app.core.security import (
     require_parent,
     require_staging_upload,
 )
-from app.db import get_staging_tenant_db, get_tenant_db
+from app.core.deps import get_staging_tenant_db, get_tenant_db
 from app.enums import UserRole
 from app.evidence import (
     INLINE_MEDIA_TYPES,

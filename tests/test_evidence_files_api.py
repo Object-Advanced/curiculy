@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.security import CurrentUser, get_current_user
-from app.db import get_admin_db, get_catalog_db, get_tenant_db
+from app.db import get_admin_db, get_catalog_db
+from app.core.deps import get_tenant_db
 from app.evidence import stored_relative_path
 from app.main import create_app
 from app.models import Household, Student

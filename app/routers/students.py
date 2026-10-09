@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.core.security import CurrentUser, get_current_user, require_parent
-from app.db import get_admin_db, get_tenant_db
+from app.db import get_admin_db
+from app.core.deps import get_tenant_db
 from app.models import (
     Assignment,
     CalendarException,

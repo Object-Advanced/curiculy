@@ -11,7 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.security import CurrentUser, require_parent
-from app.db import get_tenant_db
+from app.core.deps import get_tenant_db
 from app.enums import CurriculumPlanStatus
 from app.models import CurriculumLesson, CurriculumPlan, Student
 from app.schemas.curriculum_plans import (

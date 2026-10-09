@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.security import require_parent
-from app.db import get_tenant_db
+from app.core.deps import get_tenant_db
 from app.schemas.core import (
     ExceptionColorsRead,
     ExceptionColorsUpdate,

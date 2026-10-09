@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.security import require_parent
-from app.db import get_catalog_db, get_tenant_db
+from app.db import get_catalog_db
+from app.core.deps import get_tenant_db
 from app.schemas.catalog import (
     BookEditionRead,
     CurriculumFromISBNRead,

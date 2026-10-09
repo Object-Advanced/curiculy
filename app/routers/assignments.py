@@ -15,7 +15,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from sqlalchemy.orm import Session
 
 from app.core.security import CurrentUser, get_current_user, require_parent
-from app.db import get_catalog_db, get_tenant_db
+from app.db import get_catalog_db
+from app.core.deps import get_tenant_db
 from app.enums import CalendarPeriod, UserRole
 from app.evidence import store_capture
 from app.models import (
