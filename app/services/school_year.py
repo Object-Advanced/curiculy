@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.enums import ExceptionKind
 from app.models import CalendarException, Household, HouseholdSettings, SchoolYear
 from app.schemas.core import DEFAULT_EXCEPTION_COLOR_VALUES
+from app.services.clock import household_today
 from app.services.households import get_default_household
 
 DEFAULT_CLASS_WEEKDAYS = (0, 1, 2, 3, 4)
@@ -129,7 +130,7 @@ def require_operational_school_year(db: Session) -> SchoolYear:
     year = _latest_school_year(db, household.id)
     if year is not None:
         return year
-    start, end = default_school_year_bounds()
+    start, end = default_school_year_bounds(household_today(db))
     year = SchoolYear(
         household_id=household.id,
         name=school_year_name(start, end),
@@ -189,7 +190,7 @@ def load_school_year_settings(db: Session) -> tuple[date, date, list[int], int |
     weekdays = parse_weekdays(row.weekdays) if row is not None else list(DEFAULT_CLASS_WEEKDAYS)
     if year is not None:
         return year.start_date, year.end_date, weekdays, year.id
-    start, end = default_school_year_bounds()
+    start, end = default_school_year_bounds(household_today(db))
     return start, end, weekdays, None
 
 

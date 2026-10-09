@@ -1,4 +1,5 @@
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -88,6 +89,10 @@ class Settings(BaseSettings):
     mail_starttls: bool = True
     mail_ssl_tls: bool = False
 
+    # Zone used for "today" when a household has none stored yet (the SPA
+    # stores the parent's browser zone). Unset means the server's own clock.
+    default_timezone: str | None = None
+
     # Local Ollama for PDF pacing-guide extraction. The API container reaches
     # a host-installed daemon via host.docker.internal (see docker-compose).
     ollama_host: str = "http://127.0.0.1:11434"
@@ -117,6 +122,18 @@ def apply_dev_jwt_fallback(config: Settings) -> None:
         config.jwt_secret = SecretStr(DEV_ONLY_JWT_SECRET)
 
 
+def _validate_default_timezone(config: Settings) -> None:
+    name = (config.default_timezone or "").strip()
+    if not name:
+        return
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError) as error:
+        raise ConfigurationError(
+            "DEFAULT_TIMEZONE must be an IANA time zone such as America/Chicago."
+        ) from error
+
+
 def validate_runtime_configuration(config: Settings | None = None) -> None:
     """Fail closed unless JWT signing is acceptable for this process.
 
@@ -126,6 +143,7 @@ def validate_runtime_configuration(config: Settings | None = None) -> None:
     secret.
     """
     config = settings if config is None else config
+    _validate_default_timezone(config)
     if config.dev_mode:
         apply_dev_jwt_fallback(config)
         return

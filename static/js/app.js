@@ -916,8 +916,53 @@ function paintHouseholdChrome(household) {
   }
 }
 
+function deviceTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
+}
+
+// "Today" on the server follows the household's time zone. Households made
+// before that existed have none, so the first parent visit fills it in.
+async function rememberDeviceTimeZone(household) {
+  const zone = deviceTimeZone();
+  if (!zone || household?.timezone || currentUserIsChild()) return household;
+  try {
+    const updated = await api("/household", {
+      method: "PATCH",
+      body: JSON.stringify({ timezone: zone }),
+      skipOutbox: true,
+    });
+    return updated || household;
+  } catch {
+    return household;
+  }
+}
+
 async function loadHousehold() {
-  paintHouseholdChrome(await api("/household"));
+  const household = await api("/household");
+  paintHouseholdChrome(household);
+  if (!household?.timezone) {
+    paintHouseholdChrome(await rememberDeviceTimeZone(household));
+  }
+}
+
+async function useDeviceTimeZone() {
+  const zone = deviceTimeZone();
+  if (!zone) return;
+  try {
+    const updated = await api("/household", {
+      method: "PATCH",
+      body: JSON.stringify({ timezone: zone }),
+    });
+    if (!isOfflineQueued(updated)) paintHouseholdChrome(updated);
+    render();
+    flash(`Time zone set to ${zone}.`);
+  } catch (error) {
+    flash(error.message, true);
+  }
 }
 
 async function setHouseholdIcon(icon) {
@@ -3994,6 +4039,15 @@ function renderSettings() {
     householdName && householdName !== DEFAULT_HOUSEHOLD_NAME ? householdName : "";
   const selectedIcon = householdIconId(state.household);
   const letter = state.household?.letter || householdInitial(householdName);
+  const zone = state.household?.timezone || "";
+  const deviceZone = deviceTimeZone();
+  const zoneCopy = zone
+    ? `School days follow ${escapeHtml(zone)}.`
+    : "No time zone yet; “today” follows the server clock.";
+  const zoneAction =
+    deviceZone && deviceZone !== zone
+      ? `<button type="button" class="ghost small" data-action="use-device-timezone">Use this device’s time zone (${escapeHtml(deviceZone)})</button>`
+      : "";
   return `
     <section class="settings-hub">
       <section class="card household-pref">
@@ -4009,6 +4063,10 @@ function renderSettings() {
             </label>
             <button type="submit">Save name</button>
           </form>
+        </div>
+        <div class="household-timezone">
+          <p class="muted">${zoneCopy}</p>
+          ${zoneAction}
         </div>
         <fieldset class="household-icon-picker">
           <legend>Sidebar icon</legend>
@@ -7470,6 +7528,9 @@ async function handleClick(event) {
     case "set-household-icon":
       await setHouseholdIcon(control.dataset.icon);
       break;
+    case "use-device-timezone":
+      await useDeviceTimeZone();
+      break;
     case "edit-student":
       studentEditor.id = Number(control.dataset.studentId);
       render();
@@ -8089,9 +8150,10 @@ async function submitWizardHousehold(form) {
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
   try {
+    const zone = deviceTimeZone();
     const result = await api("/household", {
       method: "PATCH",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(zone ? { name, timezone: zone } : { name }),
     });
     if (!isOfflineQueued(result) && result?.name) {
       paintHouseholdChrome(result);

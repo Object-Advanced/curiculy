@@ -1,5 +1,6 @@
 from datetime import date
 from re import fullmatch
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
@@ -53,6 +54,7 @@ class HouseholdRead(ORMModel):
     name: str
     jurisdiction_id: int | None
     icon: str | None = None
+    timezone: str | None = None
 
     @computed_field
     @property
@@ -63,6 +65,7 @@ class HouseholdRead(ORMModel):
 class HouseholdUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     icon: str | None = Field(default=None, max_length=32)
+    timezone: str | None = Field(default=None, max_length=64)
 
     @field_validator("name")
     @classmethod
@@ -88,9 +91,21 @@ class HouseholdUpdate(BaseModel):
             raise ValueError("unknown household icon")
         return cleaned
 
+    @field_validator("timezone")
+    @classmethod
+    def _known_timezone(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        try:
+            ZoneInfo(cleaned)
+        except (ZoneInfoNotFoundError, ValueError) as error:
+            raise ValueError("unknown time zone") from error
+        return cleaned
+
     @model_validator(mode="after")
     def _at_least_one_field(self) -> "HouseholdUpdate":
-        if self.name is None and self.icon is None:
+        if self.name is None and self.icon is None and self.timezone is None:
             raise ValueError("at least one field is required")
         return self
 

@@ -15,6 +15,7 @@ from app.db import get_tenant_db
 from app.enums import AssignmentStatus
 from app.models import Assignment, Student
 from app.schemas import DashboardStatsRead, StudentTodayProgress, StudentWeeklyTrend
+from app.services.clock import household_today
 
 router = APIRouter(
     prefix="/dashboard",
@@ -26,7 +27,7 @@ router = APIRouter(
 @router.get("/stats", response_model=DashboardStatsRead)
 def get_dashboard_stats(db: Session = Depends(get_tenant_db)) -> DashboardStatsRead:
     """Return today's assignment progress and completed work for the last 7 days."""
-    today = date.today()
+    today = household_today(db)
     trend_dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
     students = db.query(Student).order_by(Student.id).all()
     student_ids = {student.id for student in students}

@@ -41,6 +41,7 @@ from app.schemas import (
 )
 from app.services.assignments import AssignmentQuery, InvalidDateRangeError, resolve_window
 from app.services.child_accounts import is_child
+from app.services.clock import household_today
 
 router = APIRouter(tags=["assignments"], dependencies=[Depends(get_current_user)])
 
@@ -142,7 +143,12 @@ def list_student_assignments(
         raise HTTPException(status_code=404, detail="Student not found")
 
     try:
-        window = resolve_window(start_date=start_date, end_date=end_date, period=period)
+        window = resolve_window(
+            start_date=start_date,
+            end_date=end_date,
+            period=period,
+            today=household_today(tenant_db),
+        )
     except InvalidDateRangeError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

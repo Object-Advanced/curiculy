@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Assignment, Student
 from app.services.assignments import AssignmentQuery, DateRange
+from app.services.clock import household_today
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 _UNSAFE_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
@@ -61,14 +62,13 @@ class WeeklyManifest:
     days: list[ManifestDay]
 
 
-def _today() -> date:
-    return date.today()
+def _today(tenant_db: Session) -> date:
+    return household_today(tenant_db)
 
 
-def week_monday(day: date | None = None) -> date:
-    """Snap ``day`` (or today) back to that week's Monday."""
-    anchor = day or _today()
-    return anchor - timedelta(days=anchor.weekday())
+def week_monday(day: date) -> date:
+    """Snap ``day`` back to that week's Monday."""
+    return day - timedelta(days=day.weekday())
 
 
 def _heading(day: date) -> str:
@@ -111,7 +111,7 @@ def build_weekly_manifest(
     if student is None:
         raise WeeklyManifestLookupError("Student not found")
 
-    monday = week_monday(start_date)
+    monday = week_monday(start_date or _today(tenant_db))
     friday = monday + timedelta(days=4)
     assignments = AssignmentQuery(tenant_db, catalog_db).for_student(
         student_id, DateRange(monday, friday)

@@ -38,7 +38,7 @@ SATURDAY = date(2026, 9, 19)
 
 @pytest.fixture
 def freeze_today(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("app.services.weekly_manifest._today", lambda: ANCHOR)
+    monkeypatch.setattr("app.services.weekly_manifest._today", lambda *_: ANCHOR)
 
 
 @pytest.fixture

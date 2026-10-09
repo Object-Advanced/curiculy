@@ -965,6 +965,19 @@ button.small {
     margin: 0;
 }
 
+.household-timezone {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin: 0.75rem 0;
+}
+
+.household-timezone button {
+    width: auto;
+    margin-top: 0;
+}
+
 .household-icon-picker {
     border: 0;
     margin: 0;
