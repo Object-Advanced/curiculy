@@ -28,6 +28,7 @@ export const HOUSEHOLD = {
 
 export interface HouseholdState {
   studentId: number;
+  familyCode: string;
 }
 
 const STATE_FILE = join(__dirname, "..", ".state", "household.json");

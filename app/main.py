@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response
 
 from app.config import settings, validate_runtime_configuration
+from app.core.rate_limit import RateLimiter
 from app.evidence import evidence_root
 from app.routers import (
     admin,
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    application.state.rate_limiter = RateLimiter()
     application.add_middleware(StaticRevalidateMiddleware)
     application.include_router(health.router, prefix="/api")
     application.include_router(auth.router, prefix="/api")

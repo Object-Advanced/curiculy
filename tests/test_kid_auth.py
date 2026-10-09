@@ -8,6 +8,7 @@ from app.core.security import decode_access_token
 from app.db import open_admin_session
 from app.enums import AssignmentStatus, UserRole
 from app.models.admin import User
+from app.services.family_codes import display_code, family_code_for
 from tests.test_auth import bearer, seed_user
 
 pytest_plugins = ["tests.test_auth"]
@@ -41,11 +42,28 @@ def _set_pin(client: TestClient, token: str, student_id: int, pin: str = "1234")
     return response.json()
 
 
-def _child_token(client: TestClient, student_id: int, pin: str = "1234") -> str:
+def _family_code(client: TestClient, token: str) -> str:
+    response = client.get("/api/auth/family-code", headers=bearer(token))
+    assert response.status_code == 200
+    return response.json()["code"]
+
+
+def _family_code_for_parent(email: str = "parent@example.com") -> str:
+    session = open_admin_session()
+    try:
+        parent = session.query(User).filter(User.email == email).one()
+        return display_code(family_code_for(session, parent.tenant_uuid).code)
+    finally:
+        session.close()
+
+
+def _child_token(
+    client: TestClient, student_id: int, pin: str = "1234", email: str = "parent@example.com"
+) -> str:
     response = client.post(
         "/api/auth/student-token",
         json={
-            "email": "parent@example.com",
+            "family_code": _family_code_for_parent(email),
             "student_id": student_id,
             "pin": pin,
         },
@@ -70,17 +88,17 @@ def test_set_pin_and_student_household(auth_client: TestClient) -> None:
     assert listed[0]["has_login"] is True
     household = auth_client.post(
         "/api/auth/student-household",
-        json={"email": "parent@example.com"},
+        json={"family_code": _family_code(auth_client, token)},
     )
     assert household.status_code == 200
     assert household.json()["students"] == [{"student_id": student["id"], "name": "Ada"}]
 
 
-def test_unknown_household_email_lists_no_students(auth_client: TestClient) -> None:
+def test_unknown_family_code_lists_no_students(auth_client: TestClient) -> None:
     seed_user()
     response = auth_client.post(
         "/api/auth/student-household",
-        json={"email": "nobody@example.com"},
+        json={"family_code": "ABCD-2345"},
     )
     assert response.status_code == 200
     assert response.json()["students"] == []
@@ -126,11 +144,12 @@ def test_pin_lockout(auth_client: TestClient) -> None:
     token, student = _parent_ready(auth_client)
     _set_pin(auth_client, token, student["id"], "1234")
     details = []
+    code = _family_code(auth_client, token)
     for _ in range(5):
         response = auth_client.post(
             "/api/auth/student-token",
             json={
-                "email": "parent@example.com",
+                "family_code": code,
                 "student_id": student["id"],
                 "pin": "0000",
             },
@@ -141,7 +160,7 @@ def test_pin_lockout(auth_client: TestClient) -> None:
     locked = auth_client.post(
         "/api/auth/student-token",
         json={
-            "email": "parent@example.com",
+            "family_code": code,
             "student_id": student["id"],
             "pin": "1234",
         },
@@ -262,7 +281,7 @@ def test_delete_student_removes_child_login(auth_client: TestClient) -> None:
     )
     household = auth_client.post(
         "/api/auth/student-household",
-        json={"email": "parent@example.com"},
+        json={"family_code": _family_code(auth_client, token)},
     )
     assert household.json()["students"] == []
     session = open_admin_session()
@@ -323,7 +342,7 @@ def test_clear_pin_disables_login(auth_client: TestClient) -> None:
     denied = auth_client.post(
         "/api/auth/student-token",
         json={
-            "email": "parent@example.com",
+            "family_code": _family_code(auth_client, token),
             "student_id": student["id"],
             "pin": "1234",
         },

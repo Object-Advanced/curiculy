@@ -59,9 +59,15 @@
             <div id="student-view" class="auth-view" style="display: none;">
                 <h1 id="auth-title-student">Student sign in</h1>
                 <form id="student-household-form" class="login-form" data-form="student-household">
-                    <label>Household email
-                        <input name="email" type="email" required maxlength="255"
-                               autocomplete="username" placeholder="parent@example.com">
+                    <label>Family code
+                        <input name="family_code" required minlength="8" maxlength="9"
+                               autocomplete="off" autocapitalize="characters" spellcheck="false"
+                               placeholder="ABCD-2345" aria-describedby="family-code-hint">
+                    </label>
+                    <p class="muted" id="family-code-hint">A grown-up can find it in Settings → Students.</p>
+                    <label class="checkbox-row">
+                        <input type="checkbox" name="remember" checked>
+                        Remember on this device
                     </label>
                     <button type="submit">Find my name</button>
                 </form>
@@ -74,6 +80,7 @@
                                minlength="4" maxlength="8" required autocomplete="off">
                     </label>
                     <button type="submit">Log In</button>
+                    <button type="button" class="link" data-action="forget-family-code">Use a different family code</button>
                 </form>
                 <p class="auth-switch">
                     <button type="button" class="link" data-action="login-mode"

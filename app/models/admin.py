@@ -68,3 +68,22 @@ class CaptureToken(TimestampMixin, AdminBase):
     created_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class FamilyCode(TimestampMixin, AdminBase):
+    """The code a child enters (once per device) to find their name at sign-in.
+
+    It replaces looking a household up by the parent's email address, which
+    told anyone who knew that address the children's names. One per household;
+    rotating it stops the old code working.
+    """
+
+    __tablename__ = "family_codes"
+    __table_args__ = (
+        UniqueConstraint("tenant_uuid", name="uq_family_codes_tenant"),
+        UniqueConstraint("code", name="uq_family_codes_code"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_uuid: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(16), nullable=False)

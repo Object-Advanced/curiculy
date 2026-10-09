@@ -965,6 +965,25 @@ button.small {
     margin: 0;
 }
 
+label.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.family-code-settings {
+    margin-top: 1.25rem;
+}
+
+.family-code {
+    margin: 0.75rem 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-primary);
+}
+
 .household-timezone {
     display: flex;
     flex-wrap: wrap;

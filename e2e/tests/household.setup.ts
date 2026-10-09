@@ -46,5 +46,6 @@ test("register a household and give the first kid a PIN", async ({ page }) => {
       status,
     });
   }
-  saveHouseholdState({ studentId: kid.id });
+  const { code } = await apiAs<{ code: string }>(page, "GET", "/auth/family-code");
+  saveHouseholdState({ studentId: kid.id, familyCode: code });
 });

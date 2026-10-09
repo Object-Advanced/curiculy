@@ -61,9 +61,9 @@ test("parent screens", async ({ page }) => {
 });
 
 test("kid's own work list", async ({ page }) => {
-  const { studentId } = loadHouseholdState();
+  const { studentId, familyCode } = loadHouseholdState();
   const response = await page.request.post("/api/auth/student-token", {
-    data: { email: HOUSEHOLD.email, student_id: studentId, pin: HOUSEHOLD.kid.pin },
+    data: { family_code: familyCode, student_id: studentId, pin: HOUSEHOLD.kid.pin },
   });
   expect(response.ok()).toBeTruthy();
   const { access_token: token } = (await response.json()) as { access_token: string };

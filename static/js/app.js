@@ -163,7 +163,8 @@ const state = {
   kidWork: [],
   homework: { session: null, assignmentId: null, busy: false },
   switchUsers: [],
-  studentLoginEmail: "",
+  studentLoginCode: "",
+  familyCode: "",
   portfolio: {
     studentId: null,
     schoolYearId: null,
@@ -1124,6 +1125,44 @@ async function loadInviteKeys() {
   state.inviteKeys = await api("/admin/invites");
 }
 
+async function loadFamilyCode() {
+  state.familyCode = "";
+  if (currentUserIsChild() || tokenIsDemo()) return;
+  try {
+    state.familyCode = (await api("/auth/family-code")).code || "";
+  } catch {
+    state.familyCode = "";
+  }
+}
+
+async function rotateFamilyCode() {
+  if (
+    !window.confirm(
+      "Make a new family code? Devices that remembered the old one will ask kids for the new code."
+    )
+  ) {
+    return;
+  }
+  try {
+    state.familyCode = (await api("/auth/family-code/rotate", { method: "POST" })).code || "";
+    render();
+    flash("New family code ready.");
+  } catch (error) {
+    flash(error.message, true);
+  }
+}
+
+function renderFamilyCodeSettings() {
+  if (tokenIsDemo()) return "";
+  return `
+    <section class="card family-code-settings">
+      <h2>Kid sign-in</h2>
+      <p class="muted">On a kid’s device, tap “I’m a student”, enter this family code once, then the kid picks their name and enters their PIN.</p>
+      <p class="family-code">${state.familyCode ? escapeHtml(state.familyCode) : "…"}</p>
+      <button type="button" class="ghost small" data-action="rotate-family-code">Make a new code</button>
+    </section>`;
+}
+
 async function loadCaptureTokenStatus() {
   state.captureTokenStatus = { active: false, created_at: null, expires_at: null };
   if (currentUserIsChild() || tokenIsDemo()) {
@@ -1164,7 +1203,7 @@ async function loadSettings() {
     await Promise.all(extras);
     return;
   }
-  extras.push(loadStudents(), loadCaptureTokenStatus());
+  extras.push(loadStudents(), loadCaptureTokenStatus(), loadFamilyCode());
   await Promise.all(extras);
 }
 
@@ -2579,6 +2618,7 @@ function renderStudentSettings() {
         }
       </section>
     </div>
+    ${renderFamilyCodeSettings()}
     ${renderCaptureTokenSettings()}
   `;
 }
@@ -7531,6 +7571,9 @@ async function handleClick(event) {
     case "use-device-timezone":
       await useDeviceTimeZone();
       break;
+    case "rotate-family-code":
+      await rotateFamilyCode();
+      break;
     case "edit-student":
       studentEditor.id = Number(control.dataset.studentId);
       render();
@@ -8378,7 +8421,11 @@ function setAuthLayout(required) {
   }
 }
 
-function setLoginMode(mode) {
+let currentLoginMode = "signin";
+
+function setLoginMode(mode, { focus = true } = {}) {
+  const changed = mode !== currentLoginMode;
+  currentLoginMode = mode;
   const register = mode === "register";
   const student = mode === "student";
   const loginView = $("login-view");
@@ -8394,8 +8441,12 @@ function setLoginMode(mode) {
       ? "auth-title-student"
       : "auth-title-signin";
   card?.setAttribute("aria-labelledby", labelled);
-  loginError("");
-  if (mode !== "student") resetStudentLoginForms();
+  if (changed) {
+    loginError("");
+    if (!student) resetStudentLoginForms();
+  }
+  if (student) resumeRememberedFamilyCode();
+  if (!focus) return;
   const form = register
     ? $("register-form")
     : student
@@ -8414,7 +8465,7 @@ function resetStudentLoginForms() {
   }
   const chips = $("student-name-chips");
   if (chips) chips.innerHTML = "";
-  state.studentLoginEmail = "";
+  state.studentLoginCode = "";
 }
 
 function openLoginModal() {
@@ -8431,7 +8482,10 @@ function openLoginModal() {
     setOnboardingLock(false);
   }
   setAuthLayout(true);
-  setLoginMode("signin");
+  // Boot finishes after /api/health answers. By then someone may have picked
+  // a view or started typing, so keep their view and don't move focus.
+  const card = document.querySelector("#auth-page .auth-card");
+  setLoginMode(currentLoginMode, { focus: !card?.contains(document.activeElement) });
 }
 
 function closeLoginModal() {
@@ -8678,6 +8732,7 @@ function handleLoginClick(event) {
   if (pick) {
     pickStudentLogin(Number(pick.dataset.studentId), pick.textContent);
   }
+  if (event.target.closest("[data-action='forget-family-code']")) forgetFamilyCode();
 }
 
 function handleLoginSubmit(event) {
@@ -8698,40 +8753,85 @@ function handleLoginSubmit(event) {
   }
 }
 
+const KID_FAMILY_CODE_KEY = "kid_family_code";
+
+function rememberedFamilyCode() {
+  try {
+    return localStorage.getItem(KID_FAMILY_CODE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberFamilyCode(code) {
+  try {
+    if (code) localStorage.setItem(KID_FAMILY_CODE_KEY, code);
+    else localStorage.removeItem(KID_FAMILY_CODE_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
+async function lookupStudentNames(code, { remember = false } = {}) {
+  const result = await api("/auth/student-household", {
+    method: "POST",
+    skipAuth: true,
+    body: JSON.stringify({ family_code: code }),
+  });
+  const students = result.students || [];
+  if (!students.length) return false;
+  state.studentLoginCode = code;
+  if (remember) rememberFamilyCode(code);
+  $("student-household-form").hidden = true;
+  $("student-pin-form").hidden = false;
+  $("student-name-chips").innerHTML = students
+    .map(
+      (student) =>
+        `<button type="button" class="student-name-chip" data-action="pick-student-login"
+                 data-student-id="${student.student_id}">${escapeHtml(student.name)}</button>`
+    )
+    .join("");
+  return true;
+}
+
+// A device that remembered the family code skips straight to the names.
+function resumeRememberedFamilyCode() {
+  const code = rememberedFamilyCode();
+  if (!code || !$("student-pin-form")?.hidden) return;
+  lookupStudentNames(code)
+    .then((found) => {
+      if (found) return;
+      rememberFamilyCode("");
+      loginError("This device's family code has changed. Ask a grown-up for the new one.");
+    })
+    .catch(() => {});
+}
+
+function forgetFamilyCode() {
+  rememberFamilyCode("");
+  resetStudentLoginForms();
+  loginError("");
+  $("student-household-form")?.querySelector("input")?.focus();
+}
+
 async function submitStudentHousehold(form) {
   loginError("");
   const data = formValues(form);
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
   try {
-    const result = await api("/auth/student-household", {
-      method: "POST",
-      skipAuth: true,
-      body: JSON.stringify({ email: data.email }),
+    const found = await lookupStudentNames(String(data.family_code || "").trim(), {
+      remember: Boolean(form.elements.remember?.checked),
     });
-    const students = result.students || [];
-    if (!students.length) {
-      loginError("No student logins for that household yet.");
-      return;
+    if (!found) {
+      loginError("No kid sign-ins for that family code. A grown-up can check it in Settings → Students.");
     }
-    state.studentLoginEmail = data.email;
-    form.hidden = true;
-    const pinForm = $("student-pin-form");
-    pinForm.hidden = false;
-    $("student-name-chips").innerHTML = students
-      .map(
-        (student) =>
-          `<button type="button" class="student-name-chip" data-action="pick-student-login"
-                   data-student-id="${student.student_id}">${escapeHtml(student.name)}</button>`
-      )
-      .join("");
   } catch (error) {
     loginError(error.message);
   } finally {
     button.disabled = false;
   }
 }
-
 function pickStudentLogin(studentId, name) {
   $("student-pick-id").value = String(studentId);
   document.querySelectorAll(".student-name-chip").forEach((chip) => {
@@ -8756,7 +8856,7 @@ async function submitStudentPin(form) {
       method: "POST",
       skipAuth: true,
       body: JSON.stringify({
-        email: state.studentLoginEmail,
+        family_code: state.studentLoginCode,
         student_id: Number(data.student_id),
         pin: data.pin,
       }),
@@ -9015,6 +9115,9 @@ function logout() {
     return;
   }
   $("view").innerHTML = "";
+  currentLoginMode = "signin";
+  resetStudentLoginForms();
+  loginError("");
   $("household-label").textContent = "Household";
   const avatar = $("user-avatar");
   if (avatar) {

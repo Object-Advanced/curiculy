@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     mail_starttls: bool = True
     mail_ssl_tls: bool = False
 
+    # Attempt limits on sign-in, registration, demo, and kid PIN endpoints.
+    # Turn off only for test rigs that sign in many times from one address.
+    rate_limits_enabled: bool = True
+
     # Zone used for "today" when a household has none stored yet (the SPA
     # stores the parent's browser zone). Unset means the server's own clock.
     default_timezone: str | None = None
