@@ -1,0 +1,72 @@
+# Playwright suite against a throwaway Curiculy app. Use e2e/run.sh.
+#
+# This is its own Compose project (curiculy-e2e) so starting, stopping, or
+# `down -v` here can never touch the real `api` container in the main project.
+name: curiculy-e2e
+
+services:
+  # The service is not called "app": .app is an HSTS-preloaded top-level
+  # domain, so Chromium upgrades http://app/ to https and the connection fails.
+  #
+  # Every run starts from empty databases (tmpfs), signs tokens with a
+  # test-only key, has no Ollama (port 9 refuses connections, so AI features
+  # degrade as they do when the model is off), and seeds one invite key so the
+  # suite can register a real household.
+  curiculy-app:
+    build:
+      context: ..
+      target: base
+    image: curiculy-e2e-app:latest
+    environment:
+      CATALOG_DATABASE_URL: sqlite:////data/catalog.db
+      TENANT_DATABASE_URL: sqlite:////data/tenant.db
+      ADMIN_DATABASE_URL: sqlite:////data/admin.db
+      EVIDENCE_DIR: /data/evidence
+      INDEX_HTML_PATH: /app/index.html
+      STATIC_DIR: /app/static
+      JWT_SECRET: e2e-only-signing-key-never-used-in-production
+      DEV_MODE: "false"
+      OLLAMA_HOST: http://127.0.0.1:9
+      # Visual tests freeze the browser clock on 14 Oct 2026, and the SPA
+      # drops tokens whose `exp` is behind the browser clock. Long-lived tokens
+      # keep a frozen date valid. Throwaway app only.
+      ACCESS_TOKEN_EXPIRE_MINUTES: "5256000"
+      DEMO_TOKEN_EXPIRE_MINUTES: "5256000"
+    entrypoint:
+      - sh
+      - -c
+      - python scripts/create_invite.py --key e2e-invite-key > /dev/null && exec ./entrypoint.sh
+    tmpfs:
+      - /data
+    volumes:
+      - ../app:/app/app
+      - ../scripts:/app/scripts
+      - ../static:/app/static
+      - ../index.html:/app/index.html
+      - ../sw.js:/app/sw.js
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1/api/health', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Microsoft's image ships the browsers; keep its tag in step with
+  # @playwright/test in package.json. Runs as the host user so snapshots and
+  # reports written into e2e/ are not owned by root.
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    depends_on:
+      curiculy-app:
+        condition: service_healthy
+    user: "${E2E_UID:-1000}:${E2E_GID:-1000}"
+    working_dir: /e2e
+    shm_size: "1gb"
+    environment:
+      BASE_URL: http://curiculy-app
+      E2E_INVITE_KEY: e2e-invite-key
+      HOME: /tmp/e2e-home
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+      CI: ${CI:-}
+      UPDATE_A11Y_BASELINE: ${UPDATE_A11Y_BASELINE:-}
+    volumes:
+      - .:/e2e

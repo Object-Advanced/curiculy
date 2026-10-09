@@ -1,5 +1,6 @@
-# Lint and the pytest suite on every push and pull request. No production
-# secrets, SMTP, or Ollama: pytest uses tmp paths.
+# Lint, the pytest suite, and the Playwright suite on every push and pull
+# request. No production secrets, SMTP, or Ollama: pytest uses tmp paths and
+# the browser suite runs against a throwaway app with tmpfs databases.
 #
 # Docker layers are cached between runs (GitHub Actions cache), so unchanged
 # dependencies are not reinstalled. `-T` disables a TTY; the pytest step is
@@ -45,3 +46,30 @@ jobs:
           cache-to: type=gha,mode=max,scope=tests
       - name: Run the full pytest suite
         run: docker compose --profile dev run --rm -T tests pytest -q --tb=line
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: base
+          tags: curiculy-e2e-app:latest
+          load: true
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+      - name: Run the Playwright suite against a throwaway app
+        run: e2e/run.sh
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

@@ -17,11 +17,13 @@ Curiculy runs via Docker Compose.
 The UI will be available at `http://localhost:3040`. *(Note: Code directories are bind-mounted. Evidence files and databases are stored in the `./data` directory on the host).*
 
 ## 3. Bootstrapping the First Admin
-Because registration is invite-gated, you need to manually generate the first invite key directly in the admin database to create your initial parent account. The live `invite_keys` table requires `tenant_uuid` (the admin API uses an empty string until the key is redeemed).
-1. Exec into the container: `docker compose exec api bash`
-2. Open the admin database: `sqlite3 /data/admin.db`
-3. Insert an invite key: `INSERT INTO invite_keys (key, tenant_uuid, expires_at) VALUES ('YOUR_HEX_KEY', '', datetime('now', '+1 day'));`
-4. Go to `http://localhost:3040`, click **Register**, and use your new invite key.
+Registration is invite-gated, so the first parent account needs an invite key made from the command line:
+
+```
+docker compose exec api python scripts/create_invite.py --expires-days 1
+```
+
+It prints the key. Go to `http://localhost:3040`, click **Create Account**, and use it. Run it again whenever you need another key (`--key` picks a specific value).
 
 ## 4. Development Mode
 Run the full suite locally (same image and tests as CI):
@@ -29,7 +31,16 @@ Run the full suite locally (same image and tests as CI):
 
 GitHub Actions (`.github/workflows/tests.yml`) runs that command on every push and pull request, with `-T` because the runner has no TTY. CI does not use production secrets, SMTP credentials, an Ollama daemon, or live `/data` files. Pytest sets a local JWT signing value in `tests/conftest.py`; do not copy that into a family deploy.
 
-The 2026-09-01 reconciliation baseline was **821 passed**. The current suite is **892 passed**, 0 failed, 0 skipped.
+Lint (syntax errors and pyflakes; the same check CI runs):
+`docker compose --profile dev run --build --rm tests ruff check app scripts tests`
+
+### Browser tests (Playwright)
+`e2e/run.sh` starts a throwaway app (empty databases, no Ollama, a test-only signing key) and runs the Playwright suite against it from Microsoft's Playwright image. Only Docker is needed. It runs as a separate Compose project, so it never touches the real `api` container.
+
+* `e2e/run.sh --project=functional` runs the smoke, kid sign-in, accessibility, and metrics tests.
+* Visual snapshots of the main screens (phone, tablet, desktop; light and dark) live in `e2e/tests/__screenshots__`. After an intended visual change, run `e2e/run.sh --update-snapshots` and commit the new images.
+* `e2e/a11y-baseline.json` caps serious and critical axe violations per screen. Lower the numbers as screens improve; `UPDATE_A11Y_BASELINE=1 e2e/run.sh --project=functional` rewrites it.
+* `e2e/reports/metrics.json` records requests, bytes, and LCP when a parent opens Home.
 
 ## 5. Optional operator scripts
 Historical enrollments can be reconstructed when an assignment already proves student + curriculum + school year (stored `curriculum_id`, or a live curriculum resource/unit). Title-only week/day plan lessons are not guessed:
