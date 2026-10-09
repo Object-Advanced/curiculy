@@ -5,7 +5,6 @@ curriculum, edition, and book land together so Auto-schedule can see the pages.
 """
 
 import httpx
-import pytest
 import respx
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

@@ -12,8 +12,9 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.models  # noqa: F401
-from app.db import _ensure_tenant_schema, _sqlite_table_columns
+from app.db import _ensure_tenant_schema
 from app.enums import AssignmentStatus
+from app.schema_patches import sqlite_table_columns
 from app.models import (
     Assignment,
     AssignmentEvidence,
@@ -368,7 +369,7 @@ class TestLegacyTenantInitialize:
         _ensure_tenant_schema(engine)
 
         with engine.connect() as conn:
-            columns = _sqlite_table_columns(conn, "household_settings")
+            columns = sqlite_table_columns(conn, "household_settings")
             assert "start_date" not in columns
             assert "end_date" not in columns
             assert "weekdays" in columns
@@ -487,7 +488,7 @@ class TestLegacyTenantInitialize:
         _ensure_tenant_schema(engine)
 
         with engine.connect() as conn:
-            columns = _sqlite_table_columns(conn, "household_settings")
+            columns = sqlite_table_columns(conn, "household_settings")
             assert "start_date" not in columns
             assert "end_date" not in columns
             year = conn.execute(

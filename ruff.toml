@@ -1,0 +1,9 @@
+# CI lint gate. It only fails on real bugs: syntax errors and pyflakes
+# findings (undefined names, unused imports, redefinitions). Wider rule sets
+# and a one-time `ruff format` pass are separate changes, so behavior edits
+# don't get buried under style churn.
+target-version = "py312"
+extend-exclude = ["alembic", "e2e"]
+
+[lint]
+select = ["E9", "F"]

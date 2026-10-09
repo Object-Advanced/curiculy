@@ -45,7 +45,7 @@ FROM base AS dev
 COPY requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt
 
-COPY pytest.ini .
+COPY pytest.ini ruff.toml ./
 COPY tests ./tests
 
 ENTRYPOINT []

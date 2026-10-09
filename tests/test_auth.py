@@ -1,6 +1,7 @@
 """JWT login, demo mode, and tenant routing."""
 
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -196,6 +197,51 @@ def test_demo_sessions_do_not_share_data(auth_client: TestClient) -> None:
     other = auth_client.get("/api/students", headers=bearer(second))
     assert other.status_code == 200
     assert other.json() == []
+
+
+def test_concurrent_requests_to_one_demo_household(auth_client: TestClient) -> None:
+    """The SPA loads several things at once. A demo household shared one
+    in-memory connection across threads, so parallel reads returned 404s and
+    500s ("bad parameter or other API misuse")."""
+    token = auth_client.post("/api/auth/demo").json()["access_token"]
+    student = auth_client.post(
+        "/api/students", headers=bearer(token), json={"name": "Ada"}
+    ).json()
+    for day in range(1, 6):
+        auth_client.post(
+            "/api/assignments",
+            headers=bearer(token),
+            json={
+                "student_id": student["id"],
+                "title": f"Lesson {day}",
+                "scheduled_date": f"2026-10-0{day}",
+            },
+        )
+    paths = [
+        f"/api/students/{student['id']}/courses",
+        f"/api/students/{student['id']}/assignments?start_date=2026-10-01",
+    ] * 30
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        statuses = list(
+            pool.map(lambda path: auth_client.get(path, headers=bearer(token)).status_code, paths)
+        )
+
+    assert statuses == [200] * len(paths)
+
+
+def test_only_recent_demo_households_are_kept(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import app.db as db_module
+
+    monkeypatch.setattr(db_module, "DEMO_HOUSEHOLD_LIMIT", 2)
+    monkeypatch.setattr(db_module, "demo_data_dir", lambda: tmp_path)
+    for _ in range(3):
+        token = auth_client.post("/api/auth/demo").json()["access_token"]
+        assert auth_client.get("/api/students", headers=bearer(token)).status_code == 200
+
+    assert len(list(tmp_path.glob("demo_*.db"))) == 2
 
 
 def test_login_routes_to_tenant_file(auth_client: TestClient, auth_dir: Path) -> None:

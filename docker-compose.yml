@@ -45,11 +45,13 @@ services:
     build:
       context: .
       target: dev
+    image: curiculy-tests:latest
     profiles: ["dev"]
     volumes:
       - ./app:/app/app
       - ./scripts:/app/scripts
       - ./tests:/app/tests
+      - ./ruff.toml:/app/ruff.toml
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
       - ./sw.js:/app/sw.js
