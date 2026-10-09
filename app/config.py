@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     mail_starttls: bool = True
     mail_ssl_tls: bool = False
 
+    # Largest request body accepted (curriculum PDFs are the biggest uploads).
+    # Evidence photos and PDFs have their own, smaller per-file limit.
+    max_upload_megabytes: int = 50
+
     # Attempt limits on sign-in, registration, demo, and kid PIN endpoints.
     # Turn off only for test rigs that sign in many times from one address.
     rate_limits_enabled: bool = True

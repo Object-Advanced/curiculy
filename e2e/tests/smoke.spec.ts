@@ -25,6 +25,25 @@ test("a demo household finishes onboarding and lands in the catalog", async ({ p
   await expect(page.locator("#health-pill")).toHaveText("API ok · DB ok");
 });
 
+test("Home draws its charts with the vendored Chart.js", async ({ page }) => {
+  await startDemo(page);
+  await seedSchoolWeek(page);
+  await openRoute(page, "#/dashboard", "Home");
+  // page.evaluate runs in the browser, so each callback reads window itself.
+  type ChartWindow = { Chart?: { version: string; getChart: (id: string) => unknown } };
+  expect(await page.evaluate(() => (window as unknown as ChartWindow).Chart?.version)).toBe("4.5.1");
+  // The weekly trend draws whenever there are students (today's chart can
+  // be legitimately empty).
+  await expect(page.locator("#weeklyTrendChart")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Boolean((window as unknown as ChartWindow).Chart?.getChart("weeklyTrendChart")),
+      ),
+    )
+    .toBe(true);
+});
+
 test("the calendar renders day, week, and month", async ({ page }) => {
   await startDemo(page);
   await openRoute(page, "#/assignments", "Calendar");

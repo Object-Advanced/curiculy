@@ -2,14 +2,19 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
 from app.config import settings, validate_runtime_configuration
+from app.core.middleware import (
+    BodySizeLimitMiddleware,
+    SecurityHeadersMiddleware,
+    SelectiveGZipMiddleware,
+)
 from app.core.rate_limit import RateLimiter
-from app.evidence import evidence_root
+from app.evidence import EvidenceRejected, evidence_root
 from app.routers import (
     admin,
     assignments,
@@ -63,7 +68,19 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     application.state.rate_limiter = RateLimiter()
+    # The last one added runs first: the size cap refuses oversized uploads
+    # before anything else, then headers, compression, and static caching.
     application.add_middleware(StaticRevalidateMiddleware)
+    application.add_middleware(SelectiveGZipMiddleware)
+    application.add_middleware(SecurityHeadersMiddleware)
+    application.add_middleware(
+        BodySizeLimitMiddleware, max_bytes=settings.max_upload_megabytes * 1024 * 1024
+    )
+
+    @application.exception_handler(EvidenceRejected)
+    async def evidence_rejected(_request: Request, error: EvidenceRejected) -> JSONResponse:
+        return JSONResponse({"detail": error.detail}, status_code=error.status_code)
+
     application.include_router(health.router, prefix="/api")
     application.include_router(auth.router, prefix="/api")
     application.include_router(admin.router, prefix="/api")

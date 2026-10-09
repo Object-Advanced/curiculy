@@ -317,12 +317,7 @@ def upload_assignment_evidence(
     """
     _ = apply_to_group
     assignment = _load_assignment(tenant_db, catalog_db, assignment_id)
-    file_path = store_capture(
-        file.file,
-        file.filename,
-        tenant_uuid=user.tenant_uuid,
-        content_type=file.content_type,
-    )
+    file_path = store_capture(file.file, tenant_uuid=user.tenant_uuid)
     captured_at = utcnow()
 
     by_id = {assignment.id: assignment}

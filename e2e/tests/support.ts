@@ -42,10 +42,21 @@ export function loadHouseholdState(): HouseholdState {
   return JSON.parse(readFileSync(STATE_FILE, "utf8")) as HouseholdState;
 }
 
-/** Applies the project's theme before the app's inline theme script runs. */
+/**
+ * Applies the project's theme before the app's theme boot script runs, and
+ * fails the test on any uncaught page error or Content-Security-Policy
+ * violation (those otherwise only show up as console noise).
+ */
 export const test = base.extend<{ theme: Theme }>({
   theme: ["light", { option: true }],
   page: async ({ page, theme }, use) => {
+    const problems: string[] = [];
+    page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
+    page.on("console", (message) => {
+      if (message.type() === "error" && /Content.Security.Policy/i.test(message.text())) {
+        problems.push(`CSP: ${message.text()}`);
+      }
+    });
     await page.addInitScript((value) => {
       try {
         window.localStorage.setItem("theme", value);
@@ -54,6 +65,7 @@ export const test = base.extend<{ theme: Theme }>({
       }
     }, theme);
     await use(page);
+    expect(problems, "uncaught errors or CSP violations").toEqual([]);
   },
 });
 

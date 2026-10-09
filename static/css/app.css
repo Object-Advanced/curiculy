@@ -3834,7 +3834,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: #0c1220;
-    background-image: url("/static/night-mountains.jpg?v=20260831-paper-import");
+    background-image: url("/static/night-mountains.jpg?v=20261009-hardening");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
