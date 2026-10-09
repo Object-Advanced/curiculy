@@ -2,13 +2,20 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
 from app.config import settings, validate_runtime_configuration
-from app.evidence import evidence_root
+from app.core.idempotency import IdempotencyMiddleware, purge_expired_records
+from app.core.middleware import (
+    BodySizeLimitMiddleware,
+    SecurityHeadersMiddleware,
+    SelectiveGZipMiddleware,
+)
+from app.core.rate_limit import RateLimiter
+from app.evidence import EvidenceRejected, evidence_root
 from app.routers import (
     admin,
     assignments,
@@ -51,6 +58,7 @@ class StaticRevalidateMiddleware(BaseHTTPMiddleware):
 async def lifespan(_app: FastAPI):
     validate_runtime_configuration()
     evidence_root()
+    purge_expired_records()
     yield
 
 
@@ -61,7 +69,22 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    application.state.rate_limiter = RateLimiter()
+    # The last one added runs first: the size cap refuses oversized uploads
+    # before anything else, then headers, compression, and static caching.
+    # Idempotency is innermost so it stores uncompressed responses.
+    application.add_middleware(IdempotencyMiddleware)
     application.add_middleware(StaticRevalidateMiddleware)
+    application.add_middleware(SelectiveGZipMiddleware)
+    application.add_middleware(SecurityHeadersMiddleware)
+    application.add_middleware(
+        BodySizeLimitMiddleware, max_bytes=settings.max_upload_megabytes * 1024 * 1024
+    )
+
+    @application.exception_handler(EvidenceRejected)
+    async def evidence_rejected(_request: Request, error: EvidenceRejected) -> JSONResponse:
+        return JSONResponse({"detail": error.detail}, status_code=error.status_code)
+
     application.include_router(health.router, prefix="/api")
     application.include_router(auth.router, prefix="/api")
     application.include_router(admin.router, prefix="/api")

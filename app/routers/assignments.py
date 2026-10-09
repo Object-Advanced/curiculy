@@ -15,7 +15,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from sqlalchemy.orm import Session
 
 from app.core.security import CurrentUser, get_current_user, require_parent
-from app.db import get_catalog_db, get_tenant_db
+from app.db import get_catalog_db
+from app.core.deps import get_tenant_db
 from app.enums import CalendarPeriod, UserRole
 from app.evidence import store_capture
 from app.models import (
@@ -41,6 +42,7 @@ from app.schemas import (
 )
 from app.services.assignments import AssignmentQuery, InvalidDateRangeError, resolve_window
 from app.services.child_accounts import is_child
+from app.services.clock import household_today
 
 router = APIRouter(tags=["assignments"], dependencies=[Depends(get_current_user)])
 
@@ -142,7 +144,12 @@ def list_student_assignments(
         raise HTTPException(status_code=404, detail="Student not found")
 
     try:
-        window = resolve_window(start_date=start_date, end_date=end_date, period=period)
+        window = resolve_window(
+            start_date=start_date,
+            end_date=end_date,
+            period=period,
+            today=household_today(tenant_db),
+        )
     except InvalidDateRangeError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -311,12 +318,7 @@ def upload_assignment_evidence(
     """
     _ = apply_to_group
     assignment = _load_assignment(tenant_db, catalog_db, assignment_id)
-    file_path = store_capture(
-        file.file,
-        file.filename,
-        tenant_uuid=user.tenant_uuid,
-        content_type=file.content_type,
-    )
+    file_path = store_capture(file.file, tenant_uuid=user.tenant_uuid)
     captured_at = utcnow()
 
     by_id = {assignment.id: assignment}

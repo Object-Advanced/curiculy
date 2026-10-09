@@ -316,6 +316,29 @@ h1 {
     border-color: var(--danger-border);
 }
 
+.pill.warn {
+    color: var(--warn);
+    border-color: var(--warn-border);
+    background: var(--warn-dim);
+}
+
+button.pill {
+    width: auto;
+    margin: 0;
+    font-weight: 500;
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+button.pill.warn {
+    color: var(--warn);
+    background: var(--warn-dim);
+}
+
+#sync-pill[hidden] {
+    display: none;
+}
+
 .pill.offline {
     display: inline-flex;
     align-items: center;
@@ -963,6 +986,38 @@ button.small {
 .household-name-form button {
     width: auto;
     margin: 0;
+}
+
+label.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.family-code-settings {
+    margin-top: 1.25rem;
+}
+
+.family-code {
+    margin: 0.75rem 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-primary);
+}
+
+.household-timezone {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin: 0.75rem 0;
+}
+
+.household-timezone button {
+    width: auto;
+    margin-top: 0;
 }
 
 .household-icon-picker {
@@ -3802,7 +3857,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: #0c1220;
-    background-image: url("/static/night-mountains.jpg?v=20260831-paper-import");
+    background-image: url("/static/night-mountains.jpg?v=20261009-hardening");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

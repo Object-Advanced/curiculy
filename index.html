@@ -4,30 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curiculy</title>
-    <script>
-        (function () {
-            try {
-                if (localStorage.getItem("theme") === "dark") {
-                    document.documentElement.setAttribute("data-theme", "dark");
-                }
-                if (!localStorage.getItem("auth_token")) {
-                    document.documentElement.setAttribute("data-auth", "required");
-                }
-            } catch (error) {
-                document.documentElement.setAttribute("data-auth", "required");
-            }
-        })();
-    </script>
-    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20260831-paper-import">
-    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20260831-paper-import">
-    <link rel="stylesheet" href="/static/css/app.css?v=20260831-paper-import">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/theme-boot.js?v=20261009-hardening"></script>
+    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261009-hardening">
+    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261009-hardening">
+    <link rel="stylesheet" href="/static/css/app.css?v=20261009-hardening">
 </head>
 <body>
     <div id="auth-page">
         <section class="auth-card" aria-labelledby="auth-title-signin">
             <header class="auth-brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260831-paper-import" alt="" width="72" height="72" aria-hidden="true">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261009-hardening" alt="" width="72" height="72" aria-hidden="true">
                 <p class="auth-product">Curiculy</p>
             </header>
             <p id="login-error" class="banner error" hidden></p>
@@ -59,9 +45,15 @@
             <div id="student-view" class="auth-view" style="display: none;">
                 <h1 id="auth-title-student">Student sign in</h1>
                 <form id="student-household-form" class="login-form" data-form="student-household">
-                    <label>Household email
-                        <input name="email" type="email" required maxlength="255"
-                               autocomplete="username" placeholder="parent@example.com">
+                    <label>Family code
+                        <input name="family_code" required minlength="8" maxlength="9"
+                               autocomplete="off" autocapitalize="characters" spellcheck="false"
+                               placeholder="ABCD-2345" aria-describedby="family-code-hint">
+                    </label>
+                    <p class="muted" id="family-code-hint">A grown-up can find it in Settings → Students.</p>
+                    <label class="checkbox-row">
+                        <input type="checkbox" name="remember" checked>
+                        Remember on this device
                     </label>
                     <button type="submit">Find my name</button>
                 </form>
@@ -74,6 +66,7 @@
                                minlength="4" maxlength="8" required autocomplete="off">
                     </label>
                     <button type="submit">Log In</button>
+                    <button type="button" class="link" data-action="forget-family-code">Use a different family code</button>
                 </form>
                 <p class="auth-switch">
                     <button type="button" class="link" data-action="login-mode"
@@ -113,7 +106,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20260831-paper-import" alt="" width="40" height="40">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261009-hardening" alt="" width="40" height="40">
                 <div>
                     <strong>Curiculy</strong>
                     <p>Homeschool planner</p>
@@ -182,6 +175,7 @@
                         </svg>
                         Offline
                     </span>
+                    <button type="button" id="sync-pill" class="pill" hidden></button>
                     <span id="health-pill" class="pill">Checking…</span>
                 </div>
             </header>
@@ -692,6 +686,7 @@
     <input type="file" id="curriculum-pdf-input" accept="application/pdf" hidden>
     <input type="file" id="paper-import-input" accept="image/*" capture="environment" style="display: none;">
     <div id="toast-container" aria-live="polite" aria-relevant="additions text"></div>
-    <script src="/static/js/app.js?v=20260831-paper-import"></script>
+    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261009-hardening"></script>
+    <script src="/static/js/app.js?v=20261009-hardening"></script>
 </body>
 </html>

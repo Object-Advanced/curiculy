@@ -32,6 +32,9 @@ services:
       # keep a frozen date valid. Throwaway app only.
       ACCESS_TOKEN_EXPIRE_MINUTES: "5256000"
       DEMO_TOKEN_EXPIRE_MINUTES: "5256000"
+      # One run opens ~15 demo households from one address; pytest covers
+      # the limits themselves (tests/test_rate_limit.py).
+      RATE_LIMITS_ENABLED: "false"
     entrypoint:
       - sh
       - -c

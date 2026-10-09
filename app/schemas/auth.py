@@ -53,12 +53,9 @@ class InviteKeyRead(ORMModel):
 
 
 class StudentHouseholdRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
+    """The family code shown in Settings → Students (not the parent's email)."""
 
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        return value.strip().lower()
+    family_code: str = Field(min_length=8, max_length=16)
 
 
 class StudentHouseholdChildRead(BaseModel):
@@ -71,14 +68,13 @@ class StudentHouseholdRead(BaseModel):
 
 
 class StudentTokenRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
+    family_code: str = Field(min_length=8, max_length=16)
     student_id: int
     pin: str = Field(min_length=4, max_length=8)
 
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        return value.strip().lower()
+
+class FamilyCodeRead(BaseModel):
+    code: str
 
 
 class StudentPinUpsert(BaseModel):

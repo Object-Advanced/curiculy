@@ -22,7 +22,7 @@ TODAY = date(2026, 9, 18)
 
 @pytest.fixture
 def freeze_today(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(recalibration_service, "_today", lambda: TODAY)
+    monkeypatch.setattr(recalibration_service, "_today", lambda *_: TODAY)
 
 
 @pytest.fixture

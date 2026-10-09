@@ -6,7 +6,7 @@ next to the catalog and tenant bases in ``app.db``.
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, UniqueConstraint, false
+from sqlalchemy import Boolean, DateTime, Integer, LargeBinary, String, UniqueConstraint, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import AdminBase
@@ -68,3 +68,46 @@ class CaptureToken(TimestampMixin, AdminBase):
     created_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class FamilyCode(TimestampMixin, AdminBase):
+    """The code a child enters (once per device) to find their name at sign-in.
+
+    It replaces looking a household up by the parent's email address, which
+    told anyone who knew that address the children's names. One per household;
+    rotating it stops the old code working.
+    """
+
+    __tablename__ = "family_codes"
+    __table_args__ = (
+        UniqueConstraint("tenant_uuid", name="uq_family_codes_tenant"),
+        UniqueConstraint("code", name="uq_family_codes_code"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_uuid: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
+class IdempotencyRecord(TimestampMixin, AdminBase):
+    """The stored answer to a write sent with an Idempotency-Key.
+
+    The SPA sends a key with every write and reuses it when an offline
+    replay retries the same change, so a write whose response was lost is
+    answered from here instead of being applied twice. Scoped to the signed-in
+    principal; records older than two days are purged.
+    """
+
+    __tablename__ = "idempotency_records"
+    __table_args__ = (
+        UniqueConstraint("principal", "key", name="uq_idempotency_principal_key"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    principal: Mapped[str] = mapped_column(String(255), nullable=False)
+    key: Mapped[str] = mapped_column(String(128), nullable=False)
+    method: Mapped[str] = mapped_column(String(8), nullable=False)
+    path: Mapped[str] = mapped_column(String(512), nullable=False)
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    body: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)

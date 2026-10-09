@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.security import require_parent
-from app.db import get_tenant_db
+from app.core.deps import get_tenant_db
 from app.models import Attendance, Student
 from app.schemas import AttendanceRead, AttendanceUpsert
 from app.services.assignments import InvalidDateRangeError, resolve_window

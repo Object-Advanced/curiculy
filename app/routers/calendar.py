@@ -11,10 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.security import require_parent
-from app.db import get_catalog_db, get_tenant_db
+from app.db import get_catalog_db
+from app.core.deps import get_tenant_db
 from app.enums import CalendarPeriod
 from app.schemas import AssignmentCalendarRead, AssignmentRead
 from app.services.assignments import AssignmentQuery, InvalidDateRangeError, resolve_window
+from app.services.clock import household_today
 
 router = APIRouter(
     prefix="/calendar",
@@ -42,7 +44,12 @@ def list_shared_assignments(
     catalog_db: Session = Depends(get_catalog_db),
 ) -> AssignmentCalendarRead:
     try:
-        window = resolve_window(start_date=start_date, end_date=end_date, period=period)
+        window = resolve_window(
+            start_date=start_date,
+            end_date=end_date,
+            period=period,
+            today=household_today(tenant_db),
+        )
     except InvalidDateRangeError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

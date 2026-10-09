@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import require_parent
-from app.db import get_tenant_db
+from app.core.deps import get_tenant_db
 from app.models import Curriculum, Enrollment, SchoolYear, Student
 from app.schemas import EnrollmentCreate, EnrollmentRead
 

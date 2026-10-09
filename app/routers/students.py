@@ -1,10 +1,9 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.core.security import CurrentUser, get_current_user, require_parent
-from app.db import get_admin_db, get_tenant_db
+from app.db import get_admin_db
+from app.core.deps import get_tenant_db
 from app.models import (
     Assignment,
     CalendarException,
@@ -15,6 +14,7 @@ from app.models import (
 )
 from app.schemas import StudentCreate, StudentRead, StudentSparkRead
 from app.schemas.auth import StudentPinUpsert
+from app.services.clock import household_today
 from app.services.child_accounts import (
     child_login_student_ids,
     delete_child_account,
@@ -102,7 +102,10 @@ def get_student_spark(student_id: int, db: Session = Depends(get_tenant_db)) -> 
     titles = [
         title
         for (title,) in db.query(Assignment.title)
-        .filter(Assignment.student_id == student.id, Assignment.scheduled_date == date.today())
+        .filter(
+            Assignment.student_id == student.id,
+            Assignment.scheduled_date == household_today(db),
+        )
         .order_by(Assignment.id)
         if title
     ]

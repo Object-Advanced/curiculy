@@ -332,7 +332,7 @@ SPA, extension, and operator scripts do not call these. Tests do (`tests/test_bo
 
 ### Offline / PWA — KEEP
 
-**CURRENT:** `sw.js` caches shell; IndexedDB outbox replays mutating `api()` calls. Does not cache `/api` or `/evidence`. `SHELL_VERSION` is the single cache-bust token (currently `20260831-paper-import`). `index.html` and CSS query strings use that value. `SHELL_CACHE` is `curiculy-shell-${SHELL_VERSION}`. Tests fail if the strings drift.
+**CURRENT:** `sw.js` caches shell; IndexedDB outbox replays mutating `api()` calls. Does not cache `/api` or `/evidence`. `SHELL_VERSION` is the single cache-bust token (currently `20261009-hardening`). `index.html` and CSS query strings use that value. `SHELL_CACHE` is `curiculy-shell-${SHELL_VERSION}`. Tests fail if the strings drift.
 
 **DEPENDENCIES:** SPA `api()`, uploads.
 

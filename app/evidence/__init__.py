@@ -14,7 +14,22 @@ from app.config import settings
 
 MAX_IMAGE_DIMENSION = 1600
 WEBP_QUALITY = 80
-_PDF_CONTENT_TYPE = "application/pdf"
+MAX_EVIDENCE_BYTES = 20 * 1024 * 1024
+_PDF_MAGIC = b"%PDF-"
+# Served inline; anything else on disk (from before uploads were checked) is
+# sent as a download so a browser never renders it as a page.
+INLINE_MEDIA_TYPES = frozenset(
+    {"image/webp", "image/png", "image/jpeg", "image/gif", "application/pdf"}
+)
+
+
+class EvidenceRejected(ValueError):
+    """An upload that cannot be kept as a work sample."""
+
+    def __init__(self, status_code: int, detail: str) -> None:
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
 _MEDIA_TYPES = {
     ".webp": "image/webp",
     ".png": "image/png",
@@ -44,10 +59,6 @@ def _tenant_dir(tenant_uuid: str) -> Path:
     return path
 
 
-def _media_type(content_type: str | None) -> str:
-    return (content_type or "").split(";", 1)[0].strip().lower()
-
-
 def _compress_to_webp(data: bytes) -> bytes | None:
     """Resize to 1600px and encode WebP, or return None if this is not an image."""
     try:
@@ -57,33 +68,31 @@ def _compress_to_webp(data: bytes) -> bytes | None:
             buffer = BytesIO()
             rgb.save(buffer, format="WEBP", quality=WEBP_QUALITY)
             return buffer.getvalue()
+    except Image.DecompressionBombError as error:
+        raise EvidenceRejected(413, "That image is too large to store.") from error
     except (UnidentifiedImageError, OSError, ValueError):
         return None
 
 
-def store_capture(
-    source: BinaryIO,
-    original_name: str | None = None,
-    *,
-    tenant_uuid: str,
-    content_type: str | None = None,
-) -> str:
-    """Write a capture under the tenant's evidence folder and return its relative path.
+def store_capture(source: BinaryIO, *, tenant_uuid: str) -> str:
+    """Keep a photo or PDF under the tenant's evidence folder; return its relative path.
 
-    Images are converted to RGB, resized to a 1600×1600 box, and stored as WebP.
-    PDFs and other non-image documents are written unchanged. The stored name is
-    a UUID so two uploads of the same worksheet cannot collide.
+    The type comes from the bytes, not the uploader's claimed type or file
+    name. Photos are converted to RGB, resized to a 1600×1600 box, and stored
+    as WebP. PDFs are stored as they are. Anything else (SVG, HTML, documents)
+    is refused, as is anything over MAX_EVIDENCE_BYTES. Stored names are UUIDs,
+    so two uploads of the same worksheet cannot collide.
     """
-    data = source.read()
-    media = _media_type(content_type)
-    compressed = None if media == _PDF_CONTENT_TYPE else _compress_to_webp(data)
-
-    if compressed is not None:
-        filename = f"{uuid4()}.webp"
-        payload = compressed
+    data = source.read(MAX_EVIDENCE_BYTES + 1)
+    if len(data) > MAX_EVIDENCE_BYTES:
+        raise EvidenceRejected(413, "Work samples can be up to 20 MB.")
+    if data.startswith(_PDF_MAGIC):
+        filename, payload = f"{uuid4()}.pdf", data
     else:
-        filename = f"{uuid4()}{Path(original_name or '').suffix}"
-        payload = data
+        compressed = _compress_to_webp(data)
+        if compressed is None:
+            raise EvidenceRejected(415, "Work samples must be a photo or a PDF.")
+        filename, payload = f"{uuid4()}.webp", compressed
 
     relative_path = f"{tenant_uuid}/{filename}"
     destination = _tenant_dir(tenant_uuid) / filename

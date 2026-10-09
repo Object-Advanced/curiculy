@@ -156,10 +156,11 @@ def test_wrong_tenant_cannot_patch_assignment_status(auth_client: TestClient) ->
         json={"name": "Cora"},
     ).json()
     _set_pin(auth_client, beta, other_child_student["id"])
+    beta_code = auth_client.get("/api/auth/family-code", headers=bearer(beta)).json()["code"]
     other_child = auth_client.post(
         "/api/auth/student-token",
         json={
-            "email": "beta@example.com",
+            "family_code": beta_code,
             "student_id": other_child_student["id"],
             "pin": "1234",
         },

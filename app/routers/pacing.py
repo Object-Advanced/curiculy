@@ -11,14 +11,14 @@ alongside the schedule, because only the parent can decide whether the deadline
 or the workload should move.
 """
 
-from datetime import date
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.security import require_parent
-from app.db import get_catalog_db, get_tenant_db
+from app.db import get_catalog_db
+from app.core.deps import get_tenant_db
 from app.models import BookEdition, CurriculumEdition, Student, SubjectTaxonomy
 from app.schemas import (
     PacingCalculation,
@@ -28,6 +28,7 @@ from app.schemas import (
     PacingPreviewRequest,
 )
 from app.services.ai_generator import SyllabusGenerationError, SyllabusGenerator
+from app.services.clock import household_today
 from app.services.pacing import PacingEngine, PacingError, SyllabusCommitError, SyllabusCommitter
 
 router = APIRouter(
@@ -78,10 +79,11 @@ def _require_references(
 def generate_preview(
     payload: PacingPreviewRequest,
     catalog_db: Session = Depends(get_catalog_db),
+    tenant_db: Session = Depends(get_tenant_db),
 ) -> PacingPreviewRead:
     """Draft a syllabus for a page range, paced by a deadline or a daily page count."""
     book = _load_book(catalog_db, payload.book_id)
-    start_date = payload.start_date or date.today()
+    start_date = payload.start_date or household_today(tenant_db)
     total_pages = payload.end_page - payload.start_page + 1
 
     engine = PacingEngine()

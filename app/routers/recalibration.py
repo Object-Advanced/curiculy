@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.security import require_parent
-from app.db import get_tenant_db
+from app.core.deps import get_tenant_db
 from app.models import Student
 from app.schemas.recalibration import (
     RecalibrateExecuteRead,

@@ -3,12 +3,13 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.rate_limit import enforce, limit_by_client
 from app.core.security import (
     CurrentUser,
     get_current_user,
@@ -16,7 +17,8 @@ from app.core.security import (
     require_parent,
     verify_password,
 )
-from app.db import get_admin_db, get_tenant_db, open_tenant_session, provision_tenant
+from app.db import get_admin_db, open_tenant_session, provision_tenant
+from app.core.deps import get_tenant_db
 from app.enums import UserRole
 from app.models import Student
 from app.models.admin import InviteKey, User
@@ -24,6 +26,7 @@ from app.models.mixins import utcnow
 from app.schemas.auth import (
     CaptureTokenIssued,
     CaptureTokenStatusRead,
+    FamilyCodeRead,
     RegisterRequest,
     StudentHouseholdChildRead,
     StudentHouseholdRead,
@@ -48,6 +51,13 @@ from app.services.child_accounts import (
     parent_user_for_tenant,
     token_payload,
     verify_parent_password,
+)
+from app.services.family_codes import (
+    display_code,
+    family_code_for,
+    rotate_family_code,
+    sign_in_names,
+    tenant_for_code,
 )
 from app.services.households import get_default_household
 
@@ -102,7 +112,12 @@ def _token_user_read(user: CurrentUser, tenant_db: Session) -> TokenUserRead:
     )
 
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=Token,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(limit_by_client("register", attempts=5, per_seconds=600))],
+)
 def register_user(
     payload: RegisterRequest,
     admin_db: Session = Depends(get_admin_db),
@@ -141,12 +156,21 @@ def register_user(
     return token_payload(user)
 
 
-@router.post("/token", response_model=Token)
+@router.post(
+    "/token",
+    response_model=Token,
+    dependencies=[Depends(limit_by_client("login", attempts=10, per_seconds=60))],
+)
 def login_for_access_token(
+    request: Request,
     form: OAuth2PasswordRequestForm = Depends(),
     admin_db: Session = Depends(get_admin_db),
 ) -> Token:
-    user = admin_db.query(User).filter(User.email == form.username.strip().lower()).one_or_none()
+    email = form.username.strip().lower()
+    # Per account as well as per address, so spreading guesses across many
+    # addresses does not get more tries at one parent's password.
+    enforce(request, "login-account", email, attempts=20, per_seconds=900)
+    user = admin_db.query(User).filter(User.email == email).one_or_none()
     if (
         user is None
         or user.role == UserRole.CHILD.value
@@ -160,7 +184,11 @@ def login_for_access_token(
     return token_payload(user)
 
 
-@router.post("/demo", response_model=Token)
+@router.post(
+    "/demo",
+    response_model=Token,
+    dependencies=[Depends(limit_by_client("demo", attempts=10, per_seconds=600))],
+)
 def demo_access_token() -> Token:
     return demo_token()
 
@@ -173,62 +201,66 @@ def read_current_user(
     return _token_user_read(user, tenant_db)
 
 
-@router.post("/student-household", response_model=StudentHouseholdRead)
+@router.post(
+    "/student-household",
+    response_model=StudentHouseholdRead,
+    dependencies=[Depends(limit_by_client("student-household", attempts=20, per_seconds=60))],
+)
 def list_student_household(
     payload: StudentHouseholdRequest,
     admin_db: Session = Depends(get_admin_db),
 ) -> StudentHouseholdRead:
-    parent = (
-        admin_db.query(User)
-        .filter(
-            User.email == payload.email,
-            User.role == UserRole.PARENT.value,
-        )
-        .one_or_none()
-    )
-    if parent is None:
+    """First names of the children who can sign in, for a valid family code.
+
+    Unauthenticated, so it answers only to the household's family code (not
+    the parent's email) and shows first names only. Unknown codes get an
+    empty list, the same as a household with no kid logins.
+    """
+    tenant_uuid = tenant_for_code(admin_db, payload.family_code)
+    if tenant_uuid is None:
         return StudentHouseholdRead(students=[])
-    child_users = child_users_for_tenant(admin_db, parent.tenant_uuid)
-    login_ids = {row.student_id for row in child_users if row.student_id is not None}
+    login_ids = {
+        row.student_id
+        for row in child_users_for_tenant(admin_db, tenant_uuid)
+        if row.student_id is not None
+    }
     if not login_ids:
         return StudentHouseholdRead(students=[])
-    tenant_db = open_tenant_session(parent.tenant_uuid)
+    tenant_db = open_tenant_session(tenant_uuid)
     try:
-        students = (
-            tenant_db.query(Student)
+        names = {
+            student.id: student.name
+            for student in tenant_db.query(Student)
             .filter(Student.id.in_(login_ids))
             .order_by(Student.id)
             .all()
-        )
-        return StudentHouseholdRead(
-            students=[
-                StudentHouseholdChildRead(student_id=student.id, name=student.name)
-                for student in students
-            ]
-        )
+        }
     finally:
         tenant_db.close()
+    shown = sign_in_names(names)
+    return StudentHouseholdRead(
+        students=[
+            StudentHouseholdChildRead(student_id=student_id, name=shown[student_id])
+            for student_id in names
+        ]
+    )
 
 
-@router.post("/student-token", response_model=Token)
+@router.post(
+    "/student-token",
+    response_model=Token,
+    dependencies=[Depends(limit_by_client("student-token", attempts=20, per_seconds=60))],
+)
 def student_login(
     payload: StudentTokenRequest,
     admin_db: Session = Depends(get_admin_db),
 ) -> Token:
-    parent = (
-        admin_db.query(User)
-        .filter(
-            User.email == payload.email,
-            User.role == UserRole.PARENT.value,
-        )
-        .one_or_none()
+    tenant_uuid = tenant_for_code(admin_db, payload.family_code)
+    child = (
+        child_user_for_student(admin_db, tenant_uuid, payload.student_id)
+        if tenant_uuid is not None
+        else None
     )
-    if parent is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect name or PIN",
-        )
-    child = child_user_for_student(admin_db, parent.tenant_uuid, payload.student_id)
     if child is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -236,6 +268,34 @@ def student_login(
         )
     authenticate_child_pin(admin_db, child, payload.pin)
     return token_payload(child)
+
+
+def _require_real_household(user: CurrentUser) -> None:
+    if user.is_demo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Kid sign-in is not available in demo mode",
+        )
+
+
+@router.get("/family-code", response_model=FamilyCodeRead)
+def read_family_code(
+    user: CurrentUser = Depends(require_parent),
+    admin_db: Session = Depends(get_admin_db),
+) -> FamilyCodeRead:
+    """The code a child enters once per device to find their name at sign-in."""
+    _require_real_household(user)
+    return FamilyCodeRead(code=display_code(family_code_for(admin_db, user.tenant_uuid).code))
+
+
+@router.post("/family-code/rotate", response_model=FamilyCodeRead)
+def rotate_household_family_code(
+    user: CurrentUser = Depends(require_parent),
+    admin_db: Session = Depends(get_admin_db),
+) -> FamilyCodeRead:
+    """Issue a new code. Devices that remembered the old one must enter the new one."""
+    _require_real_household(user)
+    return FamilyCodeRead(code=display_code(rotate_family_code(admin_db, user.tenant_uuid).code))
 
 
 @router.get("/capture-token", response_model=CaptureTokenStatusRead)
@@ -334,7 +394,11 @@ def child_login_student_ids_safe(admin_db: Session, user: CurrentUser) -> set[in
     return {row.student_id for row in child_users_for_tenant(admin_db, user.tenant_uuid) if row.student_id}
 
 
-@router.post("/switch", response_model=Token)
+@router.post(
+    "/switch",
+    response_model=Token,
+    dependencies=[Depends(limit_by_client("switch", attempts=10, per_seconds=60))],
+)
 def switch_user(
     payload: SwitchUserRequest,
     user: CurrentUser = Depends(get_current_user),

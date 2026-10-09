@@ -21,12 +21,20 @@ def get_default_household(db: Session) -> Household:
     return household
 
 
-def update_household(db: Session, *, name: str | None = None, icon: str | None = None) -> Household:
+def update_household(
+    db: Session,
+    *,
+    name: str | None = None,
+    icon: str | None = None,
+    timezone: str | None = None,
+) -> Household:
     household = get_default_household(db)
     if name is not None:
         household.name = name
     if icon is not None:
         household.icon = None if icon == HOUSEHOLD_ICON_LETTER else icon
+    if timezone is not None:
+        household.timezone = timezone
     db.commit()
     db.refresh(household)
     return household

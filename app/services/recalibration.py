@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.enums import AssignmentStatus
 from app.models import Assignment, Student
+from app.services.clock import household_today
 from app.services.curriculum_plan_apply import exception_dates_for_student
 from app.services.pacing import PacingEngine, PacingError
 from app.services.school_year import load_school_year_settings
@@ -35,14 +36,14 @@ class RecalibrationError(ValueError):
     """The schedule could not be recalibrated; nothing was written."""
 
 
-def _today() -> date:
-    return date.today()
+def _today(db_session: Session) -> date:
+    return household_today(db_session)
 
 
 def calculate_recovery_options(student_id: int, db_session: Session) -> dict[str, Any]:
     """Count overdue open work and how many days each recovery strategy needs."""
     student = _require_student(db_session, student_id)
-    today = _today()
+    today = _today(db_session)
     context = _schedule_context(db_session, student, today)
     overdue = [item for item in context.assignments if item.scheduled_date < today]
     overdue_days = _unique_dates(overdue)
@@ -91,7 +92,7 @@ def execute_recalibration(
         )
 
     student = _require_student(db_session, student_id)
-    today = _today()
+    today = _today(db_session)
     target_days = _target_days_from_options(options)
     context = _schedule_context(db_session, student, today, target_days=target_days)
     original_end = context.assignments[-1].scheduled_date if context.assignments else None

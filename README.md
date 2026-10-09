@@ -42,7 +42,39 @@ Lint (syntax errors and pyflakes; the same check CI runs):
 * `e2e/a11y-baseline.json` caps serious and critical axe violations per screen. Lower the numbers as screens improve; `UPDATE_A11Y_BASELINE=1 e2e/run.sh --project=functional` rewrites it.
 * `e2e/reports/metrics.json` records requests, bytes, and LCP when a parent opens Home.
 
-## 5. Optional operator scripts
+## 5. Backups and restore
+Turn on nightly backups (a separate container; off until you run this once):
+
+```
+docker compose --profile backup up -d backup
+```
+
+Every 24 hours it snapshots each database into `BACKUP_HOST_DIR` (default `./backups`; set it in `.env` to use another disk), checks every copy with `PRAGMA integrity_check`, mirrors new evidence files into `backups/evidence/`, and keeps the newest 14 snapshots. `docker compose logs backup` shows each run. Copy `BACKUP_HOST_DIR` off this machine as well (restic, rclone, or an external drive); a backup on the same disk does not survive that disk.
+
+Back up right now:
+
+```
+docker compose --profile backup run --rm --entrypoint python backup scripts/backup.py --data-dir /data --evidence-dir /data/evidence --dest /backups
+```
+
+Restore a snapshot:
+
+1. `docker compose stop api`
+2. Copy the snapshot's databases over the live ones and delete leftover write-ahead files (otherwise SQLite may replay an old log onto the restored file): `sudo cp backups/<snapshot>/*.db data/ && sudo rm -f data/*.db-wal data/*.db-shm`
+3. Copy any missing evidence files from `backups/evidence/` back into the evidence directory.
+4. `docker compose start api`
+
+Practice it occasionally on a scratch copy: copy a snapshot into an empty directory and run `python3 scripts/check_foreign_keys.py --data-dir <that directory>`; every file should report OK.
+
+## 6. Optional operator scripts
+A parent who forgot their password (self-serve reset comes later):
+
+```
+docker compose exec api python scripts/reset_password.py parent@example.com
+```
+
+It prints a temporary password to give them. Kids sign in with PINs, which a parent changes in Settings → Students.
+
 Historical enrollments can be reconstructed when an assignment already proves student + curriculum + school year (stored `curriculum_id`, or a live curriculum resource/unit). Title-only week/day plan lessons are not guessed:
 
 ```

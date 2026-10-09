@@ -1,3 +1,4 @@
+import sqlite3
 import tempfile
 import time
 from collections import OrderedDict
@@ -7,8 +8,8 @@ from pathlib import Path
 from re import compile as regexp
 from threading import Lock
 
-from fastapi import Depends, HTTPException, status
-from sqlalchemy import create_engine
+from fastapi import HTTPException, status
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -19,12 +20,38 @@ _SAFE_TENANT = regexp(r"^[A-Za-z0-9_-]{1,64}$")
 _lock = Lock()
 _file_makers: dict[str, sessionmaker] = {}
 
+# One engine per household file, least recently used closed first, so open
+# file handles stay bounded however many households there are.
+TENANT_ENGINE_LIMIT = 256
+_tenant_engines: OrderedDict[str, tuple[sessionmaker, Engine]] = OrderedDict()
+
 # Demo households are throwaway SQLite files, not one shared in-memory
 # connection: the SPA sends requests in parallel, and a single connection used
 # from several threads corrupts reads. Only the most recently used demos are
 # kept; older files are deleted.
 DEMO_HOUSEHOLD_LIMIT = 64
 _demo_households: OrderedDict[str, tuple[sessionmaker, Engine, Path]] = OrderedDict()
+
+
+@event.listens_for(Engine, "connect")
+def _sqlite_connection_settings(dbapi_connection: object, _record: object) -> None:
+    """Every SQLite connection enforces foreign keys and uses WAL.
+
+    SQLite ignores foreign keys (and their ON DELETE rules) unless each
+    connection turns them on. WAL lets reads continue while a background
+    import writes; busy_timeout waits on a lock instead of failing at once.
+    scripts/check_foreign_keys.py reports files that would violate them.
+    """
+    if not isinstance(dbapi_connection, sqlite3.Connection):
+        return
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+    finally:
+        cursor.close()
 
 
 def _connect_args(url: str) -> dict[str, bool]:
@@ -131,13 +158,19 @@ def _file_tenant_maker(url: str) -> sessionmaker:
     import app.models  # noqa: F401
 
     with _lock:
-        maker = _file_makers.get(url)
-        if maker is None:
-            _ensure_sqlite_path(url)
-            engine = _engine(url)
-            _ensure_tenant_schema(engine)
-            maker = _sessionmaker(engine)
-            _file_makers[url] = maker
+        entry = _tenant_engines.get(url)
+        if entry is not None:
+            _tenant_engines.move_to_end(url)
+            return entry[0]
+        _ensure_sqlite_path(url)
+        engine = _engine(url)
+        _ensure_tenant_schema(engine)
+        maker = _sessionmaker(engine)
+        _tenant_engines[url] = (maker, engine)
+        while len(_tenant_engines) > TENANT_ENGINE_LIMIT:
+            # Sessions still open on it keep their connection until they close.
+            _, (_, old_engine) = _tenant_engines.popitem(last=False)
+            old_engine.dispose()
         return maker
 
 
@@ -214,65 +247,25 @@ def init_databases() -> None:
 
     Uses ``create_all`` plus ``app.schema_patches``. Does not replay Alembic.
     Existing planner rows are not deleted. The settings date-mirror columns
-    are retired after a SchoolYear backfill (see schema_patches).
+    are retired after a SchoolYear backfill (see schema_patches). Plans an
+    earlier process left "processing" are marked failed (plan_recovery).
     """
     import app.models  # noqa: F401  (registers every mapper before create_all)
     import app.models.admin  # noqa: F401
+    from app.services.plan_recovery import fail_interrupted_plans
 
     _ensure_sqlite_path(settings.catalog_database_url)
     _ensure_sqlite_path(settings.tenant_database_url)
     _ensure_sqlite_path(settings.admin_database_url)
     _ensure_catalog_schema(catalog_engine)
     _ensure_tenant_schema(tenant_engine)
+    fail_interrupted_plans(tenant_engine)
     for url in _existing_tenant_file_urls():
         engine = _engine(url)
         try:
             _ensure_tenant_schema(engine)
+            fail_interrupted_plans(engine)
         finally:
             engine.dispose()
     _admin_maker()
     purge_stale_demo_households()
-
-
-# JWT helpers live in ``app.core.security``; imported here after ``get_admin_db``
-# exists so that module can depend on this one without a circular import.
-from app.core.security import oauth2_scheme  # noqa: E402
-
-
-def get_tenant_db(
-    token: str | None = Depends(oauth2_scheme),
-    admin_db: Session = Depends(get_admin_db),
-) -> Generator[Session, None, None]:
-    """Session for an application user (parent, child, or demo).
-
-    Identity comes from ``get_current_user``, which rejects capture credentials
-    and uses the admin ``users`` row for tenant_uuid. Opening a tenant file is
-    not capture authorization. Staging must use ``get_staging_tenant_db``.
-    """
-    from app.core.security import get_current_user
-
-    user = get_current_user(token, admin_db)
-    db = open_tenant_session(user.tenant_uuid, user.jti)
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def get_staging_tenant_db(
-    token: str | None = Depends(oauth2_scheme),
-    admin_db: Session = Depends(get_admin_db),
-) -> Generator[Session, None, None]:
-    """Session for a parent JWT or a live capture credential.
-
-    Only evidence staging should depend on this. Capture tokens cannot open a
-    tenant file through ``get_tenant_db``.
-    """
-    from app.core.security import require_staging_upload
-
-    user = require_staging_upload(token, admin_db)
-    db = open_tenant_session(user.tenant_uuid, user.jti)
-    try:
-        yield db
-    finally:
-        db.close()

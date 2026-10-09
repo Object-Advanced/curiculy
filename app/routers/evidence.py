@@ -19,9 +19,10 @@ from app.core.security import (
     require_parent,
     require_staging_upload,
 )
-from app.db import get_staging_tenant_db, get_tenant_db
+from app.core.deps import get_staging_tenant_db, get_tenant_db
 from app.enums import UserRole
 from app.evidence import (
+    INLINE_MEDIA_TYPES,
     evidence_media_type,
     resolve_evidence_file,
     store_capture,
@@ -53,12 +54,7 @@ def stage_evidence(
     tenant_db: Session = Depends(get_staging_tenant_db),
 ) -> EvidenceStaging:
     """Store a screenshot and hold it until a parent links it to an assignment."""
-    file_path = store_capture(
-        file.file,
-        file.filename,
-        tenant_uuid=user.tenant_uuid,
-        content_type=file.content_type,
-    )
+    file_path = store_capture(file.file, tenant_uuid=user.tenant_uuid)
     row = EvidenceStaging(
         tenant_id=user.tenant_uuid,
         file_path=file_path,
@@ -154,10 +150,26 @@ def get_evidence_file(
         tenant_db, user, relative
     ):
         raise HTTPException(status_code=403, detail="Parent access required")
+    media_type = evidence_media_type(stored)
+    headers = {"Cache-Control": "private, no-store"}
+    if media_type.startswith("image/"):
+        # Opened directly in a tab, a photo still cannot run script.
+        headers["Content-Security-Policy"] = (
+            "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+        )
+    if media_type not in INLINE_MEDIA_TYPES:
+        # Files stored before uploads were checked: download, never render.
+        return FileResponse(
+            stored,
+            media_type="application/octet-stream",
+            filename=stored.name,
+            content_disposition_type="attachment",
+            headers=headers,
+        )
     return FileResponse(
         stored,
-        media_type=evidence_media_type(stored),
+        media_type=media_type,
         filename=stored.name,
         content_disposition_type="inline",
-        headers={"Cache-Control": "private, no-store"},
+        headers=headers,
     )

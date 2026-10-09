@@ -163,7 +163,8 @@ const state = {
   kidWork: [],
   homework: { session: null, assignmentId: null, busy: false },
   switchUsers: [],
-  studentLoginEmail: "",
+  studentLoginCode: "",
+  familyCode: "",
   portfolio: {
     studentId: null,
     schoolYearId: null,
@@ -345,10 +346,19 @@ function humanize(value) {
 }
 
 const SYNC_DB_NAME = "curiculy-sync";
-const SYNC_DB_VERSION = 1;
+const SYNC_DB_VERSION = 2;
 const OUTBOX_STORE = "outbox";
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const OFFLINE_QUEUED = Object.freeze({ __offlineQueued: true });
+
+// Offline queue. Writes made while offline are kept in IndexedDB and replayed
+// from this page (never the service worker) once the network is back:
+// - no sign-in token is stored; replay attaches the current one;
+// - each change belongs to the account that made it and replays only for it;
+// - every write carries an Idempotency-Key, reused on replay, so a change the
+//   server already applied (the reply was lost) is not applied twice;
+// - a change the server refuses (4xx) moves to a "couldn't save" list instead
+//   of retrying forever; logging out clears the queue.
 
 function isOfflineQueued(result) {
   return result === OFFLINE_QUEUED || Boolean(result && result.__offlineQueued);
@@ -363,13 +373,54 @@ function shouldQueueRequest(options) {
   return MUTATING_METHODS.has(method) && !options.skipAuth && !options.skipOutbox;
 }
 
+function newIdempotencyKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+// Matches the server's idempotency scope: household, user, and kid; each demo
+// household separately.
+function tokenOwner(token) {
+  const payload = token ? decodeJwtPayload(token) : null;
+  if (!payload || !payload.tenant_uuid || !payload.sub) return "";
+  const household =
+    payload.tenant_uuid === "DEMO" ? `DEMO/${payload.jti || ""}` : payload.tenant_uuid;
+  return `${household}:${payload.sub}:${payload.student_id ?? ""}`;
+}
+
 function openSyncDb() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(SYNC_DB_NAME, SYNC_DB_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
-      if (!db.objectStoreNames.contains(OUTBOX_STORE)) {
-        db.createObjectStore(OUTBOX_STORE, { keyPath: "id", autoIncrement: true });
+      const store = db.objectStoreNames.contains(OUTBOX_STORE)
+        ? request.transaction.objectStore(OUTBOX_STORE)
+        : db.createObjectStore(OUTBOX_STORE, { keyPath: "id", autoIncrement: true });
+      if (event.oldVersion >= 1 && event.oldVersion < 2) {
+        // Version 1 stored each request's Authorization header. Keep the
+        // change, tie it to the account that made it, and drop the token.
+        store.openCursor().onsuccess = (cursorEvent) => {
+          const cursor = cursorEvent.target.result;
+          if (!cursor) return;
+          const item = cursor.value;
+          const headers = { ...(item.headers || {}) };
+          const auth = String(headers.Authorization || headers.authorization || "");
+          delete headers.Authorization;
+          delete headers.authorization;
+          headers["Idempotency-Key"] = headers["Idempotency-Key"] || newIdempotencyKey();
+          cursor.update({
+            ...item,
+            headers,
+            owner: tokenOwner(auth.replace(/^Bearer\s+/i, "")),
+            status: "pending",
+            attempts: 0,
+          });
+          cursor.continue();
+        };
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -392,11 +443,11 @@ function idbTxDone(tx) {
   });
 }
 
-async function outboxAdd(record) {
+async function outboxWrite(change) {
   const db = await openSyncDb();
   try {
     const tx = db.transaction(OUTBOX_STORE, "readwrite");
-    tx.objectStore(OUTBOX_STORE).add(record);
+    change(tx.objectStore(OUTBOX_STORE));
     await idbTxDone(tx);
   } finally {
     db.close();
@@ -412,16 +463,10 @@ async function outboxAll() {
   }
 }
 
-async function outboxDelete(id) {
-  const db = await openSyncDb();
-  try {
-    const tx = db.transaction(OUTBOX_STORE, "readwrite");
-    tx.objectStore(OUTBOX_STORE).delete(id);
-    await idbTxDone(tx);
-  } finally {
-    db.close();
-  }
-}
+const outboxAdd = (record) => outboxWrite((store) => store.add(record));
+const outboxPut = (record) => outboxWrite((store) => store.put(record));
+const outboxDelete = (id) => outboxWrite((store) => store.delete(id));
+const outboxClear = () => outboxWrite((store) => store.clear());
 
 function serializeRequestBody(body) {
   if (body == null || body === "") {
@@ -475,8 +520,8 @@ function restoreRequestBody(record) {
   return undefined;
 }
 
-function replayHeaders(record) {
-  const headers = { ...(record.headers || {}) };
+function replayHeaders(record, token) {
+  const headers = { ...(record.headers || {}), Authorization: `Bearer ${token}` };
   if (record.bodyKind === "formdata") {
     delete headers["Content-Type"];
     delete headers["content-type"];
@@ -484,48 +529,132 @@ function replayHeaders(record) {
   return headers;
 }
 
+async function failureDetail(response) {
+  try {
+    const body = await response.json();
+    if (typeof body?.detail === "string") return body.detail;
+  } catch {
+    /* not JSON */
+  }
+  return `Request failed (${response.status})`;
+}
+
+let outboxFlushing = null;
+
+// Replays this account's queued changes in order. Stops at the first network
+// error (offline again) or 401 (signed out), and keeps those for later.
 async function flushOutbox() {
-  const items = await outboxAll();
-  let incomplete = false;
-  for (const item of items) {
-    try {
-      const response = await fetch(item.url, {
-        method: item.method,
-        headers: replayHeaders(item),
-        body: restoreRequestBody(item),
-      });
+  if (outboxFlushing) return outboxFlushing;
+  outboxFlushing = (async () => {
+    const token = getAuthToken();
+    const owner = tokenOwner(token);
+    if (!owner || (typeof navigator !== "undefined" && navigator.onLine === false)) return 0;
+    const items = (await outboxAll()).filter(
+      (item) => item.status !== "failed" && item.owner === owner
+    );
+    let saved = 0;
+    for (const item of items) {
+      let response;
+      try {
+        response = await fetch(item.url, {
+          method: item.method,
+          headers: replayHeaders(item, token),
+          body: restoreRequestBody(item),
+        });
+      } catch {
+        break;
+      }
       if (response.ok) {
         await outboxDelete(item.id);
+        saved += 1;
         continue;
       }
-      incomplete = true;
-    } catch {
-      incomplete = true;
+      if (response.status === 401) break;
+      if (response.status === 408 || response.status === 429 || response.status >= 500) {
+        await outboxPut({ ...item, attempts: (item.attempts || 0) + 1 });
+        break;
+      }
+      await outboxPut({
+        ...item,
+        status: "failed",
+        failedStatus: response.status,
+        failedDetail: await failureDetail(response),
+      });
     }
-  }
-  if (incomplete) {
-    throw new Error("Outbox sync incomplete");
+    return saved;
+  })();
+  try {
+    const saved = await outboxFlushing;
+    if (saved) {
+      showToast("success", saved === 1 ? "Saved 1 offline change." : `Saved ${saved} offline changes.`);
+      if (!document.activeElement?.closest?.("#view form")) showRoute();
+    }
+    return saved;
+  } catch {
+    return 0;
+  } finally {
+    outboxFlushing = null;
+    paintSyncStatus();
   }
 }
 
-function registerOutboxSync() {
-  if ("serviceWorker" in navigator) {
-    return navigator.serviceWorker.ready
-      .then((sw) => sw.sync.register("sync-outbox"))
-      .catch(() => {
-        if (navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({ type: "sync-outbox" });
-          return;
-        }
-        return flushOutbox().catch(() => {});
-      });
+async function outboxForCurrentUser() {
+  const owner = tokenOwner(getAuthToken());
+  if (!owner) return { pending: [], failed: [] };
+  try {
+    const mine = (await outboxAll()).filter((item) => item.owner === owner);
+    return {
+      pending: mine.filter((item) => item.status !== "failed"),
+      failed: mine.filter((item) => item.status === "failed"),
+    };
+  } catch {
+    return { pending: [], failed: [] };
   }
-  return flushOutbox().catch(() => {});
+}
+
+function describeQueuedChange(item) {
+  const path = String(item.url || "").replace(/^\/api/, "");
+  return `${item.method} ${path} — ${item.failedDetail || "refused"}`;
+}
+
+async function paintSyncStatus() {
+  const pill = $("sync-pill");
+  if (!pill) return;
+  const { pending, failed } = await outboxForCurrentUser();
+  if (failed.length) {
+    pill.textContent =
+      failed.length === 1 ? "1 change couldn't be saved" : `${failed.length} changes couldn't be saved`;
+    pill.className = "pill warn is-actionable";
+    pill.hidden = false;
+  } else if (pending.length) {
+    pill.textContent =
+      pending.length === 1 ? "1 change waiting to sync" : `${pending.length} changes waiting to sync`;
+    pill.className = "pill";
+    pill.hidden = false;
+  } else {
+    pill.hidden = true;
+  }
+}
+
+async function reviewFailedChanges() {
+  const { failed } = await outboxForCurrentUser();
+  if (!failed.length) return;
+  const list = failed.map((item) => `• ${describeQueuedChange(item)}`).join("\n");
+  const message =
+    `${failed.length === 1 ? "This change" : "These changes"} made offline couldn't be saved, ` +
+    `usually because the item changed or was deleted meanwhile:\n\n${list}\n\nDiscard ${
+      failed.length === 1 ? "it" : "them"
+    }?`;
+  if (!window.confirm(message)) return;
+  await Promise.all(failed.map((item) => outboxDelete(item.id)));
+  paintSyncStatus();
 }
 
 async function enqueueOutboxRequest(path, fetchOptions) {
   const serialized = serializeRequestBody(fetchOptions.body);
   const headers = { ...(fetchOptions.headers || {}) };
+  delete headers.Authorization;
+  delete headers.authorization;
   if (serialized.bodyKind === "formdata") {
     delete headers["Content-Type"];
     delete headers["content-type"];
@@ -536,10 +665,14 @@ async function enqueueOutboxRequest(path, fetchOptions) {
     headers,
     bodyKind: serialized.bodyKind,
     body: serialized.body,
+    owner: tokenOwner(getAuthToken()),
+    status: "pending",
+    attempts: 0,
     createdAt: Date.now(),
   });
   showOfflineSavedToast();
-  await registerOutboxSync();
+  paintSyncStatus();
+  if (typeof navigator === "undefined" || navigator.onLine !== false) flushOutbox();
   return OFFLINE_QUEUED;
 }
 
@@ -557,6 +690,9 @@ async function api(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
   const queueable = shouldQueueRequest(options);
+  if (queueable && !headers["Idempotency-Key"]) {
+    headers["Idempotency-Key"] = newIdempotencyKey();
+  }
   const fetchOptions = { ...options, headers };
   delete fetchOptions.skipAuth;
   delete fetchOptions.skipOutbox;
@@ -916,8 +1052,53 @@ function paintHouseholdChrome(household) {
   }
 }
 
+function deviceTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
+}
+
+// "Today" on the server follows the household's time zone. Households made
+// before that existed have none, so the first parent visit fills it in.
+async function rememberDeviceTimeZone(household) {
+  const zone = deviceTimeZone();
+  if (!zone || household?.timezone || currentUserIsChild()) return household;
+  try {
+    const updated = await api("/household", {
+      method: "PATCH",
+      body: JSON.stringify({ timezone: zone }),
+      skipOutbox: true,
+    });
+    return updated || household;
+  } catch {
+    return household;
+  }
+}
+
 async function loadHousehold() {
-  paintHouseholdChrome(await api("/household"));
+  const household = await api("/household");
+  paintHouseholdChrome(household);
+  if (!household?.timezone) {
+    paintHouseholdChrome(await rememberDeviceTimeZone(household));
+  }
+}
+
+async function useDeviceTimeZone() {
+  const zone = deviceTimeZone();
+  if (!zone) return;
+  try {
+    const updated = await api("/household", {
+      method: "PATCH",
+      body: JSON.stringify({ timezone: zone }),
+    });
+    if (!isOfflineQueued(updated)) paintHouseholdChrome(updated);
+    render();
+    flash(`Time zone set to ${zone}.`);
+  } catch (error) {
+    flash(error.message, true);
+  }
 }
 
 async function setHouseholdIcon(icon) {
@@ -1079,6 +1260,44 @@ async function loadInviteKeys() {
   state.inviteKeys = await api("/admin/invites");
 }
 
+async function loadFamilyCode() {
+  state.familyCode = "";
+  if (currentUserIsChild() || tokenIsDemo()) return;
+  try {
+    state.familyCode = (await api("/auth/family-code")).code || "";
+  } catch {
+    state.familyCode = "";
+  }
+}
+
+async function rotateFamilyCode() {
+  if (
+    !window.confirm(
+      "Make a new family code? Devices that remembered the old one will ask kids for the new code."
+    )
+  ) {
+    return;
+  }
+  try {
+    state.familyCode = (await api("/auth/family-code/rotate", { method: "POST" })).code || "";
+    render();
+    flash("New family code ready.");
+  } catch (error) {
+    flash(error.message, true);
+  }
+}
+
+function renderFamilyCodeSettings() {
+  if (tokenIsDemo()) return "";
+  return `
+    <section class="card family-code-settings">
+      <h2>Kid sign-in</h2>
+      <p class="muted">On a kid’s device, tap “I’m a student”, enter this family code once, then the kid picks their name and enters their PIN.</p>
+      <p class="family-code">${state.familyCode ? escapeHtml(state.familyCode) : "…"}</p>
+      <button type="button" class="ghost small" data-action="rotate-family-code">Make a new code</button>
+    </section>`;
+}
+
 async function loadCaptureTokenStatus() {
   state.captureTokenStatus = { active: false, created_at: null, expires_at: null };
   if (currentUserIsChild() || tokenIsDemo()) {
@@ -1119,7 +1338,7 @@ async function loadSettings() {
     await Promise.all(extras);
     return;
   }
-  extras.push(loadStudents(), loadCaptureTokenStatus());
+  extras.push(loadStudents(), loadCaptureTokenStatus(), loadFamilyCode());
   await Promise.all(extras);
 }
 
@@ -2534,6 +2753,7 @@ function renderStudentSettings() {
         }
       </section>
     </div>
+    ${renderFamilyCodeSettings()}
     ${renderCaptureTokenSettings()}
   `;
 }
@@ -3994,6 +4214,15 @@ function renderSettings() {
     householdName && householdName !== DEFAULT_HOUSEHOLD_NAME ? householdName : "";
   const selectedIcon = householdIconId(state.household);
   const letter = state.household?.letter || householdInitial(householdName);
+  const zone = state.household?.timezone || "";
+  const deviceZone = deviceTimeZone();
+  const zoneCopy = zone
+    ? `School days follow ${escapeHtml(zone)}.`
+    : "No time zone yet; “today” follows the server clock.";
+  const zoneAction =
+    deviceZone && deviceZone !== zone
+      ? `<button type="button" class="ghost small" data-action="use-device-timezone">Use this device’s time zone (${escapeHtml(deviceZone)})</button>`
+      : "";
   return `
     <section class="settings-hub">
       <section class="card household-pref">
@@ -4009,6 +4238,10 @@ function renderSettings() {
             </label>
             <button type="submit">Save name</button>
           </form>
+        </div>
+        <div class="household-timezone">
+          <p class="muted">${zoneCopy}</p>
+          ${zoneAction}
         </div>
         <fieldset class="household-icon-picker">
           <legend>Sidebar icon</legend>
@@ -7470,6 +7703,12 @@ async function handleClick(event) {
     case "set-household-icon":
       await setHouseholdIcon(control.dataset.icon);
       break;
+    case "use-device-timezone":
+      await useDeviceTimeZone();
+      break;
+    case "rotate-family-code":
+      await rotateFamilyCode();
+      break;
     case "edit-student":
       studentEditor.id = Number(control.dataset.studentId);
       render();
@@ -7805,7 +8044,7 @@ function syncOfflineIndicator() {
 function initOfflineIndicator() {
   window.addEventListener("online", () => {
     syncOfflineIndicator();
-    registerOutboxSync();
+    flushOutbox();
     loadHealth();
   });
   window.addEventListener("offline", () => {
@@ -8089,9 +8328,10 @@ async function submitWizardHousehold(form) {
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
   try {
+    const zone = deviceTimeZone();
     const result = await api("/household", {
       method: "PATCH",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(zone ? { name, timezone: zone } : { name }),
     });
     if (!isOfflineQueued(result) && result?.name) {
       paintHouseholdChrome(result);
@@ -8316,7 +8556,11 @@ function setAuthLayout(required) {
   }
 }
 
-function setLoginMode(mode) {
+let currentLoginMode = "signin";
+
+function setLoginMode(mode, { focus = true } = {}) {
+  const changed = mode !== currentLoginMode;
+  currentLoginMode = mode;
   const register = mode === "register";
   const student = mode === "student";
   const loginView = $("login-view");
@@ -8332,8 +8576,12 @@ function setLoginMode(mode) {
       ? "auth-title-student"
       : "auth-title-signin";
   card?.setAttribute("aria-labelledby", labelled);
-  loginError("");
-  if (mode !== "student") resetStudentLoginForms();
+  if (changed) {
+    loginError("");
+    if (!student) resetStudentLoginForms();
+  }
+  if (student) resumeRememberedFamilyCode();
+  if (!focus) return;
   const form = register
     ? $("register-form")
     : student
@@ -8352,7 +8600,7 @@ function resetStudentLoginForms() {
   }
   const chips = $("student-name-chips");
   if (chips) chips.innerHTML = "";
-  state.studentLoginEmail = "";
+  state.studentLoginCode = "";
 }
 
 function openLoginModal() {
@@ -8369,7 +8617,10 @@ function openLoginModal() {
     setOnboardingLock(false);
   }
   setAuthLayout(true);
-  setLoginMode("signin");
+  // Boot finishes after /api/health answers. By then someone may have picked
+  // a view or started typing, so keep their view and don't move focus.
+  const card = document.querySelector("#auth-page .auth-card");
+  setLoginMode(currentLoginMode, { focus: !card?.contains(document.activeElement) });
 }
 
 function closeLoginModal() {
@@ -8466,6 +8717,7 @@ async function enterApp() {
     return;
   }
   render();
+  flushOutbox();
   if (!currentUserIsChild() && !window.__notifyTimer) {
     window.__notifyTimer = window.setInterval(() => {
       if (!isLoginOpen() && !currentUserIsChild()) loadNotifications();
@@ -8616,6 +8868,7 @@ function handleLoginClick(event) {
   if (pick) {
     pickStudentLogin(Number(pick.dataset.studentId), pick.textContent);
   }
+  if (event.target.closest("[data-action='forget-family-code']")) forgetFamilyCode();
 }
 
 function handleLoginSubmit(event) {
@@ -8636,40 +8889,85 @@ function handleLoginSubmit(event) {
   }
 }
 
+const KID_FAMILY_CODE_KEY = "kid_family_code";
+
+function rememberedFamilyCode() {
+  try {
+    return localStorage.getItem(KID_FAMILY_CODE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberFamilyCode(code) {
+  try {
+    if (code) localStorage.setItem(KID_FAMILY_CODE_KEY, code);
+    else localStorage.removeItem(KID_FAMILY_CODE_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
+async function lookupStudentNames(code, { remember = false } = {}) {
+  const result = await api("/auth/student-household", {
+    method: "POST",
+    skipAuth: true,
+    body: JSON.stringify({ family_code: code }),
+  });
+  const students = result.students || [];
+  if (!students.length) return false;
+  state.studentLoginCode = code;
+  if (remember) rememberFamilyCode(code);
+  $("student-household-form").hidden = true;
+  $("student-pin-form").hidden = false;
+  $("student-name-chips").innerHTML = students
+    .map(
+      (student) =>
+        `<button type="button" class="student-name-chip" data-action="pick-student-login"
+                 data-student-id="${student.student_id}">${escapeHtml(student.name)}</button>`
+    )
+    .join("");
+  return true;
+}
+
+// A device that remembered the family code skips straight to the names.
+function resumeRememberedFamilyCode() {
+  const code = rememberedFamilyCode();
+  if (!code || !$("student-pin-form")?.hidden) return;
+  lookupStudentNames(code)
+    .then((found) => {
+      if (found) return;
+      rememberFamilyCode("");
+      loginError("This device's family code has changed. Ask a grown-up for the new one.");
+    })
+    .catch(() => {});
+}
+
+function forgetFamilyCode() {
+  rememberFamilyCode("");
+  resetStudentLoginForms();
+  loginError("");
+  $("student-household-form")?.querySelector("input")?.focus();
+}
+
 async function submitStudentHousehold(form) {
   loginError("");
   const data = formValues(form);
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
   try {
-    const result = await api("/auth/student-household", {
-      method: "POST",
-      skipAuth: true,
-      body: JSON.stringify({ email: data.email }),
+    const found = await lookupStudentNames(String(data.family_code || "").trim(), {
+      remember: Boolean(form.elements.remember?.checked),
     });
-    const students = result.students || [];
-    if (!students.length) {
-      loginError("No student logins for that household yet.");
-      return;
+    if (!found) {
+      loginError("No kid sign-ins for that family code. A grown-up can check it in Settings → Students.");
     }
-    state.studentLoginEmail = data.email;
-    form.hidden = true;
-    const pinForm = $("student-pin-form");
-    pinForm.hidden = false;
-    $("student-name-chips").innerHTML = students
-      .map(
-        (student) =>
-          `<button type="button" class="student-name-chip" data-action="pick-student-login"
-                   data-student-id="${student.student_id}">${escapeHtml(student.name)}</button>`
-      )
-      .join("");
   } catch (error) {
     loginError(error.message);
   } finally {
     button.disabled = false;
   }
 }
-
 function pickStudentLogin(studentId, name) {
   $("student-pick-id").value = String(studentId);
   document.querySelectorAll(".student-name-chip").forEach((chip) => {
@@ -8694,7 +8992,7 @@ async function submitStudentPin(form) {
       method: "POST",
       skipAuth: true,
       body: JSON.stringify({
-        email: state.studentLoginEmail,
+        family_code: state.studentLoginCode,
         student_id: Number(data.student_id),
         pin: data.pin,
       }),
@@ -8933,7 +9231,23 @@ async function unlockHomeworkHelp(assignmentId) {
   }
 }
 
-function logout() {
+async function logout() {
+  const { pending } = await outboxForCurrentUser();
+  if (
+    pending.length &&
+    !window.confirm(
+      `${pending.length === 1 ? "1 change" : `${pending.length} changes`} made offline ` +
+        "haven't been saved yet. Log out anyway and discard them?"
+    )
+  ) {
+    return;
+  }
+  try {
+    await outboxClear();
+  } catch {
+    /* IndexedDB unavailable */
+  }
+  paintSyncStatus();
   clearEvidenceBlobs();
   clearAuthToken();
   syncSessionChrome();
@@ -8953,6 +9267,9 @@ function logout() {
     return;
   }
   $("view").innerHTML = "";
+  currentLoginMode = "signin";
+  resetStudentLoginForms();
+  loginError("");
   $("household-label").textContent = "Household";
   const avatar = $("user-avatar");
   if (avatar) {
@@ -9020,6 +9337,7 @@ async function boot() {
     event.preventDefault();
     submitSwitchUser(event.currentTarget);
   });
+  $("sync-pill")?.addEventListener("click", reviewFailedChanges);
   $("notify-bell")?.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleNotifications();
@@ -9084,6 +9402,7 @@ async function boot() {
   closeLoginModal();
   await loadWorkspace();
   render();
+  flushOutbox();
   if (!currentUserIsChild()) {
     loadNotifications();
     window.setInterval(() => {

@@ -164,6 +164,11 @@ TENANT_COLUMN_PATCHES: tuple[ColumnPatch, ...] = (
         column="icon",
         ddl="ALTER TABLE households ADD COLUMN icon VARCHAR(32)",
     ),
+    ColumnPatch(
+        table="households",
+        column="timezone",
+        ddl="ALTER TABLE households ADD COLUMN timezone VARCHAR(64)",
+    ),
 )
 
 # admin.db: columns that create_all will not add to an older users table.

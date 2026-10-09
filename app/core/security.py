@@ -1,10 +1,8 @@
-"""Password hashing and JWT helpers.
+"""Password hashing, JWT helpers, and the current-user dependencies.
 
-``get_current_user`` is imported by routers. It depends on ``get_admin_db``, so
-the SQLAlchemy utilities in this module are defined first and the admin session
-is imported only after those names exist. ``app.db`` then imports
-``user_from_token`` once ``get_admin_db`` is already defined, which breaks the
-circular import.
+Imports run one way: this module uses ``app.db``; ``app.db`` never imports
+it at module level. Dependencies that also open a household database live
+in ``app.core.deps``.
 """
 
 from __future__ import annotations
@@ -22,6 +20,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.config import reveal_secret, settings
+from app.db import get_admin_db
 from app.enums import UserRole
 
 DEMO_TENANT_UUID = "DEMO"
@@ -169,8 +168,6 @@ def is_capture_credential(user: CurrentUser) -> bool:
     return user.role == UserRole.EVIDENCE.value or user.scope == CAPTURE_TOKEN_SCOPE
 
 
-# Imported after the JWT helpers exist so ``app.db`` can finish loading.
-from app.db import get_admin_db  # noqa: E402
 
 
 def get_current_user(

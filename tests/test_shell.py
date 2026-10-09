@@ -45,10 +45,11 @@ def test_service_worker_script(client: TestClient) -> None:
     response = client.get("/sw.js")
     assert response.status_code == 200
     body = response.text
-    assert "curiculy-sync" in body
-    assert "outbox" in body
-    assert "sync-outbox" in body
     assert "SHELL_VERSION" in body
+    # Offline writes replay from the page, which holds the current sign-in;
+    # the worker never stores or replays requests (or tokens).
+    assert "indexedDB" not in body
+    assert "Authorization" not in body
     assert response.headers.get("service-worker-allowed") == "/"
     assert "javascript" in response.headers.get("content-type", "")
 
