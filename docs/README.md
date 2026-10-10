@@ -64,10 +64,8 @@ Everything about Curiculy for people to read: what it is, how each part works, h
   - About 1,000 backend tests and 36 browser tests pass in CI.
 - **Do first:**
   1. an off-site backup copy
-  2. fix the kid page's refused student-record call
-  3. record lesson completion dates
-  4. an uptime monitor
-  5. turn off the public `/docs`
+  2. an uptime monitor
+  3. turn off the public `/docs`
 
   See [Open issues](6-planning/open-issues.md).
 

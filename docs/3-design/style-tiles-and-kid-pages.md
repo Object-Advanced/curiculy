@@ -27,7 +27,7 @@ A playful page a child opens to see their day as a path. **It will be built as t
 ## How stickers will work (proposed)
 - **Stickers are worked out from completed lessons**, so there's no separate sticker table, and the journal fills in automatically from work done since the beta started.
 - **Unchecking a lesson removes its sticker.**
-- **Needs first:** checking a lesson off must record its `completion_date` (today it only changes the status). See [Calendar](../2-features/04-calendar-and-lessons.md).
+- **Each sticker's day is the lesson's `completion_date`,** which check-off records (since October 2026; older lessons have none). See [Calendar](../2-features/04-calendar-and-lessons.md).
 - **Cheers need one small new table** (`assignment_reactions`) and a "Cheer" button on the parent's feed.
 
 ## Principles for every kid screen

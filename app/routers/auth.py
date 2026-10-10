@@ -92,10 +92,12 @@ def _unused_invite(admin_db: Session, key: str) -> InviteKey:
 def _token_user_read(user: CurrentUser, tenant_db: Session) -> TokenUserRead:
     display_name = "Parent"
     email = user.email
+    grade = None
     if user.role == UserRole.CHILD.value:
         email = ""
         student = tenant_db.get(Student, user.student_id) if user.student_id else None
         display_name = student.name if student is not None else "Student"
+        grade = student.grade if student is not None else None
     elif user.is_demo:
         display_name = "Demo"
     else:
@@ -109,6 +111,7 @@ def _token_user_read(user: CurrentUser, tenant_db: Session) -> TokenUserRead:
         role=user.role or UserRole.PARENT.value,
         student_id=user.student_id,
         display_name=display_name,
+        grade=grade,
     )
 
 

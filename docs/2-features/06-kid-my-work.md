@@ -6,7 +6,7 @@ The child's own screen after signing in with their PIN. It's playful, made for a
 |---|---|
 | **Who uses it** | Kids |
 | **Where** | `#/my-work`, and `#/my-work/<lesson id>` for one lesson. A signed-in child can't open any other page. |
-| **Health** | **Works, with one known bug** (below). Much improved in Phase 2b; it gets the full "Sticker Book" and "My trail" treatment in React. |
+| **Health** | **Works.** Much improved in Phase 2b; it gets the full "Sticker Book" and "My trail" treatment in React. |
 
 ## Scope
 
@@ -15,7 +15,7 @@ The child's own screen after signing in with their PIN. It's playful, made for a
 - **Today**, **Coming up** (the next 60 days) and **Earlier** (the last 14 days) lists.
   - Each lesson says where it comes from ("From Saxon Math 5/4") and shows the parent's note ("Note: Pages 14–15 in the blue workbook").
   - Checking a lesson off plays a small celebration.
-- **Just for fun:** an optional daily puzzle (unscramble a word from today's reading, a quick count, or simple math), seeded so it stays the same all day. It's never a lesson.
+- **Just for fun:** an optional daily puzzle (unscramble a word from today's reading, a quick count, or simple math), seeded so it stays the same all day and pitched to the child's grade. It's never a lesson.
 - **One lesson's page:** its date and source, the "Note from home", a "Done" check box, and the **[Stuck?](07-stuck-nudges.md)** card.
 - **Kid look ("Sticker Book"):**
   - colors: cream background, grape accent, thick ink outlines, raised buttons
@@ -35,9 +35,9 @@ Both are designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pa
 ### API
 | Method | Path | Who | Purpose |
 |---|---|---|---|
-| GET | `/api/auth/me` | the child | Name and student id |
+| GET | `/api/auth/me` | the child | Name, student id and grade (the student record itself is parent-only) |
 | GET | `/api/students/{own id}/assignments?start_date=…&end_date=…` | the child | Their lessons |
-| PATCH | `/api/assignments/{id}/status` | the child, own lessons only | Check off |
+| PATCH | `/api/assignments/{id}/status` | the child, own lessons only | Check off (records today's date) or uncheck |
 | GET | `/api/assignments/{id}` | the child, own lessons only | One lesson |
 
 ### Code
@@ -54,13 +54,12 @@ Both are designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pa
 - **Accessible:** the a11y scan includes this screen, with 0 serious issues.
 
 ### Problems and risks
-- **Bug (introduced in Phase 2b): the page asks for the child's own student record (`GET /api/students/{id}`), and the server refuses**, because that route is for parents only. The page quietly falls back to the sign-in name, so it still says "Hi Ada!". But the puzzle never learns the child's grade and always uses the middle difficulty, and every visit logs one refused request. **Fix:** add the child's grade to `GET /api/auth/me` and stop the extra call.
 - **Lists can get long.** "Coming up" shows 60 days. A trail or "this week" view will feel calmer.
 - **The puzzle's "solved" state is stored per browser tab**, so a child who changes devices starts over. That's fine for play.
 
 ### Tests
 - e2e `kid.spec.ts` (6 tests):
-  - sign-in and the kid look
+  - sign-in and the kid look, with no request refused along the way
   - greeting and stars, the parent's note and "Just for fun"
   - the whole Stuck? flow
 - `visual.spec.ts` snapshots My work in light and dark, at phone, tablet and desktop widths.
@@ -69,7 +68,6 @@ Both are designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pa
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | Fix the refused student-record call: return `grade` from `/api/auth/me` | Next small PR |
-| High | Build **My trail** and the **Sticker journal** as the React pilot route. Stickers come from completed lessons, which needs `completion_date` recorded on check-off. | Phase 3 |
+| High | Build **My trail** and the **Sticker journal** as the React pilot route. Stickers come from completed lessons and the `completion_date` that check-off records. | Phase 3 |
 | Medium | Show a "this week" view by default, with the full lists one tap away | Phase 6 |
 | Low | Remember the solved puzzle on the server, so it survives changing devices | Phase 6 |

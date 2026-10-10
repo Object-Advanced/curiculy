@@ -7352,12 +7352,10 @@ async function loadKidWorkspace() {
   }
   const start = addDaysISO(todayISO(), -14);
   const end = addDaysISO(todayISO(), 60);
-  const [calendar, student] = await Promise.all([
-    api(`/students/${studentId}/assignments?start_date=${start}&end_date=${end}`),
-    api(`/students/${studentId}`).catch(() => null),
-  ]);
+  const calendar = await api(`/students/${studentId}/assignments?start_date=${start}&end_date=${end}`);
   state.kidWork = calendar.assignments || [];
-  state.kidStudent = student || { id: studentId, name: label, grade: null };
+  // The student record is parent-only; /auth/me carries the child's own name and grade.
+  state.kidStudent = { id: studentId, name: label, grade: me.grade ?? null };
   const assignmentId = kidAssignmentId();
   if (assignmentId) {
     await loadHomeworkSession(assignmentId);

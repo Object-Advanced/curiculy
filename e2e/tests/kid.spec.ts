@@ -12,6 +12,12 @@ async function openStudentSignIn(page: Page) {
 const firstName = HOUSEHOLD.kid.name.split(" ")[0];
 
 test("a kid signs in with the family code and a PIN", async ({ page }) => {
+  // A kid's screens must not lean on parent-only routes.
+  const refused: string[] = [];
+  page.on("response", (response) => {
+    const path = new URL(response.url()).pathname;
+    if (response.status() === 403 && path.startsWith("/api/")) refused.push(path);
+  });
   await openStudentSignIn(page);
   await page.getByRole("button", { name: firstName, exact: true }).click();
   const pinForm = page.locator("#student-pin-form");
@@ -22,6 +28,8 @@ test("a kid signs in with the family code and a PIN", async ({ page }) => {
   await expect(page.locator("#view")).toContainText("Fractions worksheet");
   await expect(page.locator(".nav-parent").first()).toBeHidden();
   await expect(page.locator("html")).toHaveAttribute("data-persona", "kid");
+  await page.waitForLoadState("networkidle");
+  expect(refused).toEqual([]);
 });
 
 test("a kid's list points to the family's own materials, with the puzzle as an extra", async ({ page }) => {

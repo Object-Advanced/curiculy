@@ -120,6 +120,38 @@ def test_student_pin_login(auth_client: TestClient) -> None:
     assert body["email"] == ""
 
 
+def test_me_carries_the_childs_grade(auth_client: TestClient) -> None:
+    """My work reads the grade here, since the student record is parent-only."""
+    token, student = _parent_ready(auth_client)
+    updated = auth_client.put(
+        f"/api/students/{student['id']}",
+        headers=bearer(token),
+        json={"name": "Ada", "grade": "3"},
+    )
+    assert updated.status_code == 200
+    _set_pin(auth_client, token, student["id"])
+    child = bearer(_child_token(auth_client, student["id"]))
+
+    me = auth_client.get("/api/auth/me", headers=child)
+
+    assert me.status_code == 200
+    assert me.json()["display_name"] == "Ada"
+    assert me.json()["grade"] == "3"
+    assert auth_client.get(f"/api/students/{student['id']}", headers=child).status_code == 403
+    assert auth_client.get("/api/auth/me", headers=bearer(token)).json()["grade"] is None
+
+
+def test_me_grade_is_null_when_the_parent_left_it_blank(auth_client: TestClient) -> None:
+    token, student = _parent_ready(auth_client)
+    _set_pin(auth_client, token, student["id"])
+    child = _child_token(auth_client, student["id"])
+
+    me = auth_client.get("/api/auth/me", headers=bearer(child))
+
+    assert me.status_code == 200
+    assert me.json()["grade"] is None
+
+
 def test_child_cannot_use_parent_password_login(auth_client: TestClient) -> None:
     token, student = _parent_ready(auth_client)
     _set_pin(auth_client, token, student["id"], "1234")

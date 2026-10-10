@@ -57,14 +57,33 @@ def _require_assignment_access(user: CurrentUser, assignment: Assignment) -> Non
         raise HTTPException(status_code=404, detail="Assignment not found")
 
 
+def _record_completion(assignment: Assignment, today: date) -> None:
+    """Keep ``completion_date`` in step with a status-only write.
+
+    Checking a lesson off records the household's today, unless it already has
+    a date; any other status clears it.
+    """
+    if assignment.is_complete:
+        if assignment.completion_date is None:
+            assignment.completion_date = today
+    else:
+        assignment.completion_date = None
+
+
 def _sync_shared_group(
     tenant_db: Session,
     assignment: Assignment,
     *,
     sync_status: bool = False,
     sync_completion_date: bool = False,
+    record_completion_on: date | None = None,
 ) -> None:
-    """Copy completion fields onto every sibling that shares this lesson."""
+    """Copy completion fields onto every sibling that shares this lesson.
+
+    ``record_completion_on`` is for status-only writes: each sibling keeps or
+    loses its own completion date the way the lesson itself does, rather than
+    taking a copy of it.
+    """
     if not assignment.shared_group_uuid:
         return
     for member in AssignmentQuery(tenant_db).for_shared_group(assignment.shared_group_uuid):
@@ -74,6 +93,8 @@ def _sync_shared_group(
             member.status = assignment.status
         if sync_completion_date:
             member.completion_date = assignment.completion_date
+        elif record_completion_on is not None:
+            _record_completion(member, record_completion_on)
 
 
 def _load_assignment(tenant_db: Session, catalog_db: Session, assignment_id: int) -> Assignment:
@@ -223,13 +244,16 @@ def update_assignment_status(
 
     Parents may do this for any household assignment and still sync a shared
     group. A child may change status only on their own row, and never on a
-    sibling's copy.
+    sibling's copy. Completing records the household's today as the
+    completion date; moving to any other status clears it.
     """
     assignment = _load_assignment(tenant_db, catalog_db, assignment_id)
     _require_assignment_access(user, assignment)
+    today = household_today(tenant_db)
     assignment.status = payload.status
+    _record_completion(assignment, today)
     if not is_child(user):
-        _sync_shared_group(tenant_db, assignment, sync_status=True)
+        _sync_shared_group(tenant_db, assignment, sync_status=True, record_completion_on=today)
     tenant_db.commit()
     return _load_assignment(tenant_db, catalog_db, assignment_id)
 
@@ -246,11 +270,13 @@ def update_assignment(
     assignment = _load_assignment(tenant_db, catalog_db, assignment_id)
     changes = payload.model_dump(exclude_unset=True)
     # The two dates are checked against each other after the merge, since a
-    # request that moves only one of them still has to end up consistent.
-    _require_completion_after_schedule(
-        changes.get("scheduled_date", assignment.scheduled_date),
-        changes.get("completion_date", assignment.completion_date),
-    )
+    # request that moves only one of them still has to end up consistent. A
+    # request that leaves both as they were passes: a lesson checked off ahead
+    # of schedule keeps the day it was really done, and the editor resends it.
+    scheduled_date = changes.get("scheduled_date", assignment.scheduled_date)
+    completion_date = changes.get("completion_date", assignment.completion_date)
+    if (scheduled_date, completion_date) != (assignment.scheduled_date, assignment.completion_date):
+        _require_completion_after_schedule(scheduled_date, completion_date)
 
     for field, value in changes.items():
         setattr(assignment, field, value)
