@@ -1,6 +1,7 @@
 import { join } from "node:path";
 
 import {
+  FROZEN_NOW,
   apiAs,
   browserToday,
   expect,
@@ -23,6 +24,15 @@ test("a demo household finishes onboarding and lands in the catalog", async ({ p
   await startDemo(page, "The Rivera family");
   await expect(page.locator("#household-label")).toHaveText("The Rivera family");
   await expect(page.locator("#health-pill")).toHaveText("API ok · DB ok");
+});
+
+test("Home greets the household by family name", async ({ page }) => {
+  // 15:00 UTC; the browser in this suite runs on UTC, so it is afternoon.
+  await page.clock.setFixedTime(FROZEN_NOW);
+  await startDemo(page);
+  await openRoute(page, "#/dashboard", "Home");
+  // The demo household is named "The Rivera family".
+  await expect(page.locator(".home-hero h2")).toHaveText("Good afternoon, Rivera Family");
 });
 
 test("Home draws its charts with the vendored Chart.js", async ({ page }) => {

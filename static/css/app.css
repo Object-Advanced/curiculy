@@ -3881,7 +3881,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261010-nudge");
+    background-image: url("/static/night-mountains.jpg?v=20261010-greeting");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
