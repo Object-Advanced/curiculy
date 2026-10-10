@@ -65,6 +65,10 @@ test("a parent adds an assignment and checks it off", async ({ page }) => {
   await expect(page.locator(".cal-event", { hasText: "Lesson 12 problem set" })).toBeVisible();
 
   await openRoute(page, "#/students", /'s day$/);
+  // The parent's view of a child's day is calm: no kid-voice hero or puzzle.
+  await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Ask / })).toBeVisible();
+  await expect(page.locator("#kid-spark")).toHaveCount(0);
   const checklist = page.locator("#today-checklist");
   await checklist.getByLabel("Mark Lesson 12 problem set complete").check();
   await expect(checklist.locator(".checklist-progress")).toHaveText("1 of 1 complete");

@@ -32,18 +32,19 @@ test("register a household and give the first kid a PIN", async ({ page }) => {
   await expect(page.locator("#flash")).toHaveText("Student PIN saved.");
 
   const [kid] = await apiAs<Student[]>(page, "GET", "/students");
-  const lessons: [number, string, string][] = [
+  const lessons: [number, string, string, string?][] = [
     [-1, "Math facts practice", "assigned"],
     [0, "Read The Hobbit, chapter 2", "completed"],
-    [0, "Fractions worksheet", "assigned"],
+    [0, "Fractions worksheet", "assigned", "Pages 14–15 in the blue workbook."],
     [1, "Science: states of matter", "assigned"],
   ];
-  for (const [offset, title, status] of lessons) {
+  for (const [offset, title, status, notes] of lessons) {
     await apiAs(page, "POST", "/assignments", {
       student_id: kid.id,
       title,
       scheduled_date: isoDay(offset),
       status,
+      notes,
     });
   }
   const { code } = await apiAs<{ code: string }>(page, "GET", "/auth/family-code");
