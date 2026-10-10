@@ -1,3 +1,4 @@
+import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -42,6 +43,9 @@ from app.routers import (
     settings as settings_routes,
     students,
 )
+
+# Python's table predates WOFF2; without this the self-hosted fonts go out as text/plain.
+mimetypes.add_type("font/woff2", ".woff2")
 
 
 class StaticRevalidateMiddleware(BaseHTTPMiddleware):

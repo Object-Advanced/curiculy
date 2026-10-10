@@ -1,0 +1,430 @@
+/* Curiculy design tokens.
+
+The one place raw colors, type sizes, spacing, radii, shadows and motion are
+defined. Everything else (app.css today, the React app later) uses these
+custom properties. Three dials, all attributes on <html>:
+
+  data-theme="dark"     dark mode (light is the default)
+  data-persona="kid"    the child's screens: playful "Sticker Book" palette and
+                        rounded type; parent screens stay calm "Morning Light"
+  data-season="…"       autumn | winter | spring | summer: a small set of
+                        decorative accents only. Status colors never change.
+
+Primitive ramps come first, then semantic tokens built from them. Components
+use the semantic names. Every text/background pair below meets WCAG AA.
+Fonts are self-hosted (the CSP allows font-src 'self' only); a browser only
+downloads a face once something on the page uses it.
+*/
+
+@font-face {
+    font-family: "Figtree";
+    font-style: normal;
+    font-weight: 300 900;
+    font-display: swap;
+    src: url("/static/fonts/figtree-latin-wght.woff2?v=20261010-tokens") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Newsreader";
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url("/static/fonts/newsreader-latin-wght.woff2?v=20261010-tokens") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Newsreader";
+    font-style: italic;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url("/static/fonts/newsreader-latin-wght-italic.woff2?v=20261010-tokens") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Fredoka";
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url("/static/fonts/fredoka-latin-wght.woff2?v=20261010-tokens") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 200 1000;
+    font-display: swap;
+    src: url("/static/fonts/nunito-latin-wght.woff2?v=20261010-tokens") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+    /* ---- Primitive ramps ---- */
+    --paper-0: #ffffff;
+    --paper-50: #fbfbf9;
+    --paper-100: #f4f5f2;
+    --paper-200: #eceeea;
+    --paper-300: #e1e4df;
+    --paper-400: #c9cdc6;
+
+    --ink-900: #16181a;
+    --ink-800: #22262a;
+    --ink-700: #3a3f45;
+    --ink-600: #5b6168;
+
+    --moss-50: #f0f6f1;
+    --moss-100: #e3eee6;
+    --moss-200: #c7decf;
+    --moss-300: #7cc59a;
+    --moss-500: #3e7a55;
+    --moss-600: #2f6b49;
+    --moss-700: #24553a;
+    --moss-900: #0e2417;
+
+    --sky-100: #dcebf5;
+    --sky-300: #8cc4e6;
+    --sky-600: #2f6f8f;
+    --sky-800: #1d3b52;
+
+    --sun-100: #fff4d6;
+    --sun-200: #fdf0c8;
+    --sun-400: #f2c14e;
+    --sun-800: #6b4a00;
+
+    --clay-100: #fbeadf;
+    --clay-300: #f2b38a;
+    --clay-600: #a84b1f;
+
+    --rose-100: #fbe3df;
+    --rose-300: #f59e94;
+    --rose-600: #b42318;
+    --rose-700: #8f1c13;
+
+    --plum-100: #eee9ff;
+    --plum-300: #a48bff;
+    --plum-500: #6b4bd8;
+    --plum-600: #5a3cc4;
+    --plum-800: #4a3a8c;
+
+    --forest-950: #111513;
+    --forest-900: #151a17;
+    --forest-850: #1a201c;
+    --forest-800: #242c27;
+
+    /* ---- Type ---- */
+    --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-serif: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
+    --font-display: var(--font-serif);
+    --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+    /* One scale for the whole app (16px root). */
+    --text-2xs: 0.75rem;     /* 12px: badges, overlines */
+    --text-xs: 0.8125rem;    /* 13px: meta, captions */
+    --text-sm: 0.875rem;     /* 14px: secondary UI */
+    --text-md: 1rem;         /* 16px: body */
+    --text-lg: 1.125rem;     /* 18px: card titles */
+    --text-xl: 1.375rem;     /* 22px: section headings */
+    --text-2xl: 1.75rem;     /* 28px: page titles */
+    --text-3xl: 2.25rem;     /* 36px: greetings */
+    --text-display: clamp(2.6rem, 6vw, 3.6rem);
+
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+    --weight-display: 500;
+    --leading-tight: 1.2;
+    --leading-normal: 1.5;
+
+    /* ---- Space (4px grid), radius, elevation ---- */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-full: 999px;
+    --border-width: 1px;
+
+    --shadow-1: 0 1px 2px rgba(22, 24, 26, 0.05);
+    --shadow-2: 0 1px 2px rgba(22, 24, 26, 0.04), 0 6px 20px rgba(22, 24, 26, 0.06);
+    --shadow-3: 0 12px 40px rgba(22, 24, 26, 0.16);
+
+    /* ---- Motion ---- */
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 320ms;
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ---- Layers ---- */
+    --z-sticky: 10;
+    --z-dropdown: 30;
+    --z-overlay: 50;
+    --z-modal: 60;
+    --z-toast: 70;
+
+    /* ---- Semantic: parent "Morning Light", light ---- */
+    color-scheme: light;
+    --surface-page: var(--paper-50);
+    --surface-card: var(--paper-0);
+    --surface-sunken: var(--paper-100);
+    --surface-hover: var(--paper-200);
+    --surface-raised: var(--paper-0);
+    --surface-inverse: var(--ink-900);
+    --border-subtle: var(--paper-200);
+    --border-default: var(--paper-300);
+    --border-strong: var(--paper-400);
+
+    --text-strong: var(--ink-900);
+    --text-body: var(--ink-800);
+    --text-muted: var(--ink-600);
+    --text-inverse: var(--paper-50);
+
+    --accent: var(--moss-500);
+    --accent-hover: var(--moss-600);
+    --accent-text: var(--moss-600);
+    --accent-soft: var(--moss-100);
+    --accent-border: rgba(62, 122, 85, 0.38);
+    --on-accent: #ffffff;
+    --focus-ring: var(--moss-500);
+
+    --success: var(--moss-600);
+    --success-soft: var(--moss-100);
+    --info: var(--sky-600);
+    --info-soft: var(--sky-100);
+    --warning: var(--clay-600);
+    --warning-soft: var(--clay-100);
+    --warning-border: rgba(168, 75, 31, 0.35);
+    --danger: var(--rose-600);
+    --danger-soft: var(--rose-100);
+    --danger-border: rgba(180, 35, 24, 0.35);
+    --on-danger: #ffffff;
+    --highlight: var(--sun-400);
+    --highlight-soft: var(--sun-100);
+    --highlight-text: var(--sun-800);
+    --violet: var(--plum-600);
+    --violet-soft: var(--plum-100);
+
+    /* Calendar lesson states: amber scheduled, green done, red overdue. */
+    --status-scheduled-bg: var(--sun-200);
+    --status-scheduled-fg: var(--sun-800);
+    --status-scheduled-border: #e3b341;
+    --status-completed-bg: #ddeee2;
+    --status-completed-fg: #1f5135;
+    --status-completed-border: #6fa584;
+    --status-overdue-bg: var(--rose-100);
+    --status-overdue-fg: var(--rose-700);
+    --status-overdue-border: #e08c80;
+
+    --overlay: rgba(22, 24, 26, 0.42);
+    --scrollbar: rgba(91, 97, 104, 0.35);
+
+    /* Fixed "paper" for portfolio previews and print: never themed. */
+    --print-paper: #ffffff;
+    --print-ink: #1a1a1a;
+    --print-muted: #5b6168;
+    --print-rule: #d9e2dc;
+    --print-accent: #2f6b49;
+
+    /* Sign-in page night sky behind the photo. */
+    --auth-backdrop: #0c1220;
+
+    /* ---- Seasonal accents (decorative only) ---- */
+    --season-accent: var(--sun-400);
+    --season-soft: var(--sun-100);
+    --season-ink: var(--sun-800);
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-page: var(--forest-950);
+    --surface-card: var(--forest-850);
+    --surface-sunken: var(--forest-900);
+    --surface-hover: var(--forest-800);
+    --surface-raised: #202722;
+    --surface-inverse: #e9ede9;
+    --border-subtle: rgba(233, 237, 233, 0.08);
+    --border-default: rgba(233, 237, 233, 0.12);
+    --border-strong: rgba(233, 237, 233, 0.22);
+
+    --text-strong: #f2f5f2;
+    --text-body: #e3e8e4;
+    --text-muted: #a3ada6;
+    --text-inverse: var(--ink-900);
+
+    --accent: var(--moss-300);
+    --accent-hover: #93d3ad;
+    --accent-text: #8fd0aa;
+    --accent-soft: rgba(124, 197, 154, 0.16);
+    --accent-border: rgba(124, 197, 154, 0.42);
+    --on-accent: var(--moss-900);
+    --focus-ring: var(--moss-300);
+
+    --success: #8fd0aa;
+    --success-soft: rgba(124, 197, 154, 0.16);
+    --info: var(--sky-300);
+    --info-soft: rgba(140, 196, 230, 0.14);
+    --warning: var(--clay-300);
+    --warning-soft: rgba(242, 179, 138, 0.14);
+    --warning-border: rgba(242, 179, 138, 0.38);
+    --danger: var(--rose-300);
+    --danger-soft: rgba(245, 158, 148, 0.14);
+    --danger-border: rgba(245, 158, 148, 0.4);
+    --on-danger: var(--forest-950);
+    --highlight-soft: rgba(242, 193, 78, 0.16);
+    --highlight-text: #f7d88a;
+    --violet: var(--plum-300);
+    --violet-soft: rgba(164, 139, 255, 0.16);
+
+    --status-scheduled-bg: #4a3b12;
+    --status-scheduled-fg: #fce7a8;
+    --status-scheduled-border: #8a6d1f;
+    --status-completed-bg: #1e3a2a;
+    --status-completed-fg: #bfe5cc;
+    --status-completed-border: #3f7a57;
+    --status-overdue-bg: #4a1f1a;
+    --status-overdue-fg: #f8c6be;
+    --status-overdue-border: #9a3b30;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.32);
+    --shadow-3: 0 12px 40px rgba(0, 0, 0, 0.45);
+    --overlay: rgba(4, 7, 5, 0.72);
+    --scrollbar: rgba(163, 173, 166, 0.28);
+
+    --season-soft: rgba(242, 193, 78, 0.14);
+    --season-ink: #f7d88a;
+}
+
+/* ---- Kid persona: "Sticker Book" ---- */
+[data-persona="kid"] {
+    --font-sans: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: "Fredoka", "Nunito", ui-rounded, system-ui, sans-serif;
+    --weight-display: 600;
+
+    --radius-sm: 12px;
+    --radius-md: 18px;
+    --radius-lg: 24px;
+    --radius-xl: 28px;
+    --border-width: 3px;
+
+    --surface-page: #fff8e7;
+    --surface-card: #ffffff;
+    --surface-sunken: #fff1d6;
+    --surface-hover: #fdeccb;
+    --border-subtle: #efe6d3;
+    --border-default: #e3d8c2;
+    --border-strong: #2a2140;
+
+    --text-strong: #2a2140;
+    --text-body: #2a2140;
+    --text-muted: #5e5470;
+
+    --accent: var(--plum-500);
+    --accent-hover: var(--plum-600);
+    --accent-text: var(--plum-600);
+    --accent-soft: var(--plum-100);
+    --accent-border: rgba(107, 75, 216, 0.4);
+    --on-accent: #ffffff;
+    --focus-ring: var(--plum-500);
+
+    --kid-ink: #2a2140;
+    --kid-tomato: #d64530;
+    --kid-leaf: #2e9e5b;
+    --kid-sun: #ffc93c;
+    --kid-raise: 0 4px 0 #2a2140;
+}
+
+[data-persona="kid"][data-theme="dark"] {
+    --surface-page: #1b1630;
+    --surface-card: #251e3d;
+    --surface-sunken: #201a36;
+    --surface-hover: #30284d;
+    --border-subtle: rgba(243, 238, 255, 0.1);
+    --border-default: rgba(243, 238, 255, 0.16);
+    --border-strong: #f3eeff;
+    --text-strong: #f3eeff;
+    --text-body: #f3eeff;
+    --text-muted: #c2b8da;
+    --accent: var(--plum-300);
+    --accent-hover: #b9a6ff;
+    --accent-text: #c4b5ff;
+    --accent-soft: rgba(164, 139, 255, 0.18);
+    --on-accent: #1b1036;
+    --focus-ring: var(--plum-300);
+    --kid-ink: #f3eeff;
+    --kid-raise: 0 4px 0 #0d0a18;
+}
+
+/* ---- Seasons ---- */
+[data-season="autumn"] { --season-accent: #e0803a; --season-soft: #fbeadf; --season-ink: #7a3a10; }
+[data-season="winter"] { --season-accent: #5b8fc7; --season-soft: #e3eef8; --season-ink: #1d3b52; }
+[data-season="spring"] { --season-accent: #6fae5f; --season-soft: #e6f3e1; --season-ink: #2c5223; }
+[data-season="summer"] { --season-accent: #f2c14e; --season-soft: #fff4d6; --season-ink: #6b4a00; }
+[data-theme="dark"][data-season] { --season-soft: rgba(242, 193, 78, 0.12); --season-ink: #f7d88a; }
+
+/* Month tints and holiday-break cards on Home (legacy month moods). */
+:root {
+    --month-jan: #7dd3fc;
+    --month-feb: #fb7185;
+    --month-mar: #4ade80;
+    --month-apr: #93c5fd;
+    --month-may: #f9a8d4;
+    --month-jun: #facc15;
+    --month-jul: #f97316;
+    --month-aug: #fbbf24;
+    --month-sep: #fb7185;
+    --month-oct: #fb923c;
+    --month-nov: #c2410c;
+    --month-dec: #ef4444;
+
+    --break-christmas: linear-gradient(145deg, #143d32, #7f1d1d 72%);
+    --break-christmas-fg: #fff7ed;
+    --break-thanksgiving: linear-gradient(145deg, #7c2d12, #c2410c 70%);
+    --break-thanksgiving-fg: #fff7ed;
+    --break-easter: linear-gradient(145deg, #fce7f3, #dbeafe 68%);
+    --break-easter-fg: #4c1d95;
+    --break-halloween: linear-gradient(145deg, #1c1917, #c2410c 80%);
+    --break-halloween-fg: #ffedd5;
+    --break-newyear: linear-gradient(145deg, #0f172a, #334155);
+    --break-newyear-fg: #fef9c3;
+    --break-valentine: linear-gradient(145deg, #9d174d, #fb7185);
+    --break-valentine-fg: #fff1f2;
+    --break-patrick: linear-gradient(145deg, #14532d, #22c55e);
+    --break-patrick-fg: #f0fdf4;
+    --break-independence: linear-gradient(145deg, #1e3a8a, #b91c1c 78%);
+    --break-independence-fg: #f8fafc;
+    --break-civic: linear-gradient(145deg, #1e3a8a, #334155);
+    --break-civic-fg: #eef2ff;
+    --break-summer: linear-gradient(145deg, #0e4d6b, #b45309);
+    --break-summer-fg: #fffbeb;
+    --break-spring: linear-gradient(145deg, #ecfccb, #bbf7d0);
+    --break-spring-fg: #14532d;
+    --break-winter: linear-gradient(145deg, #0f766e, #155e75);
+    --break-winter-fg: #ecfeff;
+    --break-vacation: linear-gradient(145deg, #0e7490, #38bdf8);
+    --break-vacation-fg: #ecfeff;
+    --break-holiday: linear-gradient(145deg, #365314, #4d7c0f);
+    --break-holiday-fg: #f7fee7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 0ms;
+        --duration-base: 0ms;
+        --duration-slow: 0ms;
+    }
+}
