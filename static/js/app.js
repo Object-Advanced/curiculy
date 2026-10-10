@@ -8526,6 +8526,7 @@ function syncSessionChrome() {
     "data-role",
     currentUserIsChild() ? "child" : "parent"
   );
+  document.documentElement.setAttribute("data-persona", currentUserIsChild() ? "kid" : "parent");
   const kidLink = document.querySelector(".nav-kid");
   if (kidLink) kidLink.hidden = !currentUserIsChild();
 }

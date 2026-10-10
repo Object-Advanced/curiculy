@@ -6,8 +6,20 @@
         if (localStorage.getItem("theme") === "dark") {
             document.documentElement.setAttribute("data-theme", "dark");
         }
-        if (!localStorage.getItem("auth_token")) {
+        var token = localStorage.getItem("auth_token");
+        if (!token) {
             document.documentElement.setAttribute("data-auth", "required");
+        } else {
+            // A signed-in child gets the kid look from the first frame.
+            try {
+                var part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+                var claims = JSON.parse(atob(part + "===".slice((part.length + 3) % 4)));
+                if (claims.role === "child") {
+                    document.documentElement.setAttribute("data-persona", "kid");
+                }
+            } catch (error) {
+                /* unreadable token: the app signs out and shows sign-in */
+            }
         }
     } catch (error) {
         document.documentElement.setAttribute("data-auth", "required");

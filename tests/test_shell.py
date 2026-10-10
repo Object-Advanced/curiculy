@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
 SW_JS = ROOT / "sw.js"
 APP_CSS = ROOT / "static" / "css" / "app.css"
+TOKENS_CSS = ROOT / "static" / "css" / "tokens.css"
 EXTENSION_DIR = ROOT / "extension"
 MANIFEST = EXTENSION_DIR / "manifest.json"
 OPTIONS_HTML = EXTENSION_DIR / "options.html"
@@ -60,8 +61,10 @@ def test_shell_cache_version_matches_html_and_css() -> None:
     resolved_sw = sw_text.replace("${SHELL_VERSION}", version)
     html = INDEX_HTML.read_text(encoding="utf-8")
     css = APP_CSS.read_text(encoding="utf-8")
+    tokens = TOKENS_CSS.read_text(encoding="utf-8")
 
     assert "curiculy-shell-${SHELL_VERSION}" in sw_text
+    assert _static_versions(tokens) == {version}, _static_versions(tokens)
     html_versions = _static_versions(html)
     css_versions = _static_versions(css)
     sw_versions = _static_versions(resolved_sw)
@@ -70,11 +73,14 @@ def test_shell_cache_version_matches_html_and_css() -> None:
     assert sw_versions == {version}, sw_versions
     for path in (
         f"/static/js/app.js?v={version}",
+        f"/static/css/tokens.css?v={version}",
         f"/static/css/app.css?v={version}",
+        f"/static/fonts/figtree-latin-wght.woff2?v={version}",
+        f"/static/fonts/nunito-latin-wght.woff2?v={version}",
         f"/static/curiculy-logo.png?v={version}",
         f"/static/night-mountains.jpg?v={version}",
     ):
-        assert path in html or path in css
+        assert path in html or path in css or path in tokens
         assert path in resolved_sw
 
 
@@ -138,6 +144,8 @@ def test_shell_static_assets_are_served(client: TestClient) -> None:
     checks = [
         (f"/static/js/app.js?v={version}", "javascript"),
         (f"/static/css/app.css?v={version}", "css"),
+        (f"/static/css/tokens.css?v={version}", "css"),
+        (f"/static/fonts/figtree-latin-wght.woff2?v={version}", "font/woff2"),
         (f"/static/curiculy-logo.png?v={version}", "png"),
         (f"/static/night-mountains.jpg?v={version}", "jpeg"),
     ]
