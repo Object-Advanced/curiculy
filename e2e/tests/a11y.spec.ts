@@ -4,7 +4,18 @@ import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 
-import { FROZEN_NOW, expect, openRoute, openSignIn, seedSchoolWeek, settle, startDemo, test } from "./support";
+import {
+  FROZEN_NOW,
+  HOUSEHOLD,
+  expect,
+  loadHouseholdState,
+  openRoute,
+  openSignIn,
+  seedSchoolWeek,
+  settle,
+  startDemo,
+  test,
+} from "./support";
 
 /**
  * Accessibility ratchet. Counts serious + critical axe violations per screen
@@ -60,6 +71,20 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
     const result = await scan(page, screen);
     report[screen] = { ...result.counts, rules: result.rules };
   }
+
+  // The child's own screen, signed in with the household's kid PIN.
+  const { studentId, familyCode } = loadHouseholdState();
+  const response = await page.request.post("/api/auth/student-token", {
+    data: { family_code: familyCode, student_id: studentId, pin: HOUSEHOLD.kid.pin },
+  });
+  expect(response.ok()).toBeTruthy();
+  const { access_token: kidToken } = (await response.json()) as { access_token: string };
+  await page.evaluate((value) => window.localStorage.setItem("auth_token", value), kidToken);
+  await page.reload();
+  await openRoute(page, "#/my-work", "My work");
+  await settle(page);
+  const kid = await scan(page, "my-work");
+  report["my-work"] = { ...kid.counts, rules: kid.rules };
 
   if (process.env.UPDATE_A11Y_BASELINE === "1" || !existsSync(BASELINE_FILE)) {
     const baseline = Object.fromEntries(

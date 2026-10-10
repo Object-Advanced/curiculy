@@ -161,6 +161,7 @@ const state = {
   sessionUser: null,
   notifications: { unread_count: 0, notifications: [] },
   kidWork: [],
+  kidStudent: null,
   homework: { session: null, assignmentId: null, busy: false },
   switchUsers: [],
   studentLoginCode: "",
@@ -2352,9 +2353,8 @@ function renderStudents() {
 
   const studentId = selectedDashboardStudentId();
   const student = state.students.find((item) => item.id === studentId) || state.students[0];
-  const mood = monthMood();
   return `
-    <section class="student-dashboard kid-home" data-month="${mood.id}" style="${studentColorStyle(student)}">
+    <section class="student-dashboard kid-home" style="${studentColorStyle(student)}">
       <nav class="student-tabs" role="tablist" aria-label="Kids">
         ${state.students
           .map(
@@ -2367,29 +2367,20 @@ function renderStudents() {
           )
           .join("")}
       </nav>
-      <header class="kid-hero">
-        <p class="kid-kicker">${escapeHtml(mood.title)}</p>
-        <h2>Hey ${escapeHtml(firstName(student.name))} — let’s have a good day.</h2>
-        <p class="kid-blurb">${escapeHtml(mood.blurb)}</p>
-        <details class="kid-grownup">
-          <summary>Grown-up tools</summary>
-          <div class="kid-grownup-actions">
-            <button type="button" class="ghost" data-action="open-recalibrate"
-                    data-student-id="${student.id}">Recalibrate schedule</button>
-            <button type="button" class="ghost" data-action="print-weekly-checklist"
-                    data-student-id="${student.id}">Print weekly checklist</button>
-          </div>
-        </details>
-      </header>
       <div class="kid-grid">
         <section class="card kid-panel">
-          <h2>Today’s adventures</h2>
+          <div class="card-heading">
+            <h2>Today</h2>
+            <div class="card-heading-actions">
+              <button type="button" class="ghost small" data-action="open-recalibrate"
+                      data-student-id="${student.id}">Recalibrate schedule</button>
+              <button type="button" class="ghost small" data-action="print-weekly-checklist"
+                      data-student-id="${student.id}">Print weekly checklist</button>
+            </div>
+          </div>
           <div id="today-checklist"><p class="empty">Loading…</p></div>
         </section>
         <aside class="kid-side">
-          <section class="card spark-card" id="kid-spark">
-            <p class="empty">Picking a puzzle…</p>
-          </section>
           <section class="card talk-card" id="kid-talk">
             <p class="empty">Thinking of a question…</p>
           </section>
@@ -2497,11 +2488,11 @@ function renderSparkCard(student, assignments) {
     ? `<p class="spark-visual" aria-hidden="true">${escapeHtml(spark.visual)}</p>`
     : "";
   return `
-    <section class="card spark-card${solved ? " is-solved" : ""}" id="kid-spark" data-answer="${escapeHtml(
-      spark.answer
-    )}">
+    <section class="card spark-card${solved ? " is-solved" : ""}" id="kid-spark" data-student-id="${
+      student.id
+    }" data-answer="${escapeHtml(spark.answer)}">
       <p class="spark-kicker">${escapeHtml(spark.kicker)}</p>
-      <h2>Today’s puzzle</h2>
+      <h2>Just for fun</h2>
       <p class="spark-prompt">${escapeHtml(spark.prompt)}</p>
       ${visual}
       ${play}
@@ -2514,19 +2505,14 @@ function renderTalkCard(student, assignments, ai) {
   const local = localTalkPrompt(student, assignments);
   const prompt = ai?.question || local.prompt;
   const about = ai?.about || local.about;
-  const source = ai?.question ? "From what you’re learning" : about ? "A question for you" : "A little wonder";
+  const source = ai?.question ? "About today’s lessons" : about ? "A question to ask" : "A little wonder";
   return `
     <section class="card talk-card" id="kid-talk">
       <p class="spark-kicker">${escapeHtml(source)}</p>
-      <h2>Talk it out</h2>
+      <h2>Ask ${escapeHtml(firstName(student?.name))}</h2>
       <p class="talk-prompt">${escapeHtml(prompt)}</p>
-      ${about && !ai?.question ? `<p class="meta">Today’s trail: ${escapeHtml(about)}</p>` : ""}
+      ${about && !ai?.question ? `<p class="meta">From ${escapeHtml(about)}</p>` : ""}
     </section>`;
-}
-
-function paintKidSpark(student, assignments) {
-  const sparkHost = $("kid-spark");
-  if (sparkHost) sparkHost.outerHTML = renderSparkCard(student, assignments);
 }
 
 function paintKidTalk(student, assignments, ai) {
@@ -2545,7 +2531,7 @@ function markSparkSolved(card, ok) {
     feedback.textContent = ok ? `Nice — ${answer}.` : "Try once more. You’ve got this.";
   }
   if (ok) {
-    const studentId = selectedDashboardStudentId();
+    const studentId = Number(card.dataset.studentId);
     if (studentId) sessionStorage.setItem(sparkSolvedKey(studentId), answer);
     const input = card.querySelector("input[name='guess']");
     const submit = card.querySelector("button[type='submit']");
@@ -2587,7 +2573,6 @@ async function loadStudentDashboard(studentId) {
     state.dashboardCourses = courseRows || [];
     paintStudentDashboard();
     if (student) {
-      paintKidSpark(student, state.dashboardAssignments);
       paintKidTalk(student, state.dashboardAssignments, null);
     }
     const spark = await api(`/students/${id}/spark`).catch(() => null);
@@ -7357,14 +7342,17 @@ async function loadKidWorkspace() {
   const studentId = me.student_id;
   if (!studentId) {
     state.kidWork = [];
+    state.kidStudent = null;
     return;
   }
   const start = addDaysISO(todayISO(), -14);
   const end = addDaysISO(todayISO(), 60);
-  const calendar = await api(
-    `/students/${studentId}/assignments?start_date=${start}&end_date=${end}`
-  );
+  const [calendar, student] = await Promise.all([
+    api(`/students/${studentId}/assignments?start_date=${start}&end_date=${end}`),
+    api(`/students/${studentId}`).catch(() => null),
+  ]);
   state.kidWork = calendar.assignments || [];
+  state.kidStudent = student || { id: studentId, name: label, grade: null };
   const assignmentId = kidAssignmentId();
   if (assignmentId) {
     await loadHomeworkSession(assignmentId);
@@ -7384,27 +7372,66 @@ function renderMyWork() {
   const todayItems = upcoming.filter((item) => item.scheduled_date === today);
   const later = upcoming.filter((item) => item.scheduled_date > today);
   const earlier = upcoming.filter((item) => item.scheduled_date < today);
-  const section = (title, items) =>
+  const section = (title, items, options) =>
     !items.length
       ? ""
       : `<section class="card"><h2>${escapeHtml(title)}</h2><div class="kid-work-list">${items
-          .map((item) => kidWorkRow(item))
+          .map((item) => kidWorkRow(item, options))
           .join("")}</div></section>`;
+  const hello = renderKidHello(todayItems);
   if (!upcoming.length) {
-    return `<section class="card"><h2>My work</h2><p class="empty">Nothing on your list yet. A parent will add assignments here.</p></section>`;
+    return `${hello}<section class="card"><h2>My work</h2><p class="empty">Nothing on your list yet. A grown-up will add your lessons here.</p></section>`;
   }
-  return `${section("Today", todayItems)}${section("Coming up", later)}${section("Earlier", earlier)}`;
+  // The puzzle is optional play, never a lesson: lessons come from the
+  // family's own books and plans.
+  const fun = state.kidStudent ? renderSparkCard(state.kidStudent, state.kidWork) : "";
+  return `${hello}${section("Today", todayItems, { showDate: false })}${fun}${section(
+    "Coming up",
+    later
+  )}${section("Earlier", earlier)}`;
 }
 
-function kidWorkRow(item) {
+const KID_STAR_SVG =
+  '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">' +
+  '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>';
+
+function renderKidHello(todayItems) {
+  const name = firstName(state.kidStudent?.name || state.sessionUser?.display_name);
+  const total = todayItems.length;
+  const done = todayItems.filter((item) => isCompleteStatus(item.status)).length;
+  const allDone = total > 0 && done === total;
+  const line = !total
+    ? "Nothing on today’s list."
+    : allDone
+      ? "All done for today. Nice work!"
+      : `${done} of ${total} done today`;
+  const stars = todayItems
+    .map((item) => `<span class="kid-star${isCompleteStatus(item.status) ? " is-earned" : ""}">${KID_STAR_SVG}</span>`)
+    .join("");
+  return `
+    <section class="card kid-hello${allDone ? " is-all-done" : ""}">
+      <h2>Hi ${escapeHtml(name)}!</h2>
+      <p class="kid-hello-progress">${escapeHtml(line)}</p>
+      ${total ? `<div class="kid-stars" role="img" aria-label="${done} of ${total} stars earned today">${stars}</div>` : ""}
+    </section>`;
+}
+
+function kidWorkRow(item, { showDate = true } = {}) {
   const done = isCompleteStatus(item.status);
+  // Point at the family's own materials: which book or plan this comes from.
+  const details = [];
+  if (item.resource_title) details.push(`From ${item.resource_title}`);
+  else if (item.subject_name) details.push(item.subject_name);
+  if (showDate) details.push(MEDIUM_DATE.format(parseISODate(item.scheduled_date)));
+  if (done) details.push("Done");
   return `
     <div class="checklist-item${done ? " is-complete" : ""}" data-checklist-id="${item.id}">
       <input type="checkbox" data-action="toggle-complete" data-id="${item.id}"
              ${done ? "checked" : ""} aria-label="Mark ${escapeHtml(item.title)} complete">
       <button type="button" class="checklist-copy" data-action="open-kid-work" data-id="${item.id}">
         <span class="checklist-title">${escapeHtml(item.title)}</span>
-        <span class="meta">${escapeHtml(MEDIUM_DATE.format(parseISODate(item.scheduled_date)))} · ${escapeHtml(humanize(item.status))}</span>
+        ${details.length ? `<span class="meta">${escapeHtml(details.join(" · "))}</span>` : ""}
+        ${item.notes ? `<span class="kid-note">Note: ${escapeHtml(item.notes)}</span>` : ""}
       </button>
       <span class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
     </div>`;
@@ -8669,6 +8696,7 @@ function resetWorkspaceState() {
   state.sessionUser = null;
   state.notifications = { unread_count: 0, notifications: [] };
   state.kidWork = [];
+  state.kidStudent = null;
   state.homework = { session: null, assignmentId: null, busy: false };
   state.switchUsers = [];
   onboarding.step = 1;
