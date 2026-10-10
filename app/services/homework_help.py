@@ -1,177 +1,190 @@
-"""Guarded homework tutor: hints and examples, never complete answers."""
+"""Stuck? One nudge back toward the family's own materials, then a grown-up.
+
+Curiculy guides a child through the curriculum their parent chose; it does not
+teach. When a child is stuck on a lesson they get one short nudge (re-read the
+directions, look at the example in their book, try the first small step) and
+then two choices: it helped, or go get a grown-up. A nudge never answers,
+solves, writes, or explains the lesson, and there is one per lesson until a
+parent turns nudges back on.
+"""
 
 from __future__ import annotations
 
 import logging
-from re import IGNORECASE
-from re import compile as regexp
+import re
 
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.enums import (
-    HomeworkHelpMessageRole,
-    HomeworkHelpStatus,
-    ParentNotificationType,
-)
-from app.models import Assignment, HomeworkHelpMessage, HomeworkHelpSession, Student
-from app.models.mixins import utcnow
-from app.schemas.homework import TutorReply
+from app.enums import HomeworkHelpMessageRole, HomeworkHelpStatus, ParentNotificationType
+from app.models import Assignment, HomeworkHelpSession, Student
+from app.schemas.homework import NudgeReply
 from app.services.notifications import create_notification
 from app.services.ollama_chat import chat_with_model_fallback
 
 logger = logging.getLogger(__name__)
 
-PUSH_LIMIT = 3
+NUDGE_MAX_CHARS = 280
+PARENT_NOTE_MAX_CHARS = 300
+# Older builds logged help activity into the parent's own notes with this prefix.
+LEGACY_LOG_PREFIX = "[Homework help]"
 
 SYSTEM_PROMPT = """
-You are a homeschool homework tutor for a child. Your only job is to help them
-learn by demonstrating a SIMILAR example (different numbers, names, or facts)
-and by asking guiding questions.
+A child is stuck on one lesson from their family's own homeschool curriculum.
+You are not their teacher. Do not teach, explain, or solve anything.
 
-Strict rules:
-- Never give the answer to the assigned problem, question, prompt, or worksheet.
-- Never write the essay, paragraph, story, lab report, or completed worksheet.
-- Never list step-by-step solutions for the exact assigned work.
-- If they ask for the answer, refuse briefly and offer a different example or a hint.
-- Keep language warm, short, and age-appropriate.
-- If they keep demanding the complete answer after you have already refused, set
-  redirect to true and tell them to ask a parent.
+Give exactly ONE short nudge: one or two sentences in simple, warm words that
+help them get going again on their own. Good nudges:
+- read the directions again slowly, out loud
+- look at the example in their own book or workbook, or the page before
+- check the note their grown-up left
+- do just the first small step, then check it
+- one simple question that points them back to their own materials
 
-Respond with JSON only:
-{"mode": "hint" | "example" | "socratic" | "redirect", "message": "...", "redirect": false}
+Never give an answer. Never solve, write, or fill in any part of the work.
+Never give a worked example. Never explain the idea behind the lesson.
+If they ask for the answer, kindly say that is a job for their book and their
+grown-up, then give a nudge.
+
+Respond with JSON only: {"message": "..."}
 """.strip()
 
+ANSWER_SEEKING_NUDGE = (
+    "I can't give answers, but your book and your grown-up can help. "
+    "Read the directions one more time, then try just the first step."
+)
+FALLBACK_NUDGE = (
+    "Read the directions one more time, out loud. Then look for an example in your "
+    "book or on the page before."
+)
+
 _PUSH_PATTERNS = [
-    regexp(r"\bjust tell me\b", flags=IGNORECASE),
-    regexp(r"\bgive me the (full |complete )?answer\b", flags=IGNORECASE),
-    regexp(r"\bwhat('?s| is) the answer\b", flags=IGNORECASE),
-    regexp(r"\btell me the answer\b", flags=IGNORECASE),
-    regexp(r"\bwrite the (essay|paper|paragraph|story|report)\b", flags=IGNORECASE),
-    regexp(r"\bdo (it|this|the homework|the work|the problem|the worksheet) for me\b", flags=IGNORECASE),
-    regexp(r"\bsolve (it|this) for me\b", flags=IGNORECASE),
-    regexp(r"\bshow me the (full )?solution\b", flags=IGNORECASE),
-    regexp(r"\banswer key\b", flags=IGNORECASE),
-    regexp(r"\bfill (in|out) the worksheet\b", flags=IGNORECASE),
-    regexp(r"\bi (don't|do not) care\b", flags=IGNORECASE),
-    regexp(r"\bjust give (it|me)\b", flags=IGNORECASE),
-    regexp(r"\bcomplete answer\b", flags=IGNORECASE),
+    re.compile(pattern, flags=re.IGNORECASE)
+    for pattern in (
+        r"\bjust tell me\b",
+        r"\bgive me the (full |complete )?answers?\b",
+        r"\bwhat('?s| is| are) the answers?\b",
+        r"\btell me the answers?\b",
+        r"\bwrite the (essay|paper|paragraph|story|report)\b",
+        r"\bdo (it|this|the homework|the work|the problem|the worksheet) for me\b",
+        r"\bsolve (it|this) for me\b",
+        r"\bshow me the (full )?solution\b",
+        r"\banswer key\b",
+        r"\bfill (in|out) the worksheet\b",
+        r"\bjust give (it|me)\b",
+        r"\bcomplete answer\b",
+    )
 ]
 
 
 def is_answer_seeking(text: str) -> bool:
     blob = (text or "").strip()
-    if not blob:
-        return False
-    return any(pattern.search(blob) for pattern in _PUSH_PATTERNS)
+    return bool(blob) and any(pattern.search(blob) for pattern in _PUSH_PATTERNS)
 
 
-def assignment_is_locked(db: Session, assignment_id: int) -> bool:
-    session = (
+def has_nudge(session: HomeworkHelpSession) -> bool:
+    return any(item.role == HomeworkHelpMessageRole.ASSISTANT for item in session.messages)
+
+
+def parent_note(assignment: Assignment) -> str | None:
+    """The parent's own note on the lesson, without older help-log lines."""
+    lines = [
+        line.strip()
+        for line in (assignment.notes or "").splitlines()
+        if line.strip() and not line.strip().startswith(LEGACY_LOG_PREFIX)
+    ]
+    text = " ".join(lines)
+    return text[:PARENT_NOTE_MAX_CHARS] or None
+
+
+def first_name(name: str | None) -> str:
+    return (name or "").strip().split(" ")[0] or "Your child"
+
+
+def _tidy(text: str) -> str:
+    text = " ".join((text or "").split())
+    if not text:
+        return FALLBACK_NUDGE
+    if len(text) <= NUDGE_MAX_CHARS:
+        return text
+    cut = text[:NUDGE_MAX_CHARS]
+    end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
+    return cut[: end + 1] if end > 0 else cut.rsplit(" ", 1)[0] + "…"
+
+
+async def nudge_with_ollama(
+    *,
+    assignment_title: str,
+    resource_title: str | None,
+    note: str | None,
+    child_name: str,
+    user_message: str,
+) -> str:
+    lesson = [f"Child's first name: {child_name}", f"Lesson: {assignment_title}"]
+    if resource_title:
+        lesson.append(f"From their book or plan: {resource_title}")
+    if note:
+        lesson.append(f"Note from their grown-up: {note}")
+    try:
+        content = await chat_with_model_fallback(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + "\n".join(lesson)},
+                {"role": "user", "content": user_message},
+            ],
+            format=NudgeReply.model_json_schema(),
+            options={"temperature": 0.3},
+        )
+    except Exception as error:
+        logger.warning("Nudge model unavailable: %s", error)
+        return FALLBACK_NUDGE
+    try:
+        return _tidy(NudgeReply.model_validate_json(content).message)
+    except ValidationError:
+        return _tidy(content)
+
+
+def latest_session(db: Session, assignment_id: int, student_id: int) -> HomeworkHelpSession | None:
+    return (
         db.query(HomeworkHelpSession)
         .filter(
             HomeworkHelpSession.assignment_id == assignment_id,
-            HomeworkHelpSession.status == HomeworkHelpStatus.REDIRECTED,
+            HomeworkHelpSession.student_id == student_id,
         )
         .order_by(HomeworkHelpSession.id.desc())
         .first()
     )
-    return session is not None
 
 
-def append_assignment_note(assignment: Assignment, line: str) -> None:
-    stamp = utcnow().strftime("%Y-%m-%d")
-    entry = f"[Homework help] {stamp} — {line}"
-    if assignment.notes and assignment.notes.strip():
-        assignment.notes = assignment.notes.rstrip() + "\n\n" + entry
-    else:
-        assignment.notes = entry
-
-
-async def tutor_with_ollama(
-    *,
-    assignment_title: str,
-    student_name: str,
-    history: list[HomeworkHelpMessage],
-    user_message: str,
-) -> TutorReply:
-    transcript = []
-    for item in history[-12:]:
-        role = "user" if item.role == HomeworkHelpMessageRole.USER else "assistant"
-        transcript.append({"role": role, "content": item.content})
-    transcript.append({"role": "user", "content": user_message})
-    prompt = (
-        f"Student: {student_name}\n"
-        f"Assignment: {assignment_title}\n"
-        "Help with this assignment without giving the complete answer."
-    )
-    try:
-        content = await chat_with_model_fallback(
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + prompt},
-                *transcript,
-            ],
-            format=TutorReply.model_json_schema(),
-            options={"temperature": 0.3},
-        )
-    except Exception as error:
-        logger.warning("Homework tutor unavailable: %s", error)
-        return TutorReply(mode="hint", message=_fallback_hint(), redirect=False)
-
-    try:
-        return TutorReply.model_validate_json(content)
-    except ValidationError:
-        return TutorReply(
-            mode="hint",
-            message=content.strip() or _fallback_hint(),
-            redirect=False,
-        )
-
-
-def _fallback_hint() -> str:
-    return (
-        "I can't reach the tutor right now. Try a similar example with different "
-        "numbers or details, then come back to this assignment. Ask a parent if you're stuck."
-    )
-
-
-def session_to_locked_flag(session: HomeworkHelpSession) -> bool:
-    return session.status == HomeworkHelpStatus.REDIRECTED
-
-
-def notify_help_started(db: Session, student: Student, assignment: Assignment) -> None:
-    name = student.name
+def notify_nudge(db: Session, student: Student, assignment: Assignment, nudge: str) -> None:
+    name = first_name(student.name)
     create_notification(
         db,
         type=ParentNotificationType.HOMEWORK_HELP_STARTED,
         student_id=student.id,
         assignment_id=assignment.id,
-        title=f"{name} used homework help",
-        body=f"{name} asked for help on “{assignment.title}”.",
+        title=f"{name} asked for a nudge",
+        body=f"{name} got stuck on “{assignment.title}” and was told: “{nudge}”",
     )
 
 
-def notify_help_redirect(db: Session, student: Student, assignment: Assignment) -> None:
-    name = student.name
+def notify_grown_up(db: Session, student: Student, assignment: Assignment) -> None:
+    name = first_name(student.name)
     create_notification(
         db,
         type=ParentNotificationType.HOMEWORK_HELP_REDIRECT,
         student_id=student.id,
         assignment_id=assignment.id,
         title=f"{name} needs you",
-        body=(
-            f"{name} kept asking for the complete answer on “{assignment.title}”. "
-            "Homework help was stopped. They were told to come to you."
-        ),
+        body=f"{name} is stuck on “{assignment.title}” and is coming to find you.",
     )
 
 
-def unlock_assignment(db: Session, assignment_id: int) -> int:
+def allow_another_nudge(db: Session, assignment_id: int) -> int:
     rows = (
         db.query(HomeworkHelpSession)
         .filter(
             HomeworkHelpSession.assignment_id == assignment_id,
-            HomeworkHelpSession.status == HomeworkHelpStatus.REDIRECTED,
+            HomeworkHelpSession.status.in_([HomeworkHelpStatus.REDIRECTED, HomeworkHelpStatus.HELPED]),
         )
         .all()
     )

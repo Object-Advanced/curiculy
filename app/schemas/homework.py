@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +21,7 @@ class HomeworkHelpSessionRead(ORMModel):
     status: HomeworkHelpStatus
     push_count: int
     locked: bool = False
+    nudged: bool = False
     messages: list[HomeworkHelpMessageRead] = Field(default_factory=list)
 
 
@@ -28,13 +30,17 @@ class HomeworkHelpSessionCreate(BaseModel):
 
 
 class HomeworkHelpMessageCreate(BaseModel):
-    content: str = Field(min_length=1, max_length=4000)
+    content: str = Field(min_length=1, max_length=500)
 
 
-class TutorReply(BaseModel):
-    mode: str = "hint"
+class HomeworkHelpOutcome(BaseModel):
+    """What the child chose after their nudge."""
+
+    outcome: Literal["helped", "ask_grown_up"]
+
+
+class NudgeReply(BaseModel):
     message: str
-    redirect: bool = False
 
 
 class ParentNotificationRead(ORMModel):

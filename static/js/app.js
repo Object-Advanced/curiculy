@@ -2805,7 +2805,7 @@ function renderStudentPinSettings(student) {
       <p class="muted">${
         hasLogin
           ? "This child can sign in by picking their name and entering a PIN."
-          : "Set a PIN so this child can sign in and use homework help."
+          : "Set a PIN so this child can sign in and see their own lessons."
       }</p>
       <label>${hasLogin ? "New PIN" : "PIN"}
         <input id="student-pin-input" name="student_pin" type="password" inputmode="numeric"
@@ -6133,18 +6133,20 @@ function closeModal() {
   }
 }
 
+const STUCK_STATUS = {
+  active: "Opened “Stuck?”",
+  helped: "Said the nudge helped",
+  redirected: "Came to find a grown-up",
+  closed: "You allowed another nudge",
+};
+
 function renderHomeworkHelpHistory(item) {
-  const sessions = detail.helpSessions || [];
-  const locked = sessions.some((session) => session.status === "redirected");
-  const latest = sessions[0];
-  let body = `<p class="empty">This child has not used homework help on this assignment.</p>`;
+  const latest = (detail.helpSessions || [])[0];
+  const canReset = latest && (latest.status === "redirected" || latest.status === "helped");
+  let body = `<p class="empty">No nudges asked for on this lesson.</p>`;
   if (latest) {
-    const when = latest.messages.length
-      ? latest.messages[latest.messages.length - 1]
-      : null;
-    body = `<p>${escapeHtml(humanize(latest.status))}${
-      when ? ` · last activity in this session` : ""
-    }</p>
+    const status = latest.status === "active" && latest.nudged ? "Got a nudge" : STUCK_STATUS[latest.status];
+    body = `<p>${escapeHtml(status || humanize(latest.status))}</p>
       <div class="homework-thread">${(latest.messages || [])
         .map(
           (message) =>
@@ -6154,11 +6156,11 @@ function renderHomeworkHelpHistory(item) {
   }
   return `
     <section class="detail-section">
-      <h3>Homework help</h3>
+      <h3>Stuck? nudges</h3>
       ${body}
       ${
-        locked
-          ? `<button type="button" data-action="unlock-homework-help" data-id="${item.id}">Allow homework help again</button>`
+        canReset
+          ? `<button type="button" data-action="unlock-homework-help" data-id="${item.id}">Allow another nudge</button>`
           : ""
       }
     </section>`;
@@ -7431,10 +7433,19 @@ function kidWorkRow(item, { showDate = true } = {}) {
       <button type="button" class="checklist-copy" data-action="open-kid-work" data-id="${item.id}">
         <span class="checklist-title">${escapeHtml(item.title)}</span>
         ${details.length ? `<span class="meta">${escapeHtml(details.join(" · "))}</span>` : ""}
-        ${item.notes ? `<span class="kid-note">Note: ${escapeHtml(item.notes)}</span>` : ""}
+        ${parentNoteText(item.notes) ? `<span class="kid-note">Note: ${escapeHtml(parentNoteText(item.notes))}</span>` : ""}
       </button>
       <span class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
     </div>`;
+}
+
+// Older builds logged help activity into the parent's notes; kids see only the parent's words.
+function parentNoteText(notes) {
+  return String(notes || "")
+    .split("\n")
+    .filter((line) => line.trim() && !line.trim().startsWith("[Homework help]"))
+    .join("\n")
+    .trim();
 }
 
 function renderKidAssignment(item, assignmentId) {
@@ -7442,52 +7453,75 @@ function renderKidAssignment(item, assignmentId) {
     return `<section class="card"><p class="empty">Loading assignment…</p>
       <p><a href="#/my-work">Back to my work</a></p></section>`;
   }
-  const session = state.homework.session;
-  const locked = Boolean(session && session.locked);
-  const redirected = session && session.status === "redirected";
-  const messages = (session && session.messages) || [];
-  const notes = item.notes
-    ? `<section class="detail-section"><h3>Notes</h3><p>${escapeHtml(item.notes)}</p></section>`
-    : "";
-  const thread = messages
-    .map(
-      (message) =>
-        `<div class="homework-bubble is-${escapeHtml(message.role)}">${escapeHtml(message.content)}</div>`
-    )
-    .join("");
-  const composer =
-    locked || redirected
-      ? `<p class="banner">Please ask a parent for help. Homework help is paused on this assignment.</p>`
-      : `<form class="login-form homework-chat" data-form="homework-help">
-          <label>Ask for a hint or an example
-            <textarea name="content" required maxlength="4000" rows="3" placeholder="What part is tricky?"></textarea>
-          </label>
-          <button type="submit"${state.homework.busy ? " disabled" : ""}>Send</button>
-        </form>`;
   const done = isCompleteStatus(item.status);
-  const start =
-    session
-      ? ""
-      : `<button type="button" data-action="start-homework-help" data-id="${assignmentId}">Get homework help</button>`;
+  const source = item.resource_title ? `From ${item.resource_title} · ` : "";
+  const note = parentNoteText(item.notes);
   return `
     <p><a href="#/my-work">Back to my work</a></p>
     <section class="card">
       <h2>${escapeHtml(item.title)}</h2>
-      <p class="meta">${escapeHtml(FULL_DATE.format(parseISODate(item.scheduled_date)))} · ${escapeHtml(humanize(item.status))}</p>
+      <p class="meta">${escapeHtml(source + FULL_DATE.format(parseISODate(item.scheduled_date)))}</p>
+      ${
+        note
+          ? `<section class="detail-section"><h3>Note from home</h3><p class="kid-note-full">${escapeHtml(note)}</p></section>`
+          : ""
+      }
       <div class="checklist-item${done ? " is-complete" : ""}" data-checklist-id="${assignmentId}">
         <input type="checkbox" data-action="toggle-complete" data-id="${assignmentId}"
                ${done ? "checked" : ""} aria-label="Mark ${escapeHtml(item.title)} complete">
         <span class="checklist-title">Done</span>
         <span class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
       </div>
-      ${notes}
     </section>
-    <section class="card homework-chat">
-      <h2>Homework help</h2>
-      <p class="muted">You'll get hints and similar examples — not the complete answer.</p>
-      ${start}
-      <div class="homework-thread">${thread}</div>
-      ${session ? composer : ""}
+    ${renderStuckCard()}`;
+}
+
+// "Stuck?": one nudge back toward the family's own materials, then a grown-up.
+// The app guides; it does not teach.
+function renderStuckCard() {
+  const raw = state.homework.session;
+  const session = raw && raw.status !== "closed" ? raw : null;
+  const off = state.homework.busy ? " disabled" : "";
+  const nudge = (session?.messages || []).find((message) => message.role === "assistant");
+  if (session?.status === "redirected") {
+    return `
+    <section class="card stuck-card is-grown-up" aria-live="polite">
+      <h2>Time to find a grown-up</h2>
+      <p>We let them know you’re stuck on this one. Bring your book!</p>
+    </section>`;
+  }
+  if (nudge) {
+    const helped = session.status === "helped";
+    return `
+    <section class="card stuck-card" aria-live="polite">
+      <h2>${helped ? "Your nudge" : "Here’s a nudge"}</h2>
+      <p class="stuck-nudge">${escapeHtml(nudge.content)}</p>
+      ${
+        helped
+          ? `<p class="muted">Glad it helped! Stuck again? Ask a grown-up.</p>
+             <div class="stuck-actions">
+               <button type="button" class="ghost" data-action="stuck-grown-up"${off}>Get a grown-up</button>
+             </div>`
+          : `<div class="stuck-actions">
+               <button type="button" data-action="stuck-helped"${off}>That helped!</button>
+               <button type="button" class="ghost" data-action="stuck-grown-up"${off}>Still stuck? Get a grown-up</button>
+             </div>`
+      }
+    </section>`;
+  }
+  return `
+    <section class="card stuck-card">
+      <h2>Stuck?</h2>
+      <p class="muted">Get one small nudge to help you keep going. Still stuck after that? Ask a grown-up.</p>
+      <form class="stuck-form" data-form="stuck-nudge">
+        <label><span>What part is tricky? <span class="muted">(you can skip this)</span></span>
+          <textarea name="content" maxlength="500" rows="2"></textarea>
+        </label>
+        <div class="stuck-actions">
+          <button type="submit"${off}>${state.homework.busy ? "Thinking…" : "Give me a nudge"}</button>
+          <button type="button" class="ghost" data-action="stuck-grown-up"${off}>Get a grown-up</button>
+        </div>
+      </form>
     </section>`;
 }
 
@@ -7501,35 +7535,52 @@ async function loadHomeworkSession(assignmentId) {
   }
 }
 
-async function startHomeworkHelp(assignmentId) {
-  flash("");
-  try {
-    state.homework.session = await api("/homework-help/sessions", {
-      method: "POST",
-      body: JSON.stringify({ assignment_id: assignmentId }),
-    });
-    render();
-  } catch (error) {
-    flash(error.message, true);
-  }
+// Nudges need a live answer, so they skip the offline queue.
+async function ensureStuckSession() {
+  const current = state.homework.session;
+  if (current && current.status !== "closed") return current;
+  state.homework.session = await api("/homework-help/sessions", {
+    method: "POST",
+    body: JSON.stringify({ assignment_id: state.homework.assignmentId }),
+    skipOutbox: true,
+  });
+  return state.homework.session;
 }
 
-async function sendHomeworkHelp(content) {
-  const session = state.homework.session;
-  if (!session) return;
+async function stuckRequest(send) {
+  if (state.homework.busy) return;
   state.homework.busy = true;
+  flash("");
   render();
   try {
-    state.homework.session = await api(`/homework-help/sessions/${session.id}/messages`, {
-      method: "POST",
-      body: JSON.stringify({ content }),
-    });
+    const session = await ensureStuckSession();
+    state.homework.session = await send(session);
   } catch (error) {
     flash(error.message, true);
   } finally {
     state.homework.busy = false;
     render();
   }
+}
+
+function askForNudge(content) {
+  return stuckRequest((session) =>
+    api(`/homework-help/sessions/${session.id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content: content || "I'm stuck." }),
+      skipOutbox: true,
+    })
+  );
+}
+
+function recordStuckOutcome(outcome) {
+  return stuckRequest((session) =>
+    api(`/homework-help/sessions/${session.id}/outcome`, {
+      method: "POST",
+      body: JSON.stringify({ outcome }),
+      skipOutbox: true,
+    })
+  );
 }
 
 const VIEWS = {
@@ -7650,8 +7701,11 @@ async function handleClick(event) {
     case "open-kid-work":
       window.location.hash = `#/my-work/${control.dataset.id}`;
       break;
-    case "start-homework-help":
-      await startHomeworkHelp(Number(control.dataset.id));
+    case "stuck-helped":
+      await recordStuckOutcome("helped");
+      break;
+    case "stuck-grown-up":
+      await recordStuckOutcome("ask_grown_up");
       break;
     case "pick-student-login":
       pickStudentLogin(Number(control.dataset.studentId), control.textContent);
@@ -8092,8 +8146,8 @@ async function handleSubmit(event) {
   const kind = form.dataset.form;
   const data = formValues(form);
   try {
-    if (kind === "homework-help") {
-      await sendHomeworkHelp(String(data.content || "").trim());
+    if (kind === "stuck-nudge") {
+      await askForNudge(String(data.content || "").trim());
       return;
     }
     if (kind === "switch-user") {
@@ -9254,7 +9308,7 @@ async function unlockHomeworkHelp(assignmentId) {
       detail.item = await api(`/assignments/${assignmentId}`);
     }
     renderDetail();
-    flash("Homework help is available again.");
+    flash("Another nudge is available on this lesson.");
   } catch (error) {
     flash(error.message, true);
   }

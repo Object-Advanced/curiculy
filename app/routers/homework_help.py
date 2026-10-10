@@ -1,31 +1,39 @@
-"""Homework helper sessions for a child's own assignments."""
+"""Stuck? nudges: one nudge per lesson toward the family's own materials, then a grown-up."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.security import CurrentUser, get_current_user, require_parent
 from app.core.deps import get_tenant_db
-from app.enums import HomeworkHelpMessageRole, HomeworkHelpStatus, UserRole
+from app.core.security import CurrentUser, get_current_user, require_parent
+from app.db import get_catalog_db
+from app.enums import HomeworkHelpMessageRole, HomeworkHelpStatus
 from app.models import Assignment, HomeworkHelpMessage, HomeworkHelpSession, Student
 from app.schemas.homework import (
     HomeworkHelpMessageCreate,
     HomeworkHelpMessageRead,
+    HomeworkHelpOutcome,
     HomeworkHelpSessionCreate,
     HomeworkHelpSessionRead,
 )
+from app.services.assignments import AssignmentQuery
 from app.services.child_accounts import is_child
 from app.services.homework_help import (
-    PUSH_LIMIT,
-    append_assignment_note,
-    assignment_is_locked,
+    ANSWER_SEEKING_NUDGE,
+    allow_another_nudge,
+    first_name,
+    has_nudge,
     is_answer_seeking,
-    notify_help_redirect,
-    notify_help_started,
-    tutor_with_ollama,
-    unlock_assignment,
+    latest_session,
+    notify_grown_up,
+    notify_nudge,
+    nudge_with_ollama,
+    parent_note,
 )
 
 router = APIRouter(prefix="/homework-help", tags=["homework-help"])
+
+ASK_A_GROWN_UP = "You've had your nudge on this one. Time to ask a grown-up."
+GROWN_UP_MESSAGE = "Time to find a grown-up. We let them know you're stuck on this one."
 
 
 def _session_read(session: HomeworkHelpSession) -> HomeworkHelpSessionRead:
@@ -36,6 +44,7 @@ def _session_read(session: HomeworkHelpSession) -> HomeworkHelpSessionRead:
         status=session.status,
         push_count=session.push_count,
         locked=session.status == HomeworkHelpStatus.REDIRECTED,
+        nudged=has_nudge(session),
         messages=[HomeworkHelpMessageRead.model_validate(item) for item in session.messages],
     )
 
@@ -83,146 +92,115 @@ def get_session(
     return _session_read(session)
 
 
+def _child_session(db: Session, user: CurrentUser, session_id: int) -> HomeworkHelpSession:
+    if not is_child(user):
+        raise HTTPException(status_code=403, detail="Nudges are for students")
+    session = db.get(HomeworkHelpSession, session_id)
+    if session is None or session.student_id != user.student_id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
 @router.post("/sessions", response_model=HomeworkHelpSessionRead, status_code=201)
 def start_session(
     payload: HomeworkHelpSessionCreate,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
 ) -> HomeworkHelpSessionRead:
+    """Open (or reopen) the child's nudge for a lesson. One per lesson until a parent resets it."""
     if not is_child(user):
-        raise HTTPException(status_code=403, detail="Homework help is for students")
+        raise HTTPException(status_code=403, detail="Nudges are for students")
     assignment = _load_assignment(db, payload.assignment_id)
     _own_assignment(user, assignment)
-    student_id = user.student_id
-    if student_id is None:
-        raise HTTPException(status_code=400, detail="Student not found")
-    student = db.get(Student, student_id)
-    if student is None:
+    if user.student_id is None or db.get(Student, user.student_id) is None:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    if assignment_is_locked(db, assignment.id):
-        raise HTTPException(
-            status_code=403,
-            detail="Homework help is locked until a parent allows it again",
-        )
-
-    active = (
-        db.query(HomeworkHelpSession)
-        .filter(
-            HomeworkHelpSession.assignment_id == assignment.id,
-            HomeworkHelpSession.student_id == student.id,
-            HomeworkHelpSession.status == HomeworkHelpStatus.ACTIVE,
-        )
-        .order_by(HomeworkHelpSession.id.desc())
-        .first()
-    )
-    if active is not None:
-        return _session_read(active)
+    latest = latest_session(db, assignment.id, user.student_id)
+    if latest is not None and latest.status == HomeworkHelpStatus.REDIRECTED:
+        raise HTTPException(status_code=403, detail=GROWN_UP_MESSAGE)
+    if latest is not None and latest.status in (HomeworkHelpStatus.ACTIVE, HomeworkHelpStatus.HELPED):
+        return _session_read(latest)
 
     session = HomeworkHelpSession(
-        student_id=student.id,
+        student_id=user.student_id,
         assignment_id=assignment.id,
         status=HomeworkHelpStatus.ACTIVE,
         push_count=0,
     )
     db.add(session)
-    append_assignment_note(assignment, f"{student.name} started help on “{assignment.title}”.")
-    notify_help_started(db, student, assignment)
     db.commit()
     db.refresh(session)
     return _session_read(session)
 
 
 @router.post("/sessions/{session_id}/messages", response_model=HomeworkHelpSessionRead)
-async def post_message(
+async def ask_for_nudge(
     session_id: int,
     payload: HomeworkHelpMessageCreate,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
+    catalog_db: Session = Depends(get_catalog_db),
 ) -> HomeworkHelpSessionRead:
-    if not is_child(user):
-        raise HTTPException(status_code=403, detail="Homework help is for students")
-    session = db.get(HomeworkHelpSession, session_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+    """The child says what's tricky (optional) and gets their one nudge."""
+    session = _child_session(db, user, session_id)
+    if session.status != HomeworkHelpStatus.ACTIVE or has_nudge(session):
+        raise HTTPException(status_code=403, detail=ASK_A_GROWN_UP)
     assignment = _load_assignment(db, session.assignment_id)
-    _own_assignment(user, assignment)
-    if user.role == UserRole.CHILD.value and session.student_id != user.student_id:
-        raise HTTPException(status_code=404, detail="Session not found")
-    if session.status != HomeworkHelpStatus.ACTIVE:
-        raise HTTPException(
-            status_code=403,
-            detail="Ask a parent for help. Homework help is paused on this assignment.",
-        )
-
-    content = payload.content.strip()
-    if not content:
-        raise HTTPException(status_code=400, detail="Message cannot be empty")
-
     student = db.get(Student, session.student_id)
     if student is None:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    user_message = HomeworkHelpMessage(
-        session_id=session.id,
-        role=HomeworkHelpMessageRole.USER,
-        content=content,
-    )
-    db.add(user_message)
-    db.flush()
-
-    history = list(session.messages)
-    if user_message not in history:
-        history.append(user_message)
-
-    redirected = False
+    content = payload.content.strip() or "I'm stuck."
+    db.add(HomeworkHelpMessage(session_id=session.id, role=HomeworkHelpMessageRole.USER, content=content))
     if is_answer_seeking(content):
         session.push_count += 1
-        if session.push_count >= PUSH_LIMIT:
-            redirected = True
-
-    if not redirected:
-        reply = await tutor_with_ollama(
+        nudge = ANSWER_SEEKING_NUDGE
+    else:
+        loaded = AssignmentQuery(db, catalog_db).get(assignment.id)
+        nudge = await nudge_with_ollama(
             assignment_title=assignment.title,
-            student_name=student.name,
-            history=history,
+            resource_title=loaded.resource_title if loaded else None,
+            note=parent_note(assignment),
+            child_name=first_name(student.name),
             user_message=content,
         )
-        if reply.redirect:
-            redirected = True
-            assistant_text = reply.message.strip() or (
-                "Please ask a parent for help with this. I'm pausing homework help now."
-            )
-        else:
-            assistant_text = reply.message.strip() or (
-                "Try a similar example with different numbers, then come back to yours."
-            )
-        db.add(
-            HomeworkHelpMessage(
-                session_id=session.id,
-                role=HomeworkHelpMessageRole.ASSISTANT,
-                content=assistant_text,
-            )
-        )
+    db.add(HomeworkHelpMessage(session_id=session.id, role=HomeworkHelpMessageRole.ASSISTANT, content=nudge))
+    notify_nudge(db, student, assignment, nudge)
+    db.commit()
+    db.refresh(session)
+    return _session_read(session)
 
-    if redirected:
+
+@router.post("/sessions/{session_id}/outcome", response_model=HomeworkHelpSessionRead)
+def record_outcome(
+    session_id: int,
+    payload: HomeworkHelpOutcome,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_tenant_db),
+) -> HomeworkHelpSessionRead:
+    """After the nudge: it helped, or go get a grown-up (which tells the parent)."""
+    session = _child_session(db, user, session_id)
+    assignment = _load_assignment(db, session.assignment_id)
+    student = db.get(Student, session.student_id)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if payload.outcome == "helped":
+        if session.status != HomeworkHelpStatus.ACTIVE or not has_nudge(session):
+            raise HTTPException(status_code=409, detail="There is no nudge to mark as helpful")
+        session.status = HomeworkHelpStatus.HELPED
+    else:
+        if session.status not in (HomeworkHelpStatus.ACTIVE, HomeworkHelpStatus.HELPED):
+            raise HTTPException(status_code=409, detail="A grown-up already knows")
         session.status = HomeworkHelpStatus.REDIRECTED
-        redirect_text = (
-            "Please ask a parent for help. I'm pausing homework help on this assignment."
-        )
         db.add(
             HomeworkHelpMessage(
                 session_id=session.id,
                 role=HomeworkHelpMessageRole.SYSTEM,
-                content=redirect_text,
+                content=GROWN_UP_MESSAGE,
             )
         )
-        append_assignment_note(
-            assignment,
-            f"{student.name} was redirected to a parent on “{assignment.title}”.",
-        )
-        notify_help_redirect(db, student, assignment)
-
+        notify_grown_up(db, student, assignment)
     db.commit()
     db.refresh(session)
     return _session_read(session)
@@ -234,9 +212,9 @@ def unlock_help(
     _user: CurrentUser = Depends(require_parent),
     db: Session = Depends(get_tenant_db),
 ) -> list[HomeworkHelpSessionRead]:
+    """A parent allows one more nudge on this lesson."""
     assignment = _load_assignment(db, assignment_id)
-    unlock_assignment(db, assignment.id)
-    append_assignment_note(assignment, "A parent allowed homework help again.")
+    allow_another_nudge(db, assignment.id)
     db.commit()
     sessions = (
         db.query(HomeworkHelpSession)

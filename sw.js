@@ -8,7 +8,7 @@ SHELL_VERSION is the one cache-bust token. index.html and CSS query strings
 must use the same value. Changing it also renames SHELL_CACHE so activate()
 drops the previous shell instead of mixing old and new URLs.
 */
-const SHELL_VERSION = "20261010-kidwork";
+const SHELL_VERSION = "20261010-nudge";
 const SHELL_CACHE = `curiculy-shell-${SHELL_VERSION}`;
 const SHELL_URLS = [
   "/",

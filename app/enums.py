@@ -146,9 +146,10 @@ class UserRole(StrEnum):
 
 
 class HomeworkHelpStatus(StrEnum):
-    ACTIVE = "active"
-    REDIRECTED = "redirected"
-    CLOSED = "closed"
+    ACTIVE = "active"  # started; the one nudge may or may not have been given yet
+    HELPED = "helped"  # the child said the nudge helped
+    REDIRECTED = "redirected"  # the child went to get a grown-up
+    CLOSED = "closed"  # a parent turned nudges back on for the lesson
 
 
 class HomeworkHelpMessageRole(StrEnum):

@@ -3881,7 +3881,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261010-kidwork");
+    background-image: url("/static/night-mountains.jpg?v=20261010-nudge");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -4375,9 +4375,53 @@ html[data-role="child"] .nav-kid {
     filter: none;
 }
 
-.homework-chat {
+/* "Stuck?": one nudge, then a grown-up. */
+.stuck-card,
+.stuck-form {
     display: grid;
-    gap: 0.75rem;
+    gap: var(--space-3);
+}
+
+.stuck-card h2 {
+    margin-bottom: 0;
+}
+
+.stuck-form textarea {
+    width: 100%;
+}
+
+.stuck-nudge {
+    margin: 0;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--accent-soft);
+    color: var(--text-strong);
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+}
+
+.stuck-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.stuck-actions button {
+    width: auto;
+    margin: 0;
+}
+
+.stuck-card.is-grown-up {
+    background: var(--highlight-soft);
+}
+
+.kid-note-full {
+    white-space: pre-line;
+}
+
+[data-persona="kid"] #view > p > a {
+    color: var(--accent-text);
+    font-weight: var(--weight-bold);
 }
 
 .homework-thread {
