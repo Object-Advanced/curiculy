@@ -1544,11 +1544,14 @@ function clockGreeting() {
   return "Good evening";
 }
 
+// Greet by family name: "The Schroeder family" and "Schroeder" both become "Schroeder Family".
 function familyGreetingName() {
-  const name = String(state.household?.name || "").trim();
-  if (!name) return "family";
-  if (/family$/i.test(name)) return name;
-  return `${name} family`;
+  const name = String(state.household?.name || "")
+    .trim()
+    .replace(/^the\s+/i, "")
+    .replace(/(^|\s+)family$/i, "")
+    .trim();
+  return name ? `${name} Family` : "family";
 }
 
 function monthMood(iso = todayISO()) {
@@ -1917,7 +1920,7 @@ function renderDashboard() {
     <div id="dashboard-view" class="home-view" data-month="${mood.id}">
       <section class="home-hero">
         <p class="home-kicker">${escapeHtml(mood.title)}</p>
-        <h2>${escapeHtml(clockGreeting())}, ${escapeHtml(familyGreetingName())}.</h2>
+        <h2>${escapeHtml(clockGreeting())}, ${escapeHtml(familyGreetingName())}</h2>
         <p class="home-lede">${escapeHtml(mood.blurb)} ${escapeHtml(nextHint)}</p>
         <div class="home-pulse" aria-label="Today at a glance">
           <div class="home-pulse-stat">
