@@ -52,7 +52,8 @@ services:
 
   # Nightly backups, off until enabled: docker compose --profile backup up -d backup
   # Snapshots every database (checked) and mirrors new evidence files into
-  # BACKUP_HOST_DIR (default ./backups), keeping the newest 14. See README.
+  # BACKUP_HOST_DIR (default ./backups), keeping the newest 14.
+  # See docs/4-operations/backups-and-restore.md.
   backup:
     build:
       context: .
@@ -85,8 +86,6 @@ services:
       - ./scripts:/app/scripts
       - ./tests:/app/tests
       - ./ruff.toml:/app/ruff.toml
-      - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini
       - ./sw.js:/app/sw.js
       - ./index.html:/app/index.html
       - ./static:/app/static

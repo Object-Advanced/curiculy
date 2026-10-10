@@ -6,7 +6,6 @@ These tests use temporary SQLite files only. They never open /data databases.
 from __future__ import annotations
 
 from pathlib import Path
-import subprocess
 
 import pytest
 from sqlalchemy import create_engine, inspect, text
@@ -28,13 +27,11 @@ from app.db import (
 from app.models import Curriculum, Household, HouseholdSettings, Student
 from app.schema_patches import (
     ADMIN_COLUMN_PATCHES,
-    ALEMBIC_NOT_AUTHORITATIVE,
     CATALOG_COLUMN_PATCHES,
     TENANT_COLUMN_PATCHES,
     apply_admin_schema,
     apply_catalog_schema,
     apply_tenant_schema,
-    refuse_alembic_replay,
     sqlite_table_columns,
     sqlite_user_tables,
 )
@@ -533,52 +530,3 @@ class TestIdempotencyAndSafety:
                 session.close()
         finally:
             engine.dispose()
-
-
-class TestAlembicIsNotAuthoritative:
-    def test_refuse_helper_explains_the_rule(self) -> None:
-        with pytest.raises(RuntimeError, match="must not be replayed"):
-            refuse_alembic_replay()
-        assert "init_databases" in ALEMBIC_NOT_AUTHORITATIVE
-        assert "schema_patches" in ALEMBIC_NOT_AUTHORITATIVE
-
-    def test_env_py_refuses_instead_of_calling_init_databases(self) -> None:
-        source = (ROOT / "alembic" / "env.py").read_text()
-        assert "refuse_alembic_replay" in source
-        assert "init_databases()" not in source
-
-    def test_alembic_upgrade_does_not_replay_revisions(self) -> None:
-        result = subprocess.run(
-            ["alembic", "upgrade", "head"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode != 0
-        combined = result.stdout + result.stderr
-        assert "must not be replayed" in combined
-
-    def test_revision_0001_is_not_live_curricula_shape(self) -> None:
-        source = (ROOT / "alembic" / "versions" / "0001_initial.py").read_text()
-        assert 'sa.Column("isbn"' in source
-        assert 'sa.Column("publisher"' in source
-        assert "publisher_name" not in source
-        assert "isbn" not in Curriculum.__table__.c
-        assert "publisher" not in Curriculum.__table__.c
-        assert "publisher_name" in Curriculum.__table__.c
-
-    def test_revision_0007_alters_plans_it_never_created(self) -> None:
-        source = (ROOT / "alembic" / "versions" / "0007_lesson_plan_builder.py").read_text()
-        assert "op.create_table" not in source
-        assert "curriculum_plans" in source
-        assert "curriculum_plans" in TenantBase.metadata.tables
-
-    def test_admin_tables_are_absent_from_alembic_history(self) -> None:
-        blob = "".join(
-            path.read_text()
-            for path in sorted((ROOT / "alembic" / "versions").glob("*.py"))
-        )
-        assert 'op.create_table(\n        "users"' not in blob
-        assert "capture_tokens" not in blob
-        assert "users" in AdminBase.metadata.tables
-        assert "capture_tokens" in AdminBase.metadata.tables

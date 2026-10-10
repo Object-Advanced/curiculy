@@ -1,13 +1,12 @@
-"""Runtime schema upgrades. This module is the schema runner, not Alembic.
+"""Runtime schema upgrades: Curiculy's schema runner.
 
 Boot and tenant provisioning call ``create_all`` (new tables) then the ordered
 ALTER/index patches below (new columns on files that already exist). Each patch
 checks ``PRAGMA table_info`` first, so running it twice is a no-op.
 
-Alembic revisions ``0001``–``0012`` are a historical archive. They assume one
-database, an older ``curricula`` shape, and they never create ``admin.db`` or
-the pacing-guide tables. Do not replay them. Do not add new revision files as
-the way to ship a column; add a patch here and a test.
+An old Alembic chain (revisions 0001-0012) was removed in October 2026; it
+never matched the per-household files and was never run. Ship schema changes
+here, with a test.
 
 How to add a column
 -------------------
@@ -33,19 +32,6 @@ from dataclasses import dataclass
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
-
-ALEMBIC_NOT_AUTHORITATIVE = (
-    "Alembic revisions 0001-0012 are historical and must not be replayed. "
-    "Curiculy schema changes run through create_all plus "
-    "app.schema_patches (see entrypoint.sh → init_databases). "
-    "Do not run alembic upgrade against catalog.db, admin.db, or tenant_*.db."
-)
-
-
-def refuse_alembic_replay() -> None:
-    """Block the Alembic CLI from executing archived revision scripts."""
-    raise RuntimeError(ALEMBIC_NOT_AUTHORITATIVE)
-
 
 def sqlite_table_columns(conn: Connection, table: str) -> set[str]:
     rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()

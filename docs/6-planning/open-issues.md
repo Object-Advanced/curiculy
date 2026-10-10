@@ -1,0 +1,48 @@
+# Open issues (from the October 2026 reviews)
+
+Every problem the feature reviews found, in one prioritized list. Each links to the page with the details.
+- **Now:** worth doing before the next feature work.
+- **Launch:** required before the public launch (June 2027).
+- **Later:** improvements.
+
+## Now
+| # | Issue | Where | Fix |
+|---|---|---|---|
+| 1 | **No off-site backup.** A fire or theft loses the server and its backups together. | [Backups](../4-operations/backups-and-restore.md) | Copy `/datalake/projects/curiculy/backups` off-site (restic, rclone or a drive). Owner task. |
+| 2 | **Kid's My work asks for the child's student record and is refused** (a parent-only route), so the puzzle can't use the child's grade | [My work](../2-features/06-kid-my-work.md) | Return `grade` from `/api/auth/me`; drop the extra call |
+| 3 | **Checking off a lesson doesn't record `completion_date`.** The Sticker Journal needs it. | [Calendar](../2-features/04-calendar-and-lessons.md) | Set it to the household's today on "completed"; clear it when unchecked |
+| 4 | **No outside uptime monitor or alerts** | [Monitoring](../4-operations/monitoring.md) | A free uptime check on `/api/health` |
+| 5 | **Public `/docs` and `/openapi.json`** on curiculy.com | [Security](../4-operations/security-and-privacy.md) | Turn them off in production |
+
+## Launch
+| # | Issue | Where | Fix (phase) |
+|---|---|---|---|
+| 6 | The sign-in token is kept in browser storage | [Accounts](../2-features/01-accounts-and-sign-in.md) | Cookie sessions plus CSRF (3) |
+| 7 | No self-serve password reset, email verification, sign out everywhere, account deletion or export | [Accounts](../2-features/01-accounts-and-sign-in.md) | (8) |
+| 8 | COPPA: consent, how long data is kept, parent access and deletion, legal documents | [Security](../4-operations/security-and-privacy.md) | (8), legal sign-off by April |
+| 9 | AI depends on one home GPU, with no per-household limits and no safety evaluations | [AI features](../2-features/17-ai-features.md) | Hosted provider plus an evaluation suite (8) |
+| 10 | Background jobs (PDF and paper reading, portfolio email) run inside the web process, with no retries | [Pacing](../2-features/09-pacing-and-lesson-plans.md), [Portfolios](../2-features/14-portfolios-and-reports.md) | A jobs table plus a worker (8) |
+| 11 | Work samples on one disk, with no per-household limit | [Evidence](../2-features/13-evidence-and-capture.md) | Storage interface plus S3 and limits (8) |
+| 12 | The Chrome extension asks for every website and isn't published | [Evidence](../2-features/13-evidence-and-capture.md) | Narrow the permissions; Web Store by April (7–8) |
+| 13 | Rate limits live in memory | [Accounts](../2-features/01-accounts-and-sign-in.md) | Edge limits (8) |
+| 14 | Unmaintained `passlib`; the image runs as root; production mounts source code | [Security](../4-operations/security-and-privacy.md) | (7) |
+| 15 | No load test, disaster-recovery drill or penetration test | [Testing](../5-engineering/testing-and-ci.md) | Before M4 |
+
+## Later (screens and cleanup)
+| # | Issue | Where | Fix (phase) |
+|---|---|---|---|
+| 16 | Home shows counts, not each child's lessons; no overdue banner | [Home](../2-features/03-home.md) | Content-first Today (6) |
+| 17 | Calendar on phones: a 5,000 px month column and a crowded toolbar | [Calendar](../2-features/04-calendar-and-lessons.md) | Agenda list, bottom sheets (6) |
+| 18 | "All Students" shows only shared lessons | [Calendar](../2-features/04-calendar-and-lessons.md) | All lessons plus filters (5–6) |
+| 19 | Attendance radios in every cell | [Attendance](../2-features/12-attendance.md) | One popover per day (6) |
+| 20 | Settings scattered; three school-year editors | [Settings](../2-features/02-household-setup-and-settings.md), [School year](../2-features/11-school-year-and-days-off.md) | One Settings area (4) |
+| 21 | Names drift (Kids / My day / Someone's day; Exceptions vs Days off; Auto-schedule vs Apply) | [Glossary](../1-overview/glossary.md) | (4) |
+| 22 | "Subject: Unfiled" everywhere | [Calendar](../2-features/04-calendar-and-lessons.md) | Subject from the book (5) |
+| 23 | About 9 requests to open Home; days off re-fetched on every calendar move | [Home](../2-features/03-home.md) | `/api/workspace`, a date-windowed days-off list (5) |
+| 24 | Notifications poll every 30 s even in hidden tabs; no phone push | [Notifications](../2-features/15-notifications.md) | (6–8) |
+| 25 | Offline cold start shows an empty app | [Offline](../2-features/16-offline-and-sync.md) | Workbox data caching (3) |
+| 26 | Four ISBN entry points; `/curricula` vs `/curriculum` | [Library](../2-features/08-library-and-books.md) | Consolidate and rename (5) |
+| 27 | `ai_generator.py` is plain arithmetic; placeholder models `Jurisdiction` and `CompliancePacket` | [Pacing](../2-features/09-pacing-and-lesson-plans.md), [Data model](../5-engineering/data-model.md) | Rename; drop from the code (5) |
+| 28 | No JavaScript unit tests or type checks | [Testing](../5-engineering/testing-and-ci.md) | Vitest, tsc, pyright (3, 7) |
+| 29 | No switch to turn nudges off per family or per child | [Stuck?](../2-features/07-stuck-nudges.md) | (4) |
+| 30 | HEIC photos from iPhones are refused | [Evidence](../2-features/13-evidence-and-capture.md) | Convert HEIC on upload (6) |
