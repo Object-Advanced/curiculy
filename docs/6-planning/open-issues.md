@@ -17,7 +17,10 @@ The gaps between the app and its purpose, found on 2026-10-11. Each is planned i
 | C5 | **Work samples are slow to add, and captures don't know who or what** | Add work on the lesson, ask at check-off, snap the stack, inbox suggestions |
 | C6 | **Attendance isn't suggested,** and there's no "everyone present" | "School today?" card and weekly sweep |
 | C7 | **The calendar can't move one lesson, preview a change, or check it against any rules** | Move engine with previews and the plan checker |
-| C8 | **No state, structured grade, or birth date** on the household and children | Needed by every state pack |
+| C8 | **No state or structured grade** on the household and children | State at sign-up; grades from a fixed list, re-confirmed each July 1 (no birth date, on purpose) |
+| C10 | **No way to record subjects that have no curriculum** (PE, music, art, safety) | Activities |
+| C11 | **No transcript or credits for grades 9–12** | Courses carry credits; a running transcript |
+| C12 | **No guided setup:** a new family has to find Library, Settings and Calendar on their own | The year-setup interview |
 | C9 | **No shared guides between families** | Community guides v1 |
 
 ## Now

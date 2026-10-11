@@ -36,8 +36,23 @@ Curiculy never shows a ✓ for something it can't actually check.
 | State | Means | Example |
 |---|---|---|
 | **✓ Shown by your records** | Worked out from the family's data | "Ada: 181 of 180 days" |
-| **Parent confirms** | A checklist item with an optional upload, for anything outside Curiculy or not yet mapped | "Affidavit filed with the superintendent" |
+| **Parent confirms** | A checklist item for anything outside Curiculy or not yet mapped: a checkbox and a date, plus an upload only where it's safe | "Affidavit filed July 28" (no upload); "Evaluator's letter" (upload) |
 | **Missing** | Not done yet, with a link straight to the fix | "Q2 science: 1 of 2 samples. Attach to a lesson" |
+
+## Private details: never stored
+A requirement that needs sensitive personal information (health or immunization records, birth dates, addresses, criminal-history certifications) is **never stored**. Instead:
+- **Forms are fillable PDFs:** what Curiculy knows is filled in, and private details are left blank for the parent to type, e-sign (DocuSign or similar) or ink. Nothing typed into the blanks is saved.
+- **The checklist shows a checkbox and a date,** with no upload, for anything sensitive.
+- **"Your state" explains where to get each record.**
+
+See [Privacy](../product-spine.md#privacy-keep-the-minimum).
+
+## Where families read the rules
+- **Records → Your state:** the rules in plain words, with sources, the date last reviewed, and the official forms
+- a **Why?** link on each checklist line, setup step and calendar warning
+- a **public page per state** on the website
+
+Settings holds only the family's choices: their state, and their evaluator adjustments.
 
 ## Sources
 - **Prefer primary sources:** the statute and the state education department's own guidance.
@@ -47,5 +62,5 @@ Curiculy never shows a ✓ for something it can't actually check.
 ## States
 | State | Worksheet | Status |
 |---|---|---|
-| Pennsylvania | [pennsylvania.md](pennsylvania.md) | Draft, waiting for review |
+| Pennsylvania | [pennsylvania.md](pennsylvania.md) | First review done 2026-10-11; Q12–Q14 still open |
 | New York | (not started) | Likely next: its yearly plan (IHIP) and quarterly reports can be generated from courses |
