@@ -4,6 +4,8 @@ Product and technical decisions, newest first. Each says what was decided, why, 
 
 | Date | Decision | Why | Affects |
 |---|---|---|---|
+| 2026-10-11 | **The React app lives at `/next`, built into the Docker image,** with exact package versions released at least two weeks earlier (React 19.3, TypeScript 5.9, Vite 7.3, Tailwind 4.3, React Router 7.18, TanStack Query 5, Vitest 3). Until cookie sessions land, it shares the legacy sign-in token and `theme-boot.js`. | Ship screens one at a time beside the legacy app; established major versions over brand-new ones | [My trail](../2-features/19-my-trail.md), `frontend/README.md` |
+| 2026-10-11 | **The first React screen is the kid's My trail**, with a parent preview | The user asked for the map view; the screen is self-contained | [My trail](../2-features/19-my-trail.md) |
 | 2026-10-10 | **Remove the archived Alembic migrations, two placeholder modules, duplicate images and superseded docs.** Organize all documentation in `docs/`. | They were never run or used, and they confused readers. Git history keeps them. | Repo layout; [this handbook](../README.md) |
 | 2026-10-10 | **Greet families by family name** ("Good afternoon, Schroeder Family"): drop a leading "The", capitalize "Family", no period | Reads naturally | [Home](../2-features/03-home.md) |
 | 2026-10-10 | **Homework help becomes "Stuck?":** one nudge back to the child's own materials, then "get a grown-up" (which notifies the parent) | Curiculy guides; it doesn't teach | [Stuck? nudges](../2-features/07-stuck-nudges.md) |

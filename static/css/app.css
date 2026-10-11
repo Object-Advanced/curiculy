@@ -1507,6 +1507,23 @@ button.small.button {
     width: auto;
 }
 
+a.button.small {
+    padding: 0.4rem 0.7rem;
+    font-size: var(--text-xs);
+}
+
+a.button.ghost {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+}
+
+a.button.ghost:hover {
+    background: var(--bg-hover);
+    filter: none;
+}
+
 .student-card-copy {
     margin: 0.55rem 0 0.85rem;
     color: var(--text-secondary);
@@ -2080,6 +2097,29 @@ button.small.button {
 [data-persona="kid"] .card {
     border: var(--border-width) solid var(--border-strong);
     box-shadow: var(--kid-raise);
+}
+
+.kid-trail-link {
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+}
+
+[data-persona="kid"] .kid-trail-link {
+    min-height: 48px;
+    padding: 0 var(--space-5);
+    border: var(--border-width) solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--accent);
+    color: var(--on-accent);
+    box-shadow: var(--kid-raise);
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    font-size: var(--text-lg);
+}
+
+[data-persona="kid"] .kid-trail-link:active {
+    transform: translateY(2px);
+    box-shadow: var(--kid-raise-pressed);
 }
 
 [data-persona="kid"] #view > .card + .card {
@@ -3881,7 +3921,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261010-completion");
+    background-image: url("/static/night-mountains.jpg?v=20261011-trail");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

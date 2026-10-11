@@ -1,0 +1,595 @@
+@import "tailwindcss";
+/* One token system for both apps: the same file the legacy app loads. */
+@import "../../static/css/tokens.css";
+
+/* Tailwind utilities read the tokens (bg-card, text-ink, font-display…). */
+@theme inline {
+  --color-page: var(--surface-page);
+  --color-card: var(--surface-card);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--text-strong);
+  --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
+  --color-line: var(--border-default);
+  --color-line-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-sun: var(--kid-sun);
+  --color-leaf: var(--kid-leaf);
+  --color-tomato: var(--kid-tomato);
+  --font-display: var(--font-display);
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--surface-page);
+    color: var(--text-body);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  /* ---- Page ---- */
+  .trail-page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-4) var(--space-12);
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .trail-layout {
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 960px) {
+    .trail-layout {
+      grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr);
+      align-items: start;
+    }
+  }
+
+  .trail-side {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  /* ---- Sticker Book pieces ---- */
+  .kid-header {
+    display: flex;
+    flex-wrap: wrap-reverse;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .kid-hello-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+    color: var(--text-strong);
+  }
+
+  .kid-hello-line {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-lg);
+    font-weight: 800;
+  }
+
+  .kid-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .kid-tab,
+  .kid-btn {
+    min-height: 48px;
+    padding: 0 var(--space-4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    border: var(--border-width) solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+    color: var(--text-strong);
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    font-size: var(--text-lg);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: var(--kid-raise);
+    cursor: pointer;
+    transition:
+      transform var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .kid-tab:active,
+  .kid-btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: var(--kid-raise-pressed);
+  }
+
+  .kid-tab-active,
+  .kid-btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .kid-btn-quiet {
+    min-height: 44px;
+    font-size: var(--text-sm);
+    border-width: 2px;
+    box-shadow: none;
+  }
+
+  .kid-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .kid-link {
+    justify-self: start;
+    padding: var(--space-1) 0;
+    border: 0;
+    background: none;
+    color: var(--accent-text);
+    font-weight: 800;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .kid-card {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    border: var(--border-width) solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface-card);
+    box-shadow: var(--kid-raise);
+  }
+
+  .kid-card-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    font-size: var(--text-xl);
+    color: var(--text-strong);
+  }
+
+  .kid-card-sub {
+    margin: 0;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+
+  .kid-kicker {
+    margin: 0;
+    color: var(--accent-text);
+    font-size: var(--text-xs);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .preview-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--highlight-soft);
+    color: var(--text-strong);
+    font-weight: 700;
+  }
+
+  .preview-bar p {
+    margin: 0;
+  }
+
+  .preview-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .kid-chip {
+    min-height: 40px;
+    padding: 0 var(--space-4);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    background: var(--surface-card);
+    color: var(--text-strong);
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .kid-chip.is-active {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  /* ---- Stops ---- */
+  .stop-list {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .stop-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3);
+    border: 2px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+  }
+
+  .stop-item > button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  @media (min-width: 520px) {
+    .stop-item {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .stop-item > button {
+      grid-column: auto;
+    }
+  }
+
+  .stop-item.is-current {
+    border: var(--border-width) solid var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .stop-badge {
+    width: 48px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .stop-number {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px dashed var(--border-strong);
+    border-radius: var(--radius-full);
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    font-size: var(--text-lg);
+    color: var(--text-strong);
+  }
+
+  .is-current .stop-number {
+    border-style: solid;
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .stop-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .stop-copy p {
+    margin: 0;
+  }
+
+  .stop-kicker {
+    color: var(--accent-text);
+    font-size: var(--text-2xs);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stop-title {
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    font-size: var(--text-lg);
+    color: var(--text-strong);
+  }
+
+  .is-done .stop-title {
+    color: var(--text-muted);
+  }
+
+  .stop-meta,
+  .stop-note {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .stop-note {
+    color: var(--text-body);
+    font-weight: 600;
+  }
+
+  .stop-earned {
+    color: var(--success);
+    font-size: var(--text-sm);
+    font-weight: 800;
+  }
+
+  .stop-error {
+    margin: 0;
+    color: var(--danger);
+    font-weight: 800;
+  }
+
+  /* ---- Stickers ---- */
+  .sticker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border: 4px solid var(--surface-card);
+    border-radius: var(--radius-full);
+    box-shadow: 0 0 0 2.5px var(--kid-ink, var(--text-strong));
+  }
+
+  .sticker-sun,
+  .sticker-fill-sun { background: var(--sticker-sun); fill: var(--sticker-sun); }
+  .sticker-grape,
+  .sticker-fill-grape { background: var(--sticker-grape); fill: var(--sticker-grape); }
+  .sticker-rose,
+  .sticker-fill-rose { background: var(--sticker-rose); fill: var(--sticker-rose); }
+  .sticker-leaf,
+  .sticker-fill-leaf { background: var(--sticker-leaf); fill: var(--sticker-leaf); }
+  .sticker-sky,
+  .sticker-fill-sky { background: var(--sticker-sky); fill: var(--sticker-sky); }
+  .sticker-peach,
+  .sticker-fill-peach { background: var(--sticker-peach); fill: var(--sticker-peach); }
+  .sticker-cream,
+  .sticker-fill-cream { background: var(--sticker-cream); fill: var(--sticker-cream); }
+
+  .sticker-empty {
+    border: 3px dashed var(--border-default);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .sticker-empty svg {
+    opacity: 0.4;
+  }
+
+  .sticker-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .sticker-slot {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-1);
+    text-align: center;
+  }
+
+  .sticker-slot-label {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 800;
+  }
+
+  /* ---- Bonus chest ---- */
+  .bonus-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .bonus-body {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .bonus-body p {
+    margin: 0;
+  }
+
+  .bonus-prompt {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-strong);
+  }
+
+  .bonus-visual {
+    font-size: var(--text-2xl);
+    letter-spacing: 0.15em;
+  }
+
+  .bonus-choices,
+  .bonus-guess {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .bonus-guess input {
+    flex: 1;
+    min-width: 8rem;
+    min-height: 48px;
+    padding: 0 var(--space-3);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    color: var(--text-strong);
+    font: inherit;
+    font-weight: 700;
+  }
+
+  .bonus-feedback {
+    min-height: 1.5em;
+    font-weight: 800;
+    color: var(--text-strong);
+  }
+
+  .bonus-hint {
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+
+  /* ---- Camp ---- */
+  .camp-banner {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4);
+    background: var(--sticker-rose);
+  }
+
+  .camp-banner .kid-card-title,
+  .camp-banner-line {
+    color: var(--kid-ink, var(--text-strong));
+  }
+
+  .camp-banner-line {
+    margin: var(--space-1) 0 0;
+    font-weight: 700;
+  }
+
+  /* ---- The map (SVG) ---- */
+  .trail-map-card {
+    overflow: hidden;
+    border: var(--border-width) solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    background: var(--trail-paper);
+    box-shadow: var(--kid-raise);
+  }
+
+  .trail-map {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .trail-paper { fill: var(--trail-paper); }
+  .trail-sun { fill: var(--trail-sun); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-cloud { fill: var(--trail-cloud); stroke: var(--kid-ink); stroke-width: 2.5; }
+  .trail-hill-1 { fill: var(--trail-hill-1); }
+  .trail-hill-2 { fill: var(--trail-hill-2); }
+  .trail-tree-1 { fill: var(--trail-tree-1); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-tree-2 { fill: var(--trail-tree-2); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-tree-3 { fill: var(--trail-tree-3); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-ink-line { fill: none; stroke: var(--kid-ink); stroke-width: 3; stroke-linecap: round; }
+
+  .trail-road-edge,
+  .trail-road,
+  .trail-road-traveled,
+  .trail-road-dash,
+  .trail-spur-edge,
+  .trail-spur {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .trail-road-edge { stroke: var(--kid-ink); stroke-width: 40; }
+  .trail-road { stroke: var(--trail-road); stroke-width: 32; }
+  .trail-road-traveled { stroke: var(--trail-traveled); stroke-width: 32; }
+  .trail-road-dash { stroke: var(--kid-ink); stroke-width: 3; stroke-dasharray: 3 13; opacity: 0.45; }
+  .trail-spur-edge { stroke: var(--kid-ink); stroke-width: 28; }
+  .trail-spur { stroke: var(--trail-road); stroke-width: 20; }
+
+  .trail-sign { fill: var(--surface-card); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-sign-text,
+  .trail-stop-number,
+  .trail-marker-text {
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    text-anchor: middle;
+    fill: var(--text-strong);
+  }
+  .trail-sign-text { font-size: 16px; }
+  .trail-stop-number { font-size: 26px; }
+  .trail-stop-number-current { fill: var(--on-accent); }
+
+  .trail-stop-done { stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-check { fill: var(--kid-leaf); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-check-mark { fill: none; stroke: var(--paper-0); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .trail-halo { fill: var(--accent); opacity: 0.22; }
+  .trail-stop-current { fill: var(--accent); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-stop-next { fill: var(--surface-card); stroke: var(--kid-ink); stroke-width: 3; stroke-dasharray: 6 5; }
+
+  .trail-chest { fill: var(--sticker-cream); stroke: var(--kid-ink); stroke-width: 3; stroke-dasharray: 7 5; }
+  .trail-chest-open { fill: var(--sticker-sun); stroke-dasharray: none; }
+
+  .trail-camp { fill: var(--sticker-rose); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-tent { fill: var(--kid-tomato); stroke: var(--kid-ink); stroke-width: 3; stroke-linejoin: round; }
+  .trail-tent-door { fill: var(--kid-ink); }
+  .trail-flag { fill: var(--accent); stroke: var(--kid-ink); stroke-width: 2; stroke-linejoin: round; }
+
+  .trail-marker-dot { fill: var(--sticker-rose); stroke: var(--kid-ink); stroke-width: 3; }
+  .trail-marker-text { font-size: 20px; fill: var(--kid-ink); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .trail-halo {
+      animation: halo-pulse 1.8s var(--ease-out) infinite;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    .stop-pop {
+      animation: stop-pop var(--duration-slow) var(--ease-spring);
+    }
+
+    .trail-flag-up {
+      animation: flag-wave 1.2s ease-in-out infinite alternate;
+      transform-box: fill-box;
+      transform-origin: left center;
+    }
+  }
+
+  @keyframes halo-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.22; }
+    50% { transform: scale(1.12); opacity: 0.1; }
+  }
+
+  @keyframes stop-pop {
+    from { transform: scale(0.6); }
+  }
+
+  @keyframes flag-wave {
+    from { transform: skewY(-6deg); }
+    to { transform: skewY(6deg); }
+  }
+}

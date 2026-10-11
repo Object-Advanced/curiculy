@@ -121,3 +121,17 @@ test("the portfolio preview renders a report for the school year", async ({ page
   await openRoute(page, "#/portfolios", "Portfolios");
   await expect(page.locator("#portfolio-canvas")).toContainText("Sam Rivera");
 });
+
+test("a parent opens a child's trail from the Kids page", async ({ page }) => {
+  await page.clock.setFixedTime(FROZEN_NOW);
+  await startDemo(page);
+  await seedSchoolWeek(page);
+  await openRoute(page, "#/students", /'s day$/);
+  await page.getByRole("link", { name: "See Sam’s trail" }).click();
+  await expect(page.getByRole("heading", { name: "Hi Sam!" })).toBeVisible();
+  await expect(page.getByText("Parent preview. Checking off here counts for Sam.")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Today's stops" }).getByRole("listitem")).toHaveCount(2);
+  await page.getByRole("button", { name: "Maya" }).click();
+  await expect(page.getByRole("heading", { name: "Hi Maya!" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to Kids" })).toBeVisible();
+});

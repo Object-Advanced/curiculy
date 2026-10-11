@@ -74,4 +74,9 @@ test("kid's own work list", async ({ page }) => {
   await openRoute(page, "#/my-work", "My work");
   await settle(page);
   await expect(page).toHaveScreenshot("kid-my-work.png");
+
+  await page.goto("/next/trail");
+  await expect(page.getByRole("img", { name: /^Trail map/ })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await expect(page).toHaveScreenshot("kid-my-trail.png", { fullPage: true });
 });

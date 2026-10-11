@@ -2379,6 +2379,7 @@ function renderStudents() {
                       data-student-id="${student.id}">Recalibrate schedule</button>
               <button type="button" class="ghost small" data-action="print-weekly-checklist"
                       data-student-id="${student.id}">Print weekly checklist</button>
+              <a class="button ghost small" href="/next/trail?student=${student.id}">See ${escapeHtml(firstName(student.name))}’s trail</a>
             </div>
           </div>
           <div id="today-checklist"><p class="empty">Loading…</p></div>
@@ -7398,6 +7399,12 @@ const KID_STAR_SVG =
   '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">' +
   '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>';
 
+// My trail lives in the React app (frontend/), served under /next.
+const KID_MAP_SVG =
+  '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="none" ' +
+  'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>';
+
 function renderKidHello(todayItems) {
   const name = firstName(state.kidStudent?.name || state.sessionUser?.display_name);
   const total = todayItems.length;
@@ -7416,6 +7423,7 @@ function renderKidHello(todayItems) {
       <h2>Hi ${escapeHtml(name)}!</h2>
       <p class="kid-hello-progress">${escapeHtml(line)}</p>
       ${total ? `<div class="kid-stars" role="img" aria-label="${done} of ${total} stars earned today">${stars}</div>` : ""}
+      <a class="button kid-trail-link" href="/next/trail">${KID_MAP_SVG}My trail</a>
     </section>`;
 }
 

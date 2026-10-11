@@ -20,5 +20,8 @@ cleanup() { compose down --volumes --remove-orphans > /dev/null 2>&1 || true; }
 
 trap cleanup EXIT
 cleanup
+# CI builds the image in its own step (with a layer cache); locally, rebuild
+# so the React app in the image matches the checkout.
+if [ -z "${CI:-}" ]; then compose build --quiet curiculy-app; fi
 compose up --detach --wait curiculy-app
 compose run --rm -T playwright sh -c 'npm ci --no-audit --no-fund && npx playwright test "$@"' playwright "$@"

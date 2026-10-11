@@ -10,7 +10,7 @@ All design boards live on one canvas: **[Curiculy Style Tiles](https://claude.ai
 | **Kid options** | A · Sticker Book · B · Explorer Trail | A was chosen; Explorer Trail became the **My trail** page |
 
 ## My trail (kid)
-A playful page a child opens to see their day as a path. **It will be built as the first React screen** (Phase 3).
+A playful page a child opens to see their day as a path. **Built in October 2026 as the first React screen**, at `/next/trail`. See [My trail](../2-features/19-my-trail.md) for how it works.
 
 - **Stops are today's lessons, in order.** Each says where it comes from ("Grab your copy", "Blue workbook, p. 14"), with an **I did it!** button at the current stop.
 - **The bonus chest** is the daily "Just for fun" puzzle, on a side path, so it's optional.

@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     evidence_dir: Path = Path("data/evidence")
     index_html_path: Path = Path("index.html")
     static_dir: Path = Path("static")
+    # The React app (frontend/), built into the image; served under /next.
+    frontend_dist_dir: Path = Path("frontend/dist")
 
     # Auth. DEV_MODE skips JWTs and keeps using tenant_database_url so local
     # docker data is not stranded behind an empty admin.db. JWT_SECRET is

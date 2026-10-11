@@ -14,7 +14,7 @@ A parent opens one child to see their day, check lessons off, and get a conversa
 - **Tabs, one per child.** Each tab shows the child's color.
 - **Today** card:
   - "1 of 2 complete", with today's lessons and check boxes (a small celebration plays on check-off)
-  - **Recalibrate schedule** and **Print weekly checklist** in the card's heading
+  - **Recalibrate schedule**, **Print weekly checklist**, and **See Sam's trail** (a preview of the child's [My trail](19-my-trail.md)) in the card's heading
 - **"Ask Sam":** a question for the parent to ask about today's book. A simple question appears at once; when the local AI is available, a better one about today's lessons replaces it.
 - **Books in motion:** progress bars per book (lessons done out of the total).
 

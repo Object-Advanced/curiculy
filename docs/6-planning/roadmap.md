@@ -8,7 +8,7 @@
 | **0** | Baseline and safety net: Playwright suite, visual snapshots, accessibility ratchet, lint in CI | Oct 2026 | **Done** |
 | **1** | Beta hardening: household time zone, family-code kid sign-in, rate limits, upload limits, security headers, SQLite settings, offline-queue fixes, nightly backups, password-reset script, recovering plans after a restart | Oct–Nov 2026 | **Done and deployed** (2026-10-09) |
 | **2** | Design language and tokens: style tiles, `tokens.css`, self-hosted fonts, AA contrast, the kid look, calmer parent Kids page, "Stuck?" nudges | Nov–Dec 2026 | **Done and deployed** (2026-10-10), ahead of schedule |
-| **3** | React foundation: Vite + TypeScript + React 19, Tailwind on the tokens, a typed API client, TanStack Query, PWA, cookie sessions, Storybook. **Pilot route: the kid's My trail and Sticker journal.** | Dec 2026–Jan 2027 | Next |
+| **3** | React foundation: Vite + TypeScript + React 19, Tailwind on the tokens, a typed API client, TanStack Query, PWA, cookie sessions, Storybook. **Pilot route: the kid's My trail and Sticker journal.** | Dec 2026–Jan 2027 | **Started early:** the foundation and **My trail** are built (`frontend/`, served at `/next`). Next: the Sticker journal, cookie sessions, PWA, Storybook. |
 | **4** | App shell and navigation: a bottom tab bar on phones (Today · Calendar · ＋ · Kids · More), a sidebar on desktop, one Settings area, plain names | Jan–Feb 2027 | Planned |
 | **5** | API v2 and backend cleanup: one error format, `/api/workspace`, an all-lessons calendar, renames, versioned migrations, removing dead code | Jan–Mar 2027 | Planned (some cleanup already done: the Alembic chain and placeholder modules were removed, and check-off records `completion_date`) |
 | **6** | Screen-by-screen migration and polish, then cutover: Today feed, Calendar, Kids profiles, Library, lesson details, Records, Settings | Feb–Apr 2027 | Planned |
@@ -28,6 +28,6 @@
 1. **Small fix:** turn off public `/docs`.
 2. **Off-site backup** (owner task). See [Backups](../4-operations/backups-and-restore.md).
 3. **Decision records** (by end of January): data tier, hosting, AI provider and child safety, COPPA and legal, billing.
-4. **Phase 3:** scaffold `frontend/`, then build **My trail** and the **Sticker journal** as the first React screens.
+4. **Phase 3:** the **Sticker journal** next to My trail; then cookie sessions, offline support (PWA) and Storybook.
 
 See [Open issues](open-issues.md) for every known problem, by priority.

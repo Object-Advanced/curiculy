@@ -1,3 +1,15 @@
+# The React app (frontend/), built once and copied into the Python image.
+FROM node:22.23.2-alpine AS frontend
+
+WORKDIR /src/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+# The app's CSS imports the shared design tokens from ../../static/css.
+COPY static/css/tokens.css /src/static/css/tokens.css
+RUN npm run build
+
+
 FROM python:3.12-slim AS base
 
 WORKDIR /app
@@ -29,6 +41,7 @@ COPY scripts ./scripts
 COPY index.html .
 COPY sw.js .
 COPY static ./static
+COPY --from=frontend /src/frontend/dist ./frontend/dist
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh && mkdir -p /data/evidence
 

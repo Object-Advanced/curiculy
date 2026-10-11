@@ -1,12 +1,13 @@
 # Testing and CI
 
-Three layers of checks run on every push and pull request (GitHub Actions, `.github/workflows/tests.yml`), and the same commands run locally.
+Four layers of checks run on every push and pull request (GitHub Actions, `.github/workflows/tests.yml`), and the same commands run locally.
 
 | Layer | What | Command | Count (Oct 2026) |
 |---|---|---|---|
 | **Lint** | Python syntax errors and unused or undefined names (ruff 0.16.9, E9 + F rules) | `docker compose --profile dev run --build --rm tests ruff check app scripts tests` | — |
 | **Backend** | pytest against throwaway SQLite files; never touches `/data`, the AI or mail | `docker compose --profile dev run --rm tests pytest -q --tb=line` | about 1,000 tests in 54 files |
-| **Browser** | Playwright 1.63 against a throwaway app in its own Compose project (`curiculy-e2e`) | `e2e/run.sh` | 36 tests across 6 projects |
+| **Frontend** | React app: TypeScript (strict), Vitest + Testing Library + MSW, a production build, and a check that the typed API client matches `frontend/openapi.json` | `cd frontend && npm run typecheck && npm test && npm run build` | 28 tests |
+| **Browser** | Playwright 1.63 against a throwaway app in its own Compose project (`curiculy-e2e`); `e2e/run.sh` rebuilds the app image first so the React build is current | `e2e/run.sh` | 38 tests across 6 projects |
 
 ## The browser suite (`e2e/`)
 - **Projects:**
@@ -32,7 +33,7 @@ See the **Tests** section of each [feature page](../2-features/README.md). The b
 - providers: 31
 
 ## Gaps
-- **No JavaScript unit tests.** The 9,500-line `app.js` is tested only through the browser. React brings Vitest, Testing Library and MSW (Phase 3).
+- **The legacy `app.js` has no JavaScript unit tests;** it's tested only through the browser. The React app has Vitest, Testing Library and MSW, and screens get unit tests as they move over.
 - **No type checking** (pyright, tsc). Planned for Phase 7.
 - **No dependency vulnerability scan.** Planned for Phase 7.
 - **No load test or disaster-recovery drill.** Required before launch (M4).

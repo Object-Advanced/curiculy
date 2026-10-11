@@ -7,3 +7,5 @@ venv/
 .env
 e2e/
 backups/
+frontend/node_modules/
+frontend/dist/

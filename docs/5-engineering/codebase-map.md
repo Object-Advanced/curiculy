@@ -26,10 +26,16 @@ curiculy/
 │   ├── evidence/             Storing and serving work-sample files safely
 │   ├── templates/            HTML and CSS for PDFs: portfolio, weekly checklist, paper week sheet
 │   └── utils/isbn.py         ISBN-10 and ISBN-13 checks and conversion
-├── index.html                The web app's single page, including the sign-in page and wizard (694 lines)
+├── frontend/                 The new React app (Vite + TypeScript), served at /next; see frontend/README.md
+│   ├── src/routes/           Screens: TrailPage (My trail)
+│   ├── src/components/       TrailMap (SVG), StopList, StickerPanel, BonusChest…
+│   ├── src/lib/              Pure logic: map layout, stickers, the daily puzzle, dates
+│   ├── src/api/              Typed API client (generated from openapi.json) and queries
+│   └── openapi.json          The API description the client is built from
+├── index.html                The legacy web app's single page, including the sign-in page and wizard (694 lines)
 ├── sw.js                     Service worker: keeps the app's files on the device
 ├── static/
-│   ├── js/app.js             The whole web app (9,500 lines; React replaces it from Phase 3)
+│   ├── js/app.js             The legacy web app (9,500 lines; React replaces it screen by screen)
 │   ├── js/theme-boot.js      Runs before the first paint: theme, sign-in state, kid look
 │   ├── css/tokens.css        Design tokens (colors, type, spacing, kid look, seasons)
 │   ├── css/app.css           Styles (4,460 lines; uses tokens only)
@@ -42,7 +48,7 @@ curiculy/
 ├── tests/                    Backend tests (pytest, 54 files, about 1,000 tests)
 ├── e2e/                      Browser tests (Playwright): functional, visual snapshots, accessibility, offline, metrics
 ├── .github/workflows/        CI: lint, pytest, e2e on every push and pull request
-├── Dockerfile                The app image (Python 3.12, WeasyPrint, Tesseract)
+├── Dockerfile                The app image: a Node stage builds frontend/, then Python 3.12, WeasyPrint, Tesseract
 ├── docker-compose.yml        api, backup (profile "backup") and tests (profile "dev")
 ├── entrypoint.sh             Startup: check config → prepare databases → run uvicorn behind the proxy
 ├── requirements*.txt         Python packages (pinned)
