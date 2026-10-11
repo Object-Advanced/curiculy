@@ -14,7 +14,7 @@ scheduler can alert on it.
 
 Restore (with the app stopped): copy the snapshot's .db files back into the
 data directory and the evidence mirror back into the evidence directory. See
-README "Backups and restore".
+docs/4-operations/backups-and-restore.md.
 """
 
 from __future__ import annotations
