@@ -80,6 +80,10 @@ All families in one database. Every family table carries `household_id`. **Row-l
 ### Also ruled out
 - **One SQLite file for every family:** one writer at a time for the whole service, and none of A's isolation. It gains nothing over B.
 - **A Postgres schema per family:** every migration runs once per family, which brings back A's migration problem.
+- **A Postgres database per family** (a per-customer setup like the one the owner describes at TankTrack):
+  - **Good:** real separation, and a natural nightly backup per customer.
+  - **Hard:** every migration runs once per family, connections multiply, and family data can't join shared data. Those are option A's trade-offs.
+  - **Fit:** it suits a business app with tens or hundreds of customers better than a family app aiming for thousands. Option B gets the per-family nightly copy another way (below).
 - **Hosted per-family SQLite services:** ties Curiculy to one vendor's platform before the hosting decision is made.
 
 ## Side by side
@@ -109,9 +113,7 @@ All families in one database. Every family table carries `household_id`. **Row-l
   - Family A can't read, change or delete Family B's rows through any route.
   - A session without a household sees no rows.
   - Inserting with the wrong household fails.
-- **Backups:**
-  - WAL archiving for point-in-time recovery, plus a nightly dump, both to the backup array **and off-site** (this also closes today's off-site gap)
-  - a restore drill before launch
+- **Backups:** in layers, off-site, and tested every night. See [Backups](#backups-layered-not-just-nightly).
 - **Per-family export and import** (JSON plus work-sample files). One tool serves the lifetime archive, a parent's access and deletion requests, restoring one family, seeding demos, and moving between environments.
 - **Versions are pinned:** a Postgres major release and drivers (psycopg 3) that are established, not brand new (the project's version rule).
 
@@ -142,6 +144,31 @@ This is the most important risk of a shared database, and the owner's main conce
 - **The coverage check above:** every table is either protected, or on the shared list.
 - **The planned penetration test before launch** includes cross-family access.
 
+## Backups: layered, not just nightly
+Today Curiculy copies each family file once a night. A failure late in the day loses that day's work, and **nothing is off-site yet.** Option B keeps a nightly copy and adds continuous protection. It follows the 3-2-1 rule: three copies, on two kinds of storage, one of them off-site.
+
+| Layer | What it is | What it's for |
+|---|---|---|
+| **1. Continuous archive** | Every change is shipped to the backup array within a minute or so (WAL archiving with pgBackRest or WAL-G), plus a weekly base backup | Restore the whole database to **any minute** in the last 30 days: "just before the bad update at 2:14 pm" |
+| **2. Nightly full copy** | A complete dump of the database every night, kept 14 nights plus one a month | A simple, separate "image" of everything, if the archive itself has a problem |
+| **3. Nightly family copies** | Every family exported to its own file each night (the same export that makes the lifetime archive) | **Restore one family without touching anyone else.** This is the per-customer nightly image, like TankTrack's. |
+| **Off-site** | Layers 1–3 and the work-sample files, **encrypted**, copied to cloud storage (for example Backblaze B2 or S3) | A fire, theft or dead server at home loses nothing |
+
+**A backup that's never restored isn't trusted:**
+- **Every night,** a job restores the latest full copy into a scratch database, checks row counts and integrity, and **alerts on any failure.**
+- **Before launch and then every quarter,** a full restore drill rebuilds the service on a spare machine from off-site copies alone (already a launch milestone).
+- **Alerts** go off if the continuous archive falls behind or a nightly job fails, through the same log check and uptime monitor as the rest of the site.
+
+**What a restore looks like:**
+| What went wrong | What we do | Lost |
+|---|---|---|
+| The server dies | Rebuild from the base backup and replay the archive | About a minute of changes |
+| A bad update damages data at 2:14 pm | Restore the whole database to 2:13 pm | Only changes after 2:13 |
+| One family needs yesterday back | Import their nightly family copy (or pull just their rows from a point-in-time restore) | Nothing for anyone else |
+| Fire or theft at home | Restore everything from the off-site copies onto new hardware | About a minute, plus rebuild time |
+
+**Size and cost:** the database is small (text and numbers). Photos and videos are the bulk, and they're already mirrored as files. Off-site storage at Curiculy's size costs a few dollars a month.
+
 ## Quality: is Postgres more error-prone?
 **No. For data quality it's stricter than SQLite,** so it catches mistakes SQLite lets through silently:
 - **Types are enforced.** SQLite will store the text "abc" in a number column, and it doesn't enforce lengths like `String(255)`. Postgres refuses both.
@@ -159,7 +186,7 @@ The new risks are the ones in the table above, and each has a test or a startup 
 | Schema changes | Alembic, from a fresh baseline of the redesigned models; `app/schema_patches.py` and the legacy-table scripts retire |
 | Tests | Postgres in CI (a service container) and locally (Docker); each test rolls back; new isolation tests |
 | Demo mode | Demo households become ordinary households with an expiry, deleted by a cleanup job |
-| Backups | `scripts/backup.py`'s SQLite path is replaced by WAL archiving and a nightly dump, off-site; the evidence mirror stays |
+| Backups | `scripts/backup.py`'s SQLite path is replaced by the [three layers](#backups-layered-not-just-nightly): continuous archive, nightly full copy, nightly family copies, all copied off-site and encrypted, plus a nightly restore test. The evidence mirror stays and also goes off-site. |
 | Operations | A `postgres` service in `docker-compose.yml`, with its data on the NVMe drive and archives on the data array |
 | Today's data | Start fresh; export the owner's test household first only if wanted |
 | Docs | [Data model](../../5-engineering/data-model.md), [Backups](../../4-operations/backups-and-restore.md), [How it works](../../1-overview/how-it-works.md); the principle "each family has its own database file" becomes "each family's rows are walled off by the database, with point-in-time backups" |
