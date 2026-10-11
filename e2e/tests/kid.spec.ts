@@ -122,3 +122,43 @@ test("stuck? gives one nudge, then sends the kid to a grown-up", async ({ page }
   const { notifications } = (await inbox.json()) as { notifications: { title: string }[] };
   expect(notifications.map((row) => row.title)).toContain(`${firstName} needs you`);
 });
+
+test("My trail: a kid follows today's stops to camp", async ({ page }) => {
+  await page.clock.setFixedTime(FROZEN_NOW);
+  // Start from a known day even on a retry: the worksheet is not done yet.
+  const parent = await parentToken(page);
+  const headers = { Authorization: `Bearer ${parent}` };
+  const { studentId } = loadHouseholdState();
+  const day = await page.request.get(
+    `/api/students/${studentId}/assignments?start_date=2026-10-14&end_date=2026-10-14`,
+    { headers },
+  );
+  const { assignments } = (await day.json()) as { assignments: { id: number; title: string }[] };
+  const worksheet = assignments.find((row) => row.title === "Fractions worksheet");
+  expect(worksheet).toBeTruthy();
+  await page.request.patch(`/api/assignments/${worksheet!.id}/status`, { headers, data: { status: "assigned" } });
+
+  await openStudentSignIn(page);
+  await page.getByRole("button", { name: firstName, exact: true }).click();
+  const pinForm = page.locator("#student-pin-form");
+  await pinForm.getByLabel("PIN").fill(HOUSEHOLD.kid.pin);
+  await pinForm.getByRole("button", { name: "Log In" }).click();
+
+  await page.getByRole("link", { name: "My trail" }).click();
+  await expect(page).toHaveURL(/\/next\/trail$/);
+  await expect(page.getByRole("heading", { name: `Hi ${firstName}!` })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Trail map: 1 of 2 stops done." })).toBeVisible();
+  const stops = page.getByRole("list", { name: "Today's stops" }).getByRole("listitem");
+  await expect(stops).toHaveCount(2);
+  await expect(stops.nth(1)).toContainText("Note: Pages 14–15 in the blue workbook.");
+
+  await page.getByRole("button", { name: "I did it: Fractions worksheet" }).click();
+  await expect(page.getByRole("heading", { name: "You reached camp!" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Trail map: 2 of 2 stops done, camp reached." })).toBeVisible();
+
+  // Put the day back for the other tests, then return to My work.
+  await page.getByRole("button", { name: "Not done yet: Fractions worksheet" }).click();
+  await expect(page.getByText("1 stop to camp")).toBeVisible();
+  await page.getByRole("link", { name: "My day" }).click();
+  await expect(page.locator("#page-title")).toHaveText("My work");
+});

@@ -86,6 +86,12 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
   const kid = await scan(page, "my-work");
   report["my-work"] = { ...kid.counts, rules: kid.rules };
 
+  await page.goto("/next/trail");
+  await expect(page.getByRole("img", { name: /^Trail map/ })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  const trail = await scan(page, "my-trail");
+  report["my-trail"] = { ...trail.counts, rules: trail.rules };
+
   if (process.env.UPDATE_A11Y_BASELINE === "1" || !existsSync(BASELINE_FILE)) {
     const baseline = Object.fromEntries(
       Object.entries(report).map(([screen, counts]) => [screen, counts.serious + counts.critical]),

@@ -29,5 +29,6 @@ Every major function of Curiculy has one page with two halves:
 | 16 | [Offline and sync](16-offline-and-sync.md) | Everyone | Solid for short drops | Queued changes, applied once |
 | 17 | [AI features](17-ai-features.md) | — | Works for beta; must change for launch | Every AI use in one place |
 | 18 | [Demo mode](18-demo-mode.md) | Visitors | Solid | A throwaway household |
+| 19 | [My trail](19-my-trail.md) | Kids (parents preview) | Works (new) | Today's lessons as a map to camp; the first React screen |
 
 All problems found, in one prioritized list: **[Open issues](../6-planning/open-issues.md)**.

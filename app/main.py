@@ -49,12 +49,16 @@ mimetypes.add_type("font/woff2", ".woff2")
 
 
 class StaticRevalidateMiddleware(BaseHTTPMiddleware):
-    """Tell CDNs and browsers to revalidate /static so UI edits are not stuck for hours."""
+    """Revalidate /static so UI edits are not stuck for hours; keep hashed /next assets forever."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
-        if request.url.path.startswith("/static/"):
+        path = request.url.path
+        if path.startswith("/static/"):
             response.headers["Cache-Control"] = "no-cache"
+        elif path.startswith("/next/assets/") and response.status_code == 200:
+            # Vite puts a content hash in every file name, so a new build is a new URL.
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         return response
 
 
@@ -124,6 +128,20 @@ def create_app() -> FastAPI:
     @application.get("/", include_in_schema=False)
     def app_shell() -> FileResponse:
         return FileResponse(index_path, headers={"Cache-Control": "no-cache"})
+
+    # The React app. Screens move here one by one (Phase 3 on); every /next URL
+    # is the same page, and the app's router picks the screen.
+    dist_dir = Path(settings.frontend_dist_dir)
+    next_index = dist_dir / "index.html"
+    if (dist_dir / "assets").is_dir():
+        application.mount("/next/assets", StaticFiles(directory=dist_dir / "assets"), name="next-assets")
+
+    @application.get("/next", include_in_schema=False)
+    @application.get("/next/{path:path}", include_in_schema=False)
+    def next_app(path: str = "") -> Response:
+        if path.startswith("assets/") or not next_index.is_file():
+            return Response("Not found", status_code=404, media_type="text/plain")
+        return FileResponse(next_index, headers={"Cache-Control": "no-cache"})
 
     @application.get("/sw.js", include_in_schema=False)
     def service_worker() -> Response:

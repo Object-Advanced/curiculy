@@ -91,5 +91,6 @@ services:
       - ./static:/app/static
       - ./extension:/app/extension
       - ./README.md:/app/README.md
+      - ./frontend/openapi.json:/app/frontend/openapi.json:ro
       - ./.github:/app/.github
     command: ["pytest"]

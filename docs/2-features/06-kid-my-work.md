@@ -6,7 +6,7 @@ The child's own screen after signing in with their PIN. It's playful, made for a
 |---|---|
 | **Who uses it** | Kids |
 | **Where** | `#/my-work`, and `#/my-work/<lesson id>` for one lesson. A signed-in child can't open any other page. |
-| **Health** | **Works.** Much improved in Phase 2b; it gets the full "Sticker Book" and "My trail" treatment in React. |
+| **Health** | **Works.** Much improved in Phase 2b. Its **My trail** button opens the new React map view; the rest moves to React in Phase 6. |
 
 ## Scope
 
@@ -23,11 +23,12 @@ The child's own screen after signing in with their PIN. It's playful, made for a
   - big check boxes
   - it's switched on by `data-persona="kid"` from the very first frame after sign-in
 
+- **My trail button** under the stars: opens [My trail](19-my-trail.md), the map view of today's lessons, at `/next/trail`.
+
 ### Out of scope today (designed, not built)
-- **My trail:** today's lessons as stops on a trail, a bonus chest (the puzzle), and camp when everything is done.
 - **Sticker journal:** stickers by day, the month's seasonal collection, and cheers from home.
 
-Both are designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pages.md) and will be built as the first React page (Phase 3).
+It's designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pages.md) and comes next in React (Phase 3), after My trail.
 
 ### Principle
 **Curiculy guides; it doesn't teach.** Kid screens point to the real materials and track progress. Fun extras are optional play or rewards. See [What Curiculy is](../1-overview/what-curiculy-is.md).
@@ -68,6 +69,6 @@ Both are designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pa
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | Build **My trail** and the **Sticker journal** as the React pilot route. Stickers come from completed lessons and the `completion_date` that check-off records. | Phase 3 |
+| High | Build the **Sticker journal** in React next to [My trail](19-my-trail.md) (built October 2026). Stickers come from completed lessons and the `completion_date` that check-off records. | Phase 3 |
 | Medium | Show a "this week" view by default, with the full lists one tap away | Phase 6 |
 | Low | Remember the solved puzzle on the server, so it survives changing devices | Phase 6 |

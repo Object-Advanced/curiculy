@@ -32,7 +32,7 @@ flowchart LR
 ```
 
 ## The pieces
-- **The web app** is one page: `index.html` with `static/js/app.js` and `static/css/tokens.css` + `app.css`.
+- **The web app** is one page: `index.html` with `static/js/app.js` and `static/css/tokens.css` + `app.css`. **A new React app** (`frontend/`) is taking over screen by screen at `/next`; its first screen is the kid's [My trail](../2-features/19-my-trail.md).
   - It works on phones, tablets and computers.
   - It switches to the **kid look** when a child signs in.
   - A small **service worker** (`sw.js`) keeps the app's files on the device so it opens offline. See [Offline](../2-features/16-offline-and-sync.md).

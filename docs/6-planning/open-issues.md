@@ -41,6 +41,7 @@ Every problem the feature reviews found, in one prioritized list. Each links to 
 | 23 | Offline cold start shows an empty app | [Offline](../2-features/16-offline-and-sync.md) | Workbox data caching (3) |
 | 24 | Four ISBN entry points; `/curricula` vs `/curriculum` | [Library](../2-features/08-library-and-books.md) | Consolidate and rename (5) |
 | 25 | `ai_generator.py` is plain arithmetic; placeholder models `Jurisdiction` and `CompliancePacket` | [Pacing](../2-features/09-pacing-and-lesson-plans.md), [Data model](../5-engineering/data-model.md) | Rename; drop from the code (5) |
-| 26 | No JavaScript unit tests or type checks | [Testing](../5-engineering/testing-and-ci.md) | Vitest, tsc, pyright (3, 7) |
+| 26 | The legacy `app.js` has no unit tests or type checks (the React app has both) | [Testing](../5-engineering/testing-and-ci.md) | Retire `app.js` screen by screen; pyright for Python (6, 7) |
 | 27 | No switch to turn nudges off per family or per child | [Stuck?](../2-features/07-stuck-nudges.md) | (4) |
 | 28 | HEIC photos from iPhones are refused | [Evidence](../2-features/13-evidence-and-capture.md) | Convert HEIC on upload (6) |
+| 29 | The React app (`/next`) has no offline support and shares the legacy sign-in token | [My trail](../2-features/19-my-trail.md) | vite-plugin-pwa; cookie sessions (3) |
