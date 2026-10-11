@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Question** | Keep one SQLite file per family, or move to Postgres? |
-| **Status** | **Proposed, waiting for the owner's decision** (written 2026-10-11) |
+| **Status** | **Decided 2026-10-11: option B, Postgres with row-level security** |
 | **Recommendation** | **Postgres: one database, every family's rows walled off by the database itself (row-level security)** |
 | **Decide by** | Now: before the backend spine (subjects, curricula, courses) is built |
 
@@ -203,4 +203,4 @@ Keep today's files and add:
 Revisit when the service needs a second server or cross-family features outgrow the write-twice path.
 
 ## Decision
-*Waiting for the owner.* When it's made, record it here and in [Decisions](../decisions.md).
+**2026-10-11: option B, Postgres with row-level security.** The owner was concerned about leaks between families and about backups; both are answered above (the leak table and guardrails, and the layered backups). The owner's TankTrack product already runs on Postgres. Recorded in [Decisions](../decisions.md).

@@ -324,7 +324,7 @@ When a requirement asks for something Curiculy doesn't have, we don't squeeze it
 | `students` | grade from a fixed list, re-confirmed each July 1; a yes/no IEP flag. **No birth date**: ages go into form blanks only ([Privacy](#privacy-keep-the-minimum)). |
 | shared `catalog.db` | adds community guides, curriculum programs (their materials' ISBNs) and chapter lists |
 
-**Decide the data tier first.** With no users, this is the cheapest moment to switch to Postgres if it wins, and shared guides need a shared database. See the [data-tier decision record](decision-records/data-tier.md).
+**Data tier: Postgres** ([decided 2026-10-11](decision-records/data-tier.md)), one database with each family walled off by row-level security, built before the spine.
 
 ## Order of work
 | When | Work |

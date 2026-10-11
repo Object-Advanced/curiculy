@@ -4,6 +4,7 @@ Product and technical decisions, newest first. Each says what was decided, why, 
 
 | Date | Decision | Why | Affects |
 |---|---|---|---|
+| 2026-10-11 | **Data tier: Postgres, one database, each family walled off by row-level security,** with guardrails tested on every change and layered backups (continuous archive, nightly full copy, nightly family copies, off-site, nightly restore test) | The spine's shared data must connect to family data; one schema to change; point-in-time backups; room to grow. No users, so switching now is cheapest. | [Decision record](decision-records/data-tier.md) |
 | 2026-10-11 | **Filled-in forms never reach Curiculy:** private fields are flagged and filled in the browser, a PDF app or ink; the finished PDF isn't stored or uploaded, and isn't sent through Curiculy's mail service (which keeps copies). No DocuSign needed. | Keeps the no-sensitive-records promise end to end | [Product spine](product-spine.md#state-forms-we-fill-what-we-know-you-fill-the-rest) |
 | 2026-10-11 | **Subjects are picked per year** where the state allows it; earlier years' subjects show as checked; coverage is tracked across the grade band | Pennsylvania doesn't need every subject every year, except fire safety | [Pennsylvania worksheet](state-requirements/pennsylvania.md) |
 | 2026-10-11 | **Records are kept for each child's whole education** (K–12), compressed; limits or tiers only if needed later; a lifetime archive the family can download | A main selling point | [Product spine](product-spine.md#kept-for-a-childs-whole-education) |
@@ -52,7 +53,6 @@ Product and technical decisions, newest first. Each says what was decided, why, 
 Tailwind v4 with Radix-based local components, React Router, TanStack Query, Storybook, and cookie sessions for the web app.
 
 ## Still to decide (by end of January 2027)
-- **Data tier:** SQLite per family plus replication, or Postgres. **Now due before the backend spine** (2026-10-11). See the [decision record](decision-records/data-tier.md) (recommends Postgres with row-level security).
 - **Hosting:** home lab or cloud; TLS, CDN.
 - **AI provider:** hosted model, data terms, cost, child safety.
 - **Billing and plans:** trial, prices, grandfathering beta families.
