@@ -2099,9 +2099,15 @@ a.button.ghost:hover {
     box-shadow: var(--kid-raise);
 }
 
+.kid-hello-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+}
+
 .kid-trail-link {
     gap: var(--space-2);
-    margin-top: var(--space-4);
 }
 
 [data-persona="kid"] .kid-trail-link {
@@ -2115,6 +2121,11 @@ a.button.ghost:hover {
     font-family: var(--font-display);
     font-weight: var(--weight-display);
     font-size: var(--text-lg);
+}
+
+[data-persona="kid"] .kid-journal-link {
+    background: var(--surface-card);
+    color: var(--text-strong);
 }
 
 [data-persona="kid"] .kid-trail-link:active {
@@ -3921,7 +3932,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261011-trail");
+    background-image: url("/static/night-mountains.jpg?v=20261011-journal");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

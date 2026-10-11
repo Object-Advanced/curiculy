@@ -26,7 +26,7 @@ The words parents see, the words the code uses, and the words we're moving to. W
 | **Just for fun** | Just for fun | `buildDailySpark` ("spark") | An optional daily puzzle on the kid's page; never a lesson |
 | **Ask Sam** | Ask Sam | talk card, `/students/{id}/spark` | A question for the parent to ask their child |
 | **My work** | My work | `#/my-work` | The kid's own page |
-| **My trail / Sticker journal** | (designed, not built) | (none) | The kid's progress trail and sticker book (Phase 3, React) |
+| **My trail / Sticker journal** | My trail, Sticker journal | `/next/trail`, `/next/journal` (`frontend/`) | The kid's map of today's lessons, and their sticker book (React, October 2026) |
 | **Kid look / parent look** | (none) | `data-persona="kid"` / `"parent"` | Which visual style is active |
 | **Season** | (none) | `data-season` | Small decorative accents that change with the season |
 

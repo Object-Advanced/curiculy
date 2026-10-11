@@ -6,6 +6,7 @@ export const keys = {
   me: ["me"] as const,
   students: ["students"] as const,
   day: (studentId: number, iso: string) => ["day", studentId, iso] as const,
+  range: (studentId: number, from: string, to: string) => ["range", studentId, from, to] as const,
 };
 
 async function fetchMe(): Promise<Me> {
@@ -27,6 +28,23 @@ async function fetchDay(studentId: number, iso: string): Promise<Lesson[]> {
   if (!data) throw toApiError(response, error);
   // Stops follow the order lessons were planned in.
   return [...data.assignments].sort((a, b) => a.id - b.id);
+}
+
+async function fetchRange(studentId: number, from: string, to: string): Promise<Lesson[]> {
+  const { data, error, response } = await api.GET("/api/students/{student_id}/assignments", {
+    params: { path: { student_id: studentId }, query: { start_date: from, end_date: to } },
+  });
+  if (!data) throw toApiError(response, error);
+  return data.assignments;
+}
+
+/** Every lesson scheduled between two dates (inclusive), for the Sticker journal. */
+export function useLessonsBetween(studentId: number | null, from: string, to: string) {
+  return useQuery({
+    queryKey: keys.range(studentId ?? 0, from, to),
+    queryFn: () => fetchRange(studentId as number, from, to),
+    enabled: studentId !== null,
+  });
 }
 
 export function useMe() {

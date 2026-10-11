@@ -30,5 +30,6 @@ Every major function of Curiculy has one page with two halves:
 | 17 | [AI features](17-ai-features.md) | — | Works for beta; must change for launch | Every AI use in one place |
 | 18 | [Demo mode](18-demo-mode.md) | Visitors | Solid | A throwaway household |
 | 19 | [My trail](19-my-trail.md) | Kids (parents preview) | Works (new) | Today's lessons as a map to camp; the first React screen |
+| 20 | [Sticker journal](20-sticker-journal.md) | Kids (parents preview) | Works (new) | This week's stickers, camp tents, and the month's collection |
 
 All problems found, in one prioritized list: **[Open issues](../6-planning/open-issues.md)**.

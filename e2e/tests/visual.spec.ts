@@ -79,4 +79,9 @@ test("kid's own work list", async ({ page }) => {
   await expect(page.getByRole("img", { name: /^Trail map/ })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await expect(page).toHaveScreenshot("kid-my-trail.png", { fullPage: true });
+
+  await page.goto("/next/journal");
+  await expect(page.getByRole("heading", { name: "This week" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await expect(page).toHaveScreenshot("kid-sticker-journal.png", { fullPage: true });
 });

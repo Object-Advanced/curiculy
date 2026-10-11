@@ -23,12 +23,10 @@ The child's own screen after signing in with their PIN. It's playful, made for a
   - big check boxes
   - it's switched on by `data-persona="kid"` from the very first frame after sign-in
 
-- **My trail button** under the stars: opens [My trail](19-my-trail.md), the map view of today's lessons, at `/next/trail`.
+- **My trail** and **Sticker journal** buttons under the stars: open the React pages [My trail](19-my-trail.md) (`/next/trail`) and the [Sticker journal](20-sticker-journal.md) (`/next/journal`).
 
-### Out of scope today (designed, not built)
-- **Sticker journal:** stickers by day, the month's seasonal collection, and cheers from home.
-
-It's designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pages.md) and comes next in React (Phase 3), after My trail.
+### Out of scope today
+- **Cheers from home** (parents react to finished work; the child sees a sticker). It's designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pages.md) and comes next.
 
 ### Principle
 **Curiculy guides; it doesn't teach.** Kid screens point to the real materials and track progress. Fun extras are optional play or rewards. See [What Curiculy is](../1-overview/what-curiculy-is.md).
@@ -69,6 +67,6 @@ It's designed on the [style tiles canvas](../3-design/style-tiles-and-kid-pages.
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | Build the **Sticker journal** in React next to [My trail](19-my-trail.md) (built October 2026). Stickers come from completed lessons and the `completion_date` that check-off records. | Phase 3 |
+| High | **Cheers from home**, shown in the [Sticker journal](20-sticker-journal.md) and at camp on [My trail](19-my-trail.md) | Phase 3–6 |
 | Medium | Show a "this week" view by default, with the full lists one tap away | Phase 6 |
 | Low | Remember the solved puzzle on the server, so it survives changing devices | Phase 6 |

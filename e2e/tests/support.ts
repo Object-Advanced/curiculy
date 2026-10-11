@@ -24,10 +24,14 @@ export const HOUSEHOLD = {
   password: "correct-horse-battery",
   name: "The Okafor family",
   kid: { name: "Ada Okafor", grade: "4", pin: "2468" },
+  // Tests that change lessons use Ben, so Ada's day stays fixed for the
+  // screenshot, accessibility, and read-only tests running in parallel.
+  secondKid: { name: "Ben Okafor", grade: "2", pin: "1357" },
 };
 
 export interface HouseholdState {
   studentId: number;
+  secondStudentId: number;
   familyCode: string;
 }
 
