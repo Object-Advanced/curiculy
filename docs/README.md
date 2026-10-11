@@ -6,6 +6,7 @@ Everything about Curiculy for people to read: what it is, how each part works, h
 | If you want to… | Read |
 |---|---|
 | Understand what Curiculy is and its principles | [What Curiculy is](1-overview/what-curiculy-is.md) |
+| See how the pieces fit and where it's heading | [Product spine](6-planning/product-spine.md) |
 | See how the pieces fit together | [How it works](1-overview/how-it-works.md) |
 | Look up a word | [Glossary](1-overview/glossary.md) |
 | Review every feature (scope + health) | [Features](2-features/README.md) |
@@ -54,10 +55,13 @@ Everything about Curiculy for people to read: what it is, how each part works, h
 - [Roadmap](6-planning/roadmap.md): phases, milestones, status
 - [Decisions](6-planning/decisions.md): the decision log
 - [Open issues](6-planning/open-issues.md): every problem the reviews found, prioritized
+- [Product spine](6-planning/product-spine.md): the core loop, the words, and what each feature is for (agreed 2026-10-11)
+- [State requirements](6-planning/state-requirements/README.md): how a state's law becomes a requirement pack, without forcing a fit; [Pennsylvania worksheet](6-planning/state-requirements/pennsylvania.md)
 
 ## At a glance (October 2026)
 - **Status:**
-  - an invite-only beta at **curiculy.com**
+  - **pre-beta** at **curiculy.com**: no families yet; invites go out once the core loop works
+  - **next:** the core loop (see [Product spine](6-planning/product-spine.md)), starting with the Pennsylvania worksheet review and the data-tier decision
   - Phases 0–2 done and deployed
   - React rebuild started (Phase 3): the kid's **My trail** (`/next/trail`) and **Sticker journal** (`/next/journal`) are the first React screens
 - **Health:** 7 features rated Solid, 13 rated Works, none rated Needs work.

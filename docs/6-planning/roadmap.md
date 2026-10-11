@@ -1,33 +1,47 @@
 # Roadmap
 
-**Goal:** stay an invite-only beta through the 2026–27 school year, and have a **public, self-serve service ready for parents to set up in summer 2027**. That's about 8 months from October 2026, roughly one developer working with AI help.
+**Goal:** a **public, self-serve service ready for parents to set up in summer 2027**. Curiculy is **pre-beta**: no families use it yet, and invites go out once the core loop works end to end. That's about 8 months from October 2026, roughly one developer working with AI help.
+
+**Re-ordered on 2026-10-11:** the core loop comes first. It covers Library, Courses, Calendar, Attendance, Work samples, Requirements, Records and Tasks (see [Product spine](product-spine.md)). The React rebuild continues, but the loop's screens are built directly in React rather than ported one by one, and new kid extras wait until after launch.
+
+## Core loop: order of work
+| When | Work |
+|---|---|
+| **Oct–Dec 2026** | **Data-tier decision first.** Then the backend spine, one piece at a time: subjects → Curriculum, Materials and Guide (replacing the two curriculum structures) → Reading books and reading lists → Course → lesson minutes and school-year terms → attendance suggestions → move engine with previews and the plan checker → requirement packs and Tasks → **Pennsylvania pack** (after the [worksheet](state-requirements/pennsylvania.md) is reviewed) → Records API → inbox suggestions |
+| **Jan–Mar 2027** | The loop's screens in React: **Today** ("School today?", Tasks, overdue banner, "sample wanted"), **Calendar** (drag and Move to…, previews, warnings), **Library** (Add curriculum · Add reading book), the lesson sheet with **Add work**, **Records**, the kid's **My books**. Community guides v1, seeded with the most-used programs. Pennsylvania report template. Parent phone capture. |
+| **Mar–May 2027** | Second wave of states (New York next), extension docs, launch work (Phase 8 below). **Feature freeze mid-May.** |
+| **Jun 2027** | Public sign-up opens, with an honest "N states supported" claim and a seeded guide catalog |
+
+**Parked until after launch:** cheers from home and more kid extras, kids capturing their own work, the kid score-snap extension idea, a generic custom-report designer, an upload email address, Share to Curiculy.
 
 ## Phases and status
-| Phase | Theme | Target | Status (2026-10-10) |
-|---|---|---|---|
-| **0** | Baseline and safety net: Playwright suite, visual snapshots, accessibility ratchet, lint in CI | Oct 2026 | **Done** |
-| **1** | Beta hardening: household time zone, family-code kid sign-in, rate limits, upload limits, security headers, SQLite settings, offline-queue fixes, nightly backups, password-reset script, recovering plans after a restart | Oct–Nov 2026 | **Done and deployed** (2026-10-09) |
-| **2** | Design language and tokens: style tiles, `tokens.css`, self-hosted fonts, AA contrast, the kid look, calmer parent Kids page, "Stuck?" nudges | Nov–Dec 2026 | **Done and deployed** (2026-10-10), ahead of schedule |
-| **3** | React foundation: Vite + TypeScript + React 19, Tailwind on the tokens, a typed API client, TanStack Query, PWA, cookie sessions, Storybook. **Pilot route: the kid's My trail and Sticker journal.** | Dec 2026–Jan 2027 | **Started early:** the foundation, **My trail** and the **Sticker journal** are built (`frontend/`, served at `/next`). Next: cheers from home, cookie sessions, PWA, Storybook. |
-| **4** | App shell and navigation: a bottom tab bar on phones (Today · Calendar · ＋ · Kids · More), a sidebar on desktop, one Settings area, plain names | Jan–Feb 2027 | Planned |
-| **5** | API v2 and backend cleanup: one error format, `/api/workspace`, an all-lessons calendar, renames, versioned migrations, removing dead code | Jan–Mar 2027 | Planned (some cleanup already done: the Alembic chain and placeholder modules were removed, and check-off records `completion_date`) |
-| **6** | Screen-by-screen migration and polish, then cutover: Today feed, Calendar, Kids profiles, Library, lesson details, Records, Settings | Feb–Apr 2027 | Planned |
-| **7** | Platform, delivery and docs: non-root image, locked dependencies, no source mounts in production, type checks, vulnerability scans, docs | Ongoing; done by Apr 2027 | Started: this handbook |
-| **8** | Public-launch track: durable jobs, storage interface, hosted AI with safety evaluations, self-serve accounts, COPPA and legal, billing, monitoring, edge rate limits | Jan–May 2027 | Planned |
+The phases from October 2026 still describe the engineering work; the core loop above sets the order.
+
+| Phase | Theme | Status (2026-10-11) |
+|---|---|---|
+| **0** | Baseline and safety net: Playwright suite, visual snapshots, accessibility ratchet, lint in CI | **Done** |
+| **1** | Hardening: household time zone, family-code kid sign-in, rate limits, upload limits, security headers, SQLite settings, offline-queue fixes, nightly backups, password-reset script, recovering plans after a restart | **Done and deployed** (2026-10-09) |
+| **2** | Design language and tokens: style tiles, `tokens.css`, self-hosted fonts, AA contrast, the kid look, calmer parent Kids page, "Stuck?" nudges | **Done and deployed** (2026-10-10) |
+| **3** | React foundation: Vite + TypeScript + React 19, Tailwind on the tokens, a typed API client, TanStack Query, PWA, cookie sessions, Storybook | **Foundation built** (`frontend/`, at `/next`) with **My trail** and the **Sticker journal**. Still to do: cookie sessions, PWA, Storybook. Cheers from home is **parked**. |
+| **4** | App shell and navigation: a bottom tab bar on phones, a sidebar on desktop, one Settings area, plain names | Planned. The tabs follow the spine's words: Today · Calendar · ＋ · Records · More (Library, Kids, Settings). |
+| **5** | API v2 and backend cleanup: one error format, `/api/workspace`, renames, versioned migrations, removing dead code | **Absorbs the backend spine.** No user data to migrate, so tables are redesigned rather than patched. The `jurisdictions` and `compliance_packets` placeholders are replaced by requirement packs, not just dropped. |
+| **6** | Screens and cutover | **The loop's screens are built new in React**, then the legacy app is retired |
+| **7** | Platform, delivery and docs: non-root image, locked dependencies, no source mounts in production, type checks, vulnerability scans, docs | Ongoing; done by April 2027 |
+| **8** | Public-launch track: durable jobs, storage interface, hosted AI with safety evaluations, self-serve accounts, COPPA and legal (including a read on sharing guides), billing, monitoring, edge rate limits | Jan–May 2027 |
 
 ## Milestones
 | Milestone | Date | What's true |
 |---|---|---|
-| **M1** | mid-Nov 2026 | Beta hardening live. **Met early (2026-10-09).** |
-| **M2** | end of Jan 2027 | Decision records made (data tier, hosting, AI provider, sessions, billing). The React shell with My trail available as an opt-in beta. |
-| **M3** | early Apr 2027 | Every screen on React; beta families default to it; the old frontend deleted |
+| **M1** | mid-Nov 2026 | Hardening live. **Met early (2026-10-09).** |
+| **M2** | end of Dec 2026 | Data tier decided; the backend spine works end to end for one Pennsylvania family, on paper and in tests. |
+| **M3** | end of Mar 2027 | The loop's screens on React; invites go out; the old frontend retired |
 | **M4** | mid-May 2027 | Launch ready: feature freeze, penetration test, load test, disaster-recovery drill, COPPA and legal sign-off, Chrome Web Store approval, live billing |
-| **M5** | June 2027 | Public sign-up opens; beta families migrated |
+| **M5** | June 2027 | Public sign-up opens |
 
 ## Next up (in order)
-1. **Small fix:** turn off public `/docs`.
-2. **Off-site backup** (owner task). See [Backups](../4-operations/backups-and-restore.md).
-3. **Decision records** (by end of January): data tier, hosting, AI provider and child safety, COPPA and legal, billing.
-4. **Phase 3:** **cheers from home** (parents react; kids see stickers in the journal and at camp); then cookie sessions, offline support (PWA) and Storybook.
+1. **The owner reviews the [Pennsylvania worksheet](state-requirements/pennsylvania.md)'s open questions.**
+2. **Data-tier decision record** (SQLite per family, or Postgres), now, before the spine is built.
+3. **Subjects**, then **Curriculum, Materials and Guide**: the first pieces of the backend spine.
+4. Ops tasks that still stand: an off-site backup copy, an uptime monitor, turning off the public `/docs`.
 
 See [Open issues](open-issues.md) for every known problem, by priority.

@@ -8,6 +8,8 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 | **Where** | `#/assignments` ("Calendar") and the lesson details dialog |
 | **Health** | **Works, needs a redesign for phones and for "All Students"** |
 
+> **Planned (core loop, 2026-10-11):** move one lesson or a whole day with a preview, checks against the family's and the state's guidelines, and an agenda list on phones. See [Calendar: move things, stay within the guidelines](../6-planning/product-spine.md#calendar-move-things-stay-within-the-guidelines).
+
 ## Scope
 
 ### What it does
@@ -84,5 +86,5 @@ The household database holds:
 | High | All Students shows every lesson, with a filter chip per child; a shared lesson appears once with each child's avatar | Phase 5 (API) + Phase 6 (screen) |
 | High | Phone layout: an agenda list, a compact toolbar plus an overflow menu, and bottom sheets | Phase 6 |
 | Medium | Attendance as one popover per day instead of radios in every cell | Phase 6 |
-| Medium | Take the subject from the book; remove "Subject: Unfiled" | Phase 5 |
-| Low | Drag to reschedule | Phase 6, nice-to-have |
+| High | Real subjects, from the curriculum; remove "Subject: Unfiled" | Core loop |
+| High | Move a lesson or a day with a preview and guideline checks (drag on computers, Move to… on phones) | Core loop |

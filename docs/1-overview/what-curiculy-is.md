@@ -2,6 +2,14 @@
 
 **Curiculy is a homeschool planner for families.** Parents plan lessons from whatever curriculum they use, see each child's day at a glance, keep work samples, and print records for evaluators. Kids sign in on their own tablet to see their lessons, check them off, and get a nudge when they're stuck.
 
+## Why it exists: four pillars
+1. **A cheaper hub for families who mix programs** instead of using one all-in-one curriculum.
+2. **Community guides:** one family enters a program's lessons, and every family after them plans a year in minutes.
+3. **State requirements, met and not just explained:** each state's law becomes a checklist Curiculy fills from the family's records.
+4. **Records that build themselves:** work is attached to lessons as it happens, and reports show what's missing and print as PDFs.
+
+How the pieces fit is on [Product spine](../6-planning/product-spine.md) (agreed October 2026; mostly not built yet).
+
 ## Who it's for
 - **Parents** who homeschool one or more children and want the plan, the daily list, and the records in one calm place.
 - **Kids**, usually on a shared family tablet or computer, who want to know "what do I do today?" and enjoy finishing it.
@@ -29,8 +37,9 @@
 3. **The family's day comes first.** "Today" follows the family's own clock and time zone, and every scheduler respects school days and days off.
 4. **Parents see everything said to a child.** Nudges and AI questions are visible to the parent.
 5. **The family's records are safe.** Each family has its own database file, with nightly snapshots and integrity checks.
+6. **Honest records, no square pegs.** When a state asks for something Curiculy can't check, it says so ("parent confirms") instead of forcing a fit. See [State requirements](../6-planning/state-requirements/README.md).
 
 ## Where it is today (October 2026)
-- **An invite-only beta** for a few families through the 2026–27 school year, hosted on a home server at **curiculy.com** behind a Cloudflare tunnel.
+- **Pre-beta: still being built.** No families use it yet; invites go out once the core loop works. It runs on a home server at **curiculy.com** behind a Cloudflare tunnel.
 - **A public, self-serve launch is planned for summer 2027**, so parents can set up for the 2027–28 year (see [Roadmap](../6-planning/roadmap.md)).
-- **The current app is plain JavaScript.** A rebuild in **React + TypeScript** begins in Phase 3; the kid's **My trail** page will be the first screen built in it.
+- **The current app is plain JavaScript.** A rebuild in **React + TypeScript** has started at `/next` (the kid's **My trail** and **Sticker journal**). From here, the core loop's screens are built directly in React (see [Roadmap](../6-planning/roadmap.md)).

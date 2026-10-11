@@ -5,6 +5,21 @@ Every problem the feature reviews found, in one prioritized list. Each links to 
 - **Launch:** required before the public launch (June 2027).
 - **Later:** improvements.
 
+## Core loop (the product spine)
+The gaps between the app and its purpose, found on 2026-10-11. Each is planned in [Product spine](product-spine.md).
+
+| # | Issue | Fix |
+|---|---|---|
+| C1 | **No requirement layer.** Reports print whatever exists; nothing knows what *should* exist or what's missing. | Requirement packs, Records, Tasks; Pennsylvania first |
+| C2 | **Subject isn't real** ("Subject: Unfiled"); no lesson minutes; no terms on the school year | Subjects, minutes, terms |
+| C3 | **Two unconnected curriculum structures** (library units and lesson plans); the same book can exist twice | One Curriculum + Materials + Guide model |
+| C4 | **Books and programs share one setup** | Two shelves: Add curriculum · Add reading book |
+| C5 | **Work samples are slow to add, and captures don't know who or what** | Add work on the lesson, ask at check-off, snap the stack, inbox suggestions |
+| C6 | **Attendance isn't suggested,** and there's no "everyone present" | "School today?" card and weekly sweep |
+| C7 | **The calendar can't move one lesson, preview a change, or check it against any rules** | Move engine with previews and the plan checker |
+| C8 | **No state, structured grade, or birth date** on the household and children | Needed by every state pack |
+| C9 | **No shared guides between families** | Community guides v1 |
+
 ## Now
 | # | Issue | Where | Fix |
 |---|---|---|---|
@@ -34,14 +49,14 @@ Every problem the feature reviews found, in one prioritized list. Each links to 
 | 16 | "All Students" shows only shared lessons | [Calendar](../2-features/04-calendar-and-lessons.md) | All lessons plus filters (5–6) |
 | 17 | Attendance radios in every cell | [Attendance](../2-features/12-attendance.md) | One popover per day (6) |
 | 18 | Settings scattered; three school-year editors | [Settings](../2-features/02-household-setup-and-settings.md), [School year](../2-features/11-school-year-and-days-off.md) | One Settings area (4) |
-| 19 | Names drift (Kids / My day / Someone's day; Exceptions vs Days off; Auto-schedule vs Apply) | [Glossary](../1-overview/glossary.md) | (4) |
+| 19 | Names drift (Kids / My day / Someone's day; Exceptions vs Days off; Auto-schedule vs Apply) | [Glossary](../1-overview/glossary.md) | Words decided 2026-10-11; applied as screens are rebuilt |
 | 20 | "Subject: Unfiled" everywhere | [Calendar](../2-features/04-calendar-and-lessons.md) | Subject from the book (5) |
 | 21 | About 9 requests to open Home; days off re-fetched on every calendar move | [Home](../2-features/03-home.md) | `/api/workspace`, a date-windowed days-off list (5) |
 | 22 | Notifications poll every 30 s even in hidden tabs; no phone push | [Notifications](../2-features/15-notifications.md) | (6–8) |
 | 23 | Offline cold start shows an empty app | [Offline](../2-features/16-offline-and-sync.md) | Workbox data caching (3) |
 | 24 | Four ISBN entry points; `/curricula` vs `/curriculum` | [Library](../2-features/08-library-and-books.md) | Consolidate and rename (5) |
-| 25 | `ai_generator.py` is plain arithmetic; placeholder models `Jurisdiction` and `CompliancePacket` | [Pacing](../2-features/09-pacing-and-lesson-plans.md), [Data model](../5-engineering/data-model.md) | Rename; drop from the code (5) |
+| 25 | `ai_generator.py` is plain arithmetic; placeholder models `Jurisdiction` and `CompliancePacket` | [Pacing](../2-features/09-pacing-and-lesson-plans.md), [Data model](../5-engineering/data-model.md) | Rename; replace the placeholders with requirement packs (C1) |
 | 26 | The legacy `app.js` has no unit tests or type checks (the React app has both) | [Testing](../5-engineering/testing-and-ci.md) | Retire `app.js` screen by screen; pyright for Python (6, 7) |
 | 27 | No switch to turn nudges off per family or per child | [Stuck?](../2-features/07-stuck-nudges.md) | (4) |
-| 28 | HEIC photos from iPhones are refused | [Evidence](../2-features/13-evidence-and-capture.md) | Convert HEIC on upload (6) |
+| 28 | HEIC photos from iPhones are refused | [Evidence](../2-features/13-evidence-and-capture.md) | Convert HEIC on upload (part of C5) |
 | 29 | The React app (`/next`) has no offline support and shares the legacy sign-in token | [My trail](../2-features/19-my-trail.md) | vite-plugin-pwa; cookie sessions (3) |

@@ -8,6 +8,8 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 | **Where** | `#/curricula` ("Curriculum catalog") |
 | **Health** | **Works, needs a simpler list-first layout** |
 
+> **Planned (core loop, 2026-10-11):** the Library splits into two shelves, **Curricula** and **Reading books**, each with its own Add flow, and families can share guides. See [Library: two shelves, two setups](../6-planning/product-spine.md#library-two-shelves-two-setups).
+
 ## Scope
 
 ### What it does
@@ -20,7 +22,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 
 ### Out of scope today
 - Scanning a barcode with the phone camera (Phase 6, nice-to-have).
-- Sharing a catalog between families.
+- Sharing guides between families (planned: community guides).
 
 ### API
 | Method | Path | Who | Purpose |
@@ -67,7 +69,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | List first, with an **Add** sheet offering: scan, ISBN search, import a guide (CSV, PDF or photo), or build one by hand. Books and guides share one card style and one verb, **Schedule**. | Phase 6 |
+| High | Two shelves with separate Add flows: **Add curriculum** (materials, guide, course) and **Add reading book** (who's reading it, track or schedule). One verb, **Schedule**. | Core loop |
 | Medium | Rename `/curricula` → `/library` and `/curriculum` → `/guides`, keeping the old names for one release; put the ISBN entry points under `/catalog` | Phase 5 |
 | Medium | Move the router's queries into services | Phase 5 |
 | Low | Camera barcode scan | Phase 6, nice-to-have |

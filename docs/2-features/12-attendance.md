@@ -8,6 +8,8 @@ A daily record of whether each child did school. Many states require this.
 | **Where** | Yes/No radios in each day cell of the Calendar; included in portfolio reports |
 | **Health** | **Works; the screen design is cramped** |
 
+> **Planned (core loop, 2026-10-11):** a one-tap "School today?" card per child, pre-filled from finished lessons, a weekly sweep, and minutes for states that count hours. See [Attendance: per child, one tap](../6-planning/product-spine.md#attendance-per-child-one-tap).
+
 ## Scope
 
 ### What it does
@@ -48,6 +50,6 @@ The household's own file holds `attendance` (student, date, status), one row per
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | One **attendance popover per day** ("Everyone present" plus per-child changes) instead of radios in every cell | Phase 6 |
-| Medium | Suggest "present" when a child finishes any lesson that day (the parent confirms) | Phase 6 |
-| Low | Hour logs for states that require them | Later |
+| High | A **"School today?" card** ("Looks right" for everyone, plus per-child changes) and one dot per child on the calendar instead of radios | Core loop |
+| High | Suggest "present" when a child starts or finishes any lesson that day (the parent confirms); a weekly sweep for unmarked days | Core loop |
+| High | Lesson minutes for states that count hours | Core loop |

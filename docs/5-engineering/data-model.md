@@ -55,7 +55,10 @@ erDiagram
 | `homework_help_sessions`, `homework_help_messages` | Stuck? nudges |
 | `parent_notifications` | The bell's messages |
 | `curriculum_classifications` | Links books to subjects (rarely used) |
-| `jurisdictions`, `compliance_packets` | **Placeholders, never used.** Planned to be dropped from the code (the tables stay) in Phase 5 |
+| `jurisdictions`, `compliance_packets` | **Placeholders, never used.** To be replaced by requirement packs (see below) |
+
+## Planned redesign (core loop, 2026-10-11)
+There are no real users yet, so the tables for curricula, lesson plans, enrollments, work samples, subjects and compliance are being **redesigned cleanly**, not patched. The two curriculum structures become one Curriculum + Materials + Guide model, plus Reading books, Courses, Requirement packs and Tasks. The data tier (SQLite per family, or Postgres) is decided first. See [Product spine: data model changes](../6-planning/product-spine.md#data-model-changes).
 
 ## How the schema changes
 - Brand-new tables come from SQLAlchemy `create_all` at startup.
