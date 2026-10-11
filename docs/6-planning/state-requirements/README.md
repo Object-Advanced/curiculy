@@ -59,8 +59,13 @@ Settings holds only the family's choices: their state, and their evaluator adjus
 - **Link to [HSLDA](https://hslda.org/legal)** for each state, but don't copy its text (it's their copyrighted summary).
 - Quote the statute where wording matters, and mark anything not yet checked against the statute as **to confirm**.
 
+## Hard states alone, easy states together
+- **States with demanding laws get their own pack, one at a time:** Pennsylvania, then New York, and so on.
+- **States with similar, light laws share a base pack,** and each state adds only its differences.
+- **Every state still gets a worksheet and a review.** For a state that matches a base pack, the worksheet is short: it lists the base, then only what differs.
+
 ## States
 | State | Worksheet | Status |
 |---|---|---|
-| Pennsylvania | [pennsylvania.md](pennsylvania.md) | First review done 2026-10-11; Q12–Q14 still open |
+| Pennsylvania | [pennsylvania.md](pennsylvania.md) | Reviewed 2026-10-11 (Q1–Q14 decided); a few wordings to confirm against the statute |
 | New York | (not started) | Likely next: its yearly plan (IHIP) and quarterly reports can be generated from courses |

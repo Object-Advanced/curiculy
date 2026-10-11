@@ -21,6 +21,8 @@ The gaps between the app and its purpose, found on 2026-10-11. Each is planned i
 | C10 | **No way to record subjects that have no curriculum** (PE, music, art, safety) | Activities |
 | C11 | **No transcript or credits for grades 9–12** | Courses carry credits; a running transcript |
 | C12 | **No guided setup:** a new family has to find Library, Settings and Calendar on their own | The year-setup interview |
+| C13 | **Phone photos can be stored sideways:** uploads drop the EXIF rotate tag without applying it (found while confirming GPS is stripped) | `ImageOps.exif_transpose` before re-saving, plus tests |
+| C14 | **PDF work samples keep their metadata** | Scrub with PyMuPDF on upload |
 | C9 | **No shared guides between families** | Community guides v1 |
 
 ## Now

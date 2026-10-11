@@ -86,6 +86,11 @@ Parents see: **Today · Calendar · Library (Curricula · Reading books) · Reco
 - **A slot is filled by a curriculum, activities, or both.** One curriculum can cover several subjects, or several parts of one (an English program covering reading, writing and spelling).
 - **Each subject says what it counts toward.** Presets map automatically. For a custom subject, the parent picks: "Language Arts" counts toward Pennsylvania's English, for example, or it counts toward nothing. The choice is the parent's and is shown plainly (no square pegs).
 - **Objectives are written in setup:** one line per subject, starting from a suggestion the parent edits. Together they print as the state's "objectives by subject" outline.
+- **Not every subject every year, where the state allows it.**
+  - Setup shows the state's rule in plain words and the full subject list for the child's grade band.
+  - The parent picks which subjects this year, and can change them in Settings at any time.
+  - Subjects covered in earlier years show as **checked** when the next year is set up.
+  - The checklist tracks coverage across the grade band, plus anything the state wants every year (Pennsylvania: fire-safety instruction, "regular and continuous").
 
 ## Library: two shelves, two setups
 A workbook-and-textbook program and a novel are different things, and they get different setups.
@@ -197,7 +202,7 @@ Parents may add work every day, so this has to be nearly free. **Capture is pare
 7. **Uploads never make you wait.** Photos shrink on the phone before sending, upload in the background with a small progress chip, and wait for a connection when offline. iPhone (HEIC) photos are converted.
 8. **Mistakes take one tap to fix:** **Move to another lesson** and **Remove** on every sample.
 9. **See it build up:** Records shows a gallery per child, subject and term, and "sample wanted" disappears once a sample covers it.
-10. **Location stays private:** photos already lose their GPS data when Curiculy re-saves them. Videos and PDFs need the same before video uploads open.
+10. **Location stays private:** photos lose their GPS location and camera details when Curiculy re-saves them (checked 2026-10-11). The same check found that phone photos can be stored sideways, because the "rotate" tag is dropped along with the rest; turning them upright first is a one-line fix. PDFs get their metadata scrubbed (PyMuPDF, already installed), and videos are stripped before video uploads open.
 
 ### After launch
 - **A private upload email address** per family: forward photos to it, or point a home printer's scan-to-email at it. Items land in the inbox with suggestions.
@@ -215,6 +220,7 @@ Anything not filed straight onto a lesson lands in the inbox with a **suggested 
 
 ## Requirements, Records and Tasks
 - **State packs are data:** versioned and dated ("reviewed 2027-05"), written from the statute and the state's own guidance, linking to HSLDA rather than copying it, with a "not legal advice" note.
+- **One state at a time for the hard ones; shared bases for the easy ones.** States with demanding laws (Pennsylvania, New York) each get their own pack. States with similar, light laws share a **base pack**, and each adds only its differences. Every state still gets a worksheet and a review; for a state that matches a base, the worksheet is short.
 - **Each pack is built from a few rule types**, confirmed only through review: deadline; subjects by grade band; days or hours; a log kept as you go; reading list; samples per subject per term; tests by grade; evaluator letter; periodic report; and **parent confirms**, the honest fallback.
 - **Tasks** are parent to-dos with due dates, made by the pack ("Affidavit due Aug 1", "Book your evaluator", "Certification due June 30") or added by hand.
 
@@ -238,10 +244,30 @@ The Records tab (today's Portfolios) holds everything about the rules:
 
 ### State forms: we fill what we know, you fill the rest
 - Curiculy makes the state's forms (Pennsylvania: the affidavit's parts, the objectives outline) as **fillable PDFs**. The parts Curiculy knows come filled in: the child's name, grade, school year, subjects and objectives.
-- **Private details are left blank:** birth date, address, phone number, signatures, certifications, and health records. The parent fills them in any PDF app, signs with an e-signature service such as DocuSign, or prints the form and fills it in by hand.
-- **Nothing typed into the blanks is saved** by Curiculy.
+- **Private fields are flagged and left blank:** birth date, address, phone number, signatures, certifications, health records. Before printing or downloading, Curiculy lists any flagged field still empty ("3 fields to fill: birth date, address, signature").
+- **Three ways to fill them, none needing DocuSign:**
+  - **in Curiculy's page**, where the PDF is finished in the browser
+  - in **any PDF app** after downloading
+  - **in ink** after printing
+- **None of it is ever saved, or even sent, to Curiculy.** The filled-in PDF is made in the browser and isn't cached, stored or uploaded.
+- **Forms with private details aren't emailed through Curiculy.** Our mail service keeps copies of what it sends, so the parent sends the finished PDF from their own email (on phones, through the share sheet). Curiculy's own "Email to evaluator" sends only documents without private details, like the portfolio.
 - **Official forms are linked, not copied:** the state's sample affidavits, its diploma form, and so on. The form page shows which parts Curiculy fills.
 - **Standardized tests are "parent confirms", with structure:** the test (picked from the state's approved list), the date, who gave it (Pennsylvania: not a parent), and an optional upload of the score report. That report belongs in the portfolio anyway.
+
+## Progress you can see
+Progress is part of the core, not a report-only feature. Parents see it as lessons are done, and the portfolio shows the same picture, which is how Curiculy shows "sustained progress".
+- **Per course:** lessons done of the total, and on pace or not ("On pace", "3 behind", "Finishing May 28"). The view can be the year, a quarter or a month.
+- **Per subject and per child:** the same thing rolled up, including activities and minutes.
+- **Over time:** a simple line of lessons done against the planned pace, and work samples spread across the terms.
+- **In the app (Morning Light):** progress rings on each child in the stories row, slim bars on course cards, and one-glance "on pace" words. Calm and quiet, never a wall of numbers.
+- **In the portfolio:** a clean, professional page per child, printed black on white. It has a table per course of lessons done by quarter, small charts, the subjects covered and the reading list. It's the first thing an evaluator sees.
+- **Built on what exists:** today's per-book progress (`GET /api/students/{id}/courses`), grown to terms and subjects. Charts follow the design system and the data-visualization guidance.
+
+## Kept for a child's whole education
+**Every family's records are kept for the whole of each child's schooling,** kindergarten through graduation, and that's a selling point: "Your child's whole education, in one place."
+- **Compressed:** photos are already shrunk to 1600 px WebP. At three photos a school day, a child's K–12 is roughly 2 GB.
+- **Videos are the real cost.** Links are encouraged; uploads are capped and shrunk. Limits or plan tiers can come later if they're needed.
+- **A lifetime record:** each child's transcript, reading lists by year, portfolios by year, and work samples, viewable any time and downloadable as one archive. It stays the family's: they can export it, or delete it, whenever they like.
 
 ## Privacy: keep the minimum
 Curiculy runs on a home server today, and children's data deserves care. The rule: **store only what the app needs to work, and never store sensitive records.**
@@ -253,6 +279,7 @@ Curiculy runs on a home server today, and children's data deserves care. The rul
 | Work samples: photos, scans, videos or links | Criminal-history certifications, ID numbers |
 | Test names, dates and score reports the parent adds; the evaluator's letter | Copies of the filed affidavit (it holds all of the above) |
 | A yes/no "has an IEP" flag, only so the state's special-education rules apply | The IEP itself, or any diagnosis |
+| | Anything typed into a form's private fields (it never leaves the browser) |
 
 - **Sensitive items are a checkbox and a date,** with no upload ("Affidavit filed July 28"). The "Your state" page says where to get each record (immunizations from the child's doctor or the state's immunization registry, and so on) and reminds the parent to keep their own copies safe.
 - **Photos of children are the most sensitive thing Curiculy keeps.** They're private to the household, location data is stripped, size is capped, and they can be deleted at any time.
@@ -302,9 +329,9 @@ When a requirement asks for something Curiculy doesn't have, we don't squeeze it
 ## Order of work
 | When | Work |
 |---|---|
-| Oct–Dec 2026 | Data-tier decision; then the backend spine: state and grades → subjects and objectives → Curriculum, Materials and Guide → Reading books and reading lists → Course → Lesson rename, minutes and terms → activities → attendance suggestions → move engine with previews and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API and portfolio builder → inbox suggestions → transcript and credits |
-| Jan–Mar 2027 | The loop's screens, built **directly in React**: the **year-setup interview**, Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings), Library (two Add flows), lesson sheet (Add work), Log an activity, Records (Checklist, Portfolio, Your state), kid's My books. Fillable state forms. Community guides v1, seeded. Public state pages. |
-| Mar–May 2027 | Second wave of states, starting with New York; extension docs; launch work (Phase 8). Feature freeze mid-May. |
+| Oct–Dec 2026 | Data-tier decision; then the backend spine: state and grades → subjects and objectives → Curriculum, Materials and Guide → Reading books and reading lists → Course → Lesson rename, minutes and terms → activities → attendance suggestions → move engine with previews and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → transcript and credits → photo orientation fix and PDF metadata scrub |
+| Jan–Mar 2027 | The loop's screens, built **directly in React**: the **year-setup interview**, Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings), Library (two Add flows), lesson sheet (Add work), Log an activity, Records (Checklist, Portfolio, Your state), progress rings and course bars, kid's My books. Fillable state forms (filled in the browser). Community guides v1, seeded. Public state pages. |
+| Mar–May 2027 | Second wave of states: New York on its own, then a base pack for states with similar light laws; the lifetime archive download; extension docs; launch work (Phase 8). Feature freeze mid-May. |
 | Jun 2027 | Launch with an honest "N states supported" claim and a seeded guide catalog |
 
 **Scope check:** "everything in scope for a state's portfolio", including transcripts, diplomas and special education, is a lot for one developer by June. Pennsylvania must ship complete; other states join only once their worksheets are reviewed, and the launch claims only those.
@@ -317,4 +344,4 @@ Cheers from home and more kid extras; kids capturing their own work; the kid sco
 - **Several states at once:** sign-up allows picking "state(s)". Beyond a move partway through the year, is there a case for two states at once (for example, a family split between homes)?
 - **Pricing:** a natural split is **free** (planner and community guides, to grow the catalog and compete with free options) and **paid** (requirements, Records and work-sample storage). Check competitors' prices before setting numbers.
 - **State funding (ESAs):** can Curiculy be an eligible expense, and are ESA record rules a kind of pack?
-- **Pennsylvania:** see the [questions still open](state-requirements/pennsylvania.md#still-open) in its worksheet.
+- **Pennsylvania:** a few wordings to [confirm against the statute](state-requirements/pennsylvania.md#still-to-confirm-against-the-statute).

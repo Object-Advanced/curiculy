@@ -1,6 +1,6 @@
 # Pennsylvania: requirement worksheet
 
-**Reviewed with the owner on 2026-10-11 (first pass).** This is the first state pack. Nothing here is built. Statuses are judged against the planned design in the [Product spine](../product-spine.md), using the process in [State requirements](README.md). **Not legal advice.**
+**Reviewed with the owner on 2026-10-11 (two passes; Q1–Q14 decided).** This is the first state pack. Nothing here is built. Statuses are judged against the planned design in the [Product spine](../product-spine.md), using the process in [State requirements](README.md). **Not legal advice.**
 
 ## Scope
 - **Covered here:** Option 1, the **home education program**, 24 P.S. §13-1327.1 (Section 1327.1 of the Public School Code of 1949). This is the option most Pennsylvania homeschoolers use. **Everything a Pennsylvania portfolio needs is in scope**, including grades 9–12 and special education.
@@ -32,12 +32,17 @@
 | Q10 | Special education | **In scope:** a yes/no IEP flag (no IEP or diagnosis stored) turns on the special-education rules (row 24). |
 | Q11 | Grade levels | **A fixed list,** picked at setup and re-confirmed every July 1. |
 
-## Still open
-| # | Question | Rows |
+## Decided in the second pass (2026-10-11)
+| # | Question | Decision |
 |---|---|---|
-| Q12 | **Must every required subject be taught every year?** HSLDA says no, except fire prevention, which needs "regular and continuous instruction". If so, the checklist must not demand every subject every year. It would check the subject list across grade levels, and fire safety each year. Confirm against the statute before building. | 11, 12 |
-| Q13 | **How long must the portfolio be kept?** Confirm the rule and the period against the statute. | 17 |
-| Q14 | **"Sustained progress in the overall program":** HSLDA says records must show this. Is progress per course over the year (lessons done, samples spread across terms) enough to show it, or is it the evaluator's judgment alone? | 27 |
+| Q12 | Must every required subject be taught every year? | **Setup shows the rule and the full subject list; the parent picks this year's subjects** and can change them in Settings at any time. Subjects covered in earlier years show as checked. The checklist tracks coverage across the grade band, and fire safety ("regular and continuous") every year. *To confirm:* the exact statutory wording, for the "Your state" page. |
+| Q13 | How long must the portfolio be kept? | **Curiculy keeps everything for the child's whole education** (a selling point), so the legal minimum is always met. *To confirm:* the statutory period, to quote on "Your state". |
+| Q14 | Showing "sustained progress" | **Progress is part of the core:** per course, subject and child, by year, quarter or month, shown calmly in the app and as a professional progress page that opens the portfolio. See [Progress you can see](../product-spine.md#progress-you-can-see). |
+
+## Still to confirm against the statute
+- Q12's exact wording on which subjects must be taught each year.
+- Q13's retention period.
+- Every row marked *(to confirm)* below.
 
 ## Requirements
 **Option 1: home education program, 24 P.S. §13-1327.1**
@@ -63,8 +68,8 @@
 | # | Requirement | Source | Curiculy today | Status | Notes |
 |---|---|---|---|---|---|
 | 10 | **180 days**, or **900 hours** (elementary) / **990 hours** (secondary) | HSLDA | attendance per child per day; no minutes | **Covered** (planned) | Days: attendance marked present. Hours: Q5 minutes. Elementary or secondary from the grade (Q11). |
-| 11 | **Elementary subjects:** English (spelling, reading, writing); arithmetic; science; geography; civics; history of the U.S. and Pennsylvania; health and physiology; physical education; music; art; safety education, including regular and continuous instruction in the dangers and prevention of fires | HSLDA | no real subjects ("Subject: Unfiled") | **Partly covered** | Subject slots per grade band, filled by curricula or activities (Q4). How often each must be taught: Q12. |
-| 12 | **Secondary subjects:** English (language, literature, speech, composition); mathematics (general math, algebra, geometry); science; geography; social studies (civics, world history, history of the U.S. and Pennsylvania); health; physical education; music; art; safety education, including fire prevention | HSLDA | as above | **Partly covered** | As row 11 |
+| 11 | **Elementary subjects:** English (spelling, reading, writing); arithmetic; science; geography; civics; history of the U.S. and Pennsylvania; health and physiology; physical education; music; art; safety education, including regular and continuous instruction in the dangers and prevention of fires | HSLDA | no real subjects ("Subject: Unfiled") | **Covered** (planned) | Subject slots per grade band, filled by curricula or activities (Q4); coverage tracked across years, fire safety every year (Q12) |
+| 12 | **Secondary subjects:** English (language, literature, speech, composition); mathematics (general math, algebra, geometry); science; geography; social studies (civics, world history, history of the U.S. and Pennsylvania); health; physical education; music; art; safety education, including fire prevention | HSLDA | as above | **Covered** (planned) | As row 11 |
 | 13 | Instruction in English | HSLDA | nothing | **Outside Curiculy** | |
 
 ### D. Portfolio (kept by the family; reviewed by the evaluator, not sent to the district)
@@ -73,7 +78,7 @@
 | 14 | A **log made at the time of instruction** that names, by title, the reading materials used | HSLDA; statute wording *(to confirm)* | completed lessons with completion dates; reading-list preset | **Covered** (planned) | Q6: completion date = calendar day; titles from both Library shelves |
 | 15 | **Samples** of writings, worksheets, workbooks or creative materials used or developed by the student | HSLDA; statute wording *(to confirm)* | work samples on lessons; inbox | **Covered** (planned) | Q7: counts set by the family per subject and date range, flagged when short; activities' photos and videos count too |
 | 16 | **Grades 3, 5 and 8:** results in reading/language arts and math from the PSSA or a nationally normed test on PDE's approved list; not given by a parent | PDE BEC; HSLDA | nothing | **Outside Curiculy** (testing); **parent confirms** in Records | Q8. PDE's approved list: California Achievement Test, Comprehensive Testing Program (CTP IV), Iowa Test of Basic Skills, Measures of Academic Progress (MAP), Metropolitan Achievement Test, Peabody Individual Achievement Test (revised), Stanford Achievement Test, TerraNova, Woodcock-Johnson, Wechsler Individual Achievement Test (current versions). The district must let the child take the PSSA at school if the family asks. No exemption for students with disabilities (HSLDA). |
-| 17 | The portfolio is kept for a period after the school year | *(to confirm the rule and the period)* | files kept indefinitely | **Needs a decision** | Q13 |
+| 17 | The portfolio is kept for a period after the school year | *(to confirm the rule and the period)* | files kept indefinitely | **Covered** | Q13: everything is kept for the child's whole education |
 
 ### E. Annual evaluation
 | # | Requirement | Source | Curiculy today | Status | Notes |
@@ -99,7 +104,7 @@
 | # | Requirement | Source | Curiculy today | Status | Notes |
 |---|---|---|---|---|---|
 | 26 | Moving districts: request a letter of transfer by registered mail 30 days before moving, then file it with the new district | HSLDA | nothing | **Outside Curiculy** | A Task, offered when the family changes its address or state in Settings |
-| 27 | Records show instruction in the required subjects and **"sustained progress in the overall program"** | HSLDA (24 P.S. §13-1327.1(a)) | lessons, samples | **Needs a decision** | Q14 |
+| 27 | Records show instruction in the required subjects and **"sustained progress in the overall program"** | HSLDA (24 P.S. §13-1327.1(a)) | per-book progress | **Covered** (planned) | Q14: progress by course, subject and term, in the app and on the portfolio's first page; the evaluator judges it |
 
 **Not requirements on the family:** the right to join district extracurricular, cocurricular, academic and CTE programs (PDE BEC); districts lending curriculum materials on request.
 
