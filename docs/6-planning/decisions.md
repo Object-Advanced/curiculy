@@ -52,7 +52,7 @@ Product and technical decisions, newest first. Each says what was decided, why, 
 Tailwind v4 with Radix-based local components, React Router, TanStack Query, Storybook, and cookie sessions for the web app.
 
 ## Still to decide (by end of January 2027)
-- **Data tier:** SQLite per family plus replication, or Postgres. **Now due before the backend spine** (2026-10-11).
+- **Data tier:** SQLite per family plus replication, or Postgres. **Now due before the backend spine** (2026-10-11). See the [decision record](decision-records/data-tier.md) (recommends Postgres with row-level security).
 - **Hosting:** home lab or cloud; TLS, CDN.
 - **AI provider:** hosted model, data terms, cost, child safety.
 - **Billing and plans:** trial, prices, grandfathering beta families.

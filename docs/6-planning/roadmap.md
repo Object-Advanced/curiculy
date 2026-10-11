@@ -40,7 +40,7 @@ The phases from October 2026 still describe the engineering work; the core loop 
 
 ## Next up (in order)
 1. **Confirm the last Pennsylvania wordings** against the statute (see the [worksheet](state-requirements/pennsylvania.md)); Q1–Q14 are decided.
-2. **Data-tier decision record** (SQLite per family, or Postgres), now, before the spine is built.
+2. **Data-tier decision** (SQLite per family, or Postgres), now, before the spine is built: the [decision record](decision-records/data-tier.md) is written and waiting for the owner.
 3. **Subjects**, then **Curriculum, Materials and Guide**: the first pieces of the backend spine.
 4. Ops tasks that still stand: an off-site backup copy, an uptime monitor, turning off the public `/docs`.
 
