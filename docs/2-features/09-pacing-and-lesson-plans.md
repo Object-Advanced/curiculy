@@ -8,6 +8,8 @@ Turning a book or a pacing guide into dated lessons on a child's calendar. There
 | **Where** | "Auto-schedule a book" (Catalog and Calendar); the **Lesson plans** list in the Catalog (import, builder, Apply) |
 | **Health** | **Works and well tested.** The PDF and photo imports depend on the local AI and are the least predictable part. |
 
+> **Planned (core loop, 2026-10-11):** lesson plans and book structures become one **Guide** model that families can share, and "Auto-schedule" and "Apply" become one verb, **Schedule**. See [Product spine](../6-planning/product-spine.md#words).
+
 ## Scope
 
 ### 1. Auto-schedule a book (pacing)
@@ -28,7 +30,7 @@ A "plan" is a Week/Day guide made of lessons, with optional time slots. It can c
 
 ### Out of scope today
 - Editing the AI's PDF output side by side with the original.
-- A shared library of guides between families.
+- A shared library of guides between families (planned: community guides).
 
 ### API
 | Method | Path | Who | Purpose |
@@ -79,5 +81,5 @@ The household's own file holds `curriculum_plans` (status: processing, ready or 
 |---|---|---|
 | High | Durable jobs: a jobs table, a separate worker process, retries, and a cleanup for stalled jobs | Phase 8 |
 | High | Hosted AI for PDF and photo reading behind the existing `ollama_chat` connection point, with limits per household | Phase 8 |
-| Medium | One verb, **Schedule**, for books and plans; a review step for AI-read plans | Phase 6 |
+| High | One **Guide** model and one verb, **Schedule**; a review step for AI-read plans | Core loop |
 | Low | Rename `ai_generator.py` → `pacing_math.py` | Phase 5 |

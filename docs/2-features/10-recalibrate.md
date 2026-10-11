@@ -8,6 +8,8 @@ When a family falls behind, move the unfinished lessons forward without dragging
 | **Where** | **Recalibrate Schedule** on the Calendar and on a child's Kids page |
 | **Health** | **Solid** |
 
+> **Planned (core loop, 2026-10-11):** catching up becomes one of several calendar moves, all with a preview, reached from an overdue banner on Today. See [Calendar: move things](../6-planning/product-spine.md#calendar-move-things-stay-within-the-guidelines).
+
 ## Scope
 
 ### What it does
@@ -51,6 +53,6 @@ When a family falls behind, move the unfinished lessons forward without dragging
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | An **overdue banner** on Home and Today ("Sam has 1 lesson from Tuesday") that leads to Recalibrate | Phase 6 |
-| Medium | Preview the moved lessons before applying | Phase 6 |
-| Low | Recalibrate several children together | Later |
+| High | An **overdue banner** on Home and Today ("Sam has 1 lesson from Tuesday") that leads to Recalibrate | Core loop |
+| High | Preview the moved lessons before applying | Core loop |
+| Medium | Recalibrate several children together | Core loop |

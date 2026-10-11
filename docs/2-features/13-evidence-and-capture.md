@@ -8,6 +8,8 @@ Photos, PDFs and screenshots of a child's work, attached to lessons so they appe
 | **Where** | Lesson details → evidence; Calendar → **Unsorted Evidence** panel; Settings → Students → capture token; the **Curiculy Capture** Chrome extension |
 | **Health** | **Solid** since Phase 1 hardening. The capture flow needs the phone camera and an extension store listing. |
 
+> **Planned (core loop, 2026-10-11):** parent capture for launch: **Add work** on every lesson, an offer at check-off when a sample is wanted, "snap the stack", and inbox suggestions. The extension stays as an optional parent tool. See [Work samples](../6-planning/product-spine.md#work-samples-adding-them-should-take-seconds).
+
 ## Scope
 
 ### What it does
@@ -77,7 +79,7 @@ Photos, PDFs and screenshots of a child's work, attached to lessons so they appe
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | **Phone capture:** the "＋" sheet → camera → straight to the inbox (reusing `POST /evidence/staging`) | Phase 6 |
+| High | **Parent capture:** Add work on the lesson, an offer at check-off, snap the stack, one photo for every sibling on a shared lesson, inbox suggestions | Core loop |
 | High | Extension: ask only for the configured server (optional host permissions); publish it on the Chrome Web Store | Phase 7–8 (submit by April) |
 | High | A storage interface: the local disk for self-hosting, S3-compatible storage with signed links for the public service; a limit per household | Phase 8 |
 | Medium | Serve files by direct link, not loaded as blobs | Phase 6 |

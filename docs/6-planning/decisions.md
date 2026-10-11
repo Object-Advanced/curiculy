@@ -4,6 +4,17 @@ Product and technical decisions, newest first. Each says what was decided, why, 
 
 | Date | Decision | Why | Affects |
 |---|---|---|---|
+| 2026-10-11 | **Curiculy's purpose is four pillars:** a cheaper hub for families who mix programs, community guides, state requirements met (not just explained), and records that build themselves | The parts didn't obviously fit; this gives each one a job | [Product spine](product-spine.md), [What Curiculy is](../1-overview/what-curiculy-is.md) |
+| 2026-10-11 | **The core loop comes first;** new kid extras (cheers from home and beyond) wait until after launch. The loop's screens are built directly in React. | The differentiators were marked "out of scope" or "Later" while the edges got polished | [Roadmap](roadmap.md) |
+| 2026-10-11 | **No real users yet** (invites haven't gone out), so the data model is redesigned cleanly, with no backfills | Earlier docs called it a beta with families; it isn't yet | [Product spine](product-spine.md#data-model-changes) |
+| 2026-10-11 | **The data-tier decision moves up,** to before the backend spine | With no users, switching is cheapest now, and shared guides need a shared database | [Roadmap](roadmap.md) |
+| 2026-10-11 | **Words:** Library (Curricula · Reading books), Curriculum (a program you teach from: materials + guide), Material, Guide, Reading book, Reading list, Course, Lesson, Work sample, Requirement, Records, Task | "Curriculum" meant three things; books and programs were tangled | [Glossary](../1-overview/glossary.md), [Product spine](product-spine.md#words) |
+| 2026-10-11 | **Two shelves, two setups:** adding a curriculum (materials, guide, course) is a different flow from adding a reading book (who's reading it, track or schedule) | A BJU program and The Lord of the Rings shouldn't share a setup | [Product spine](product-spine.md#library-two-shelves-two-setups) |
+| 2026-10-11 | **"Task" means a parent to-do with a due date,** mostly made by the state pack | One meaning per word | [Product spine](product-spine.md#requirements-records-and-tasks) |
+| 2026-10-11 | **Pennsylvania is the first state,** built end to end | The owner's choice; its portfolio and evaluator model fits the loop closely | [Pennsylvania worksheet](state-requirements/pennsylvania.md) |
+| 2026-10-11 | **No square pegs:** a requirement Curiculy can't honestly check is flagged and reviewed with the owner, never forced to fit. Records shows ✓, "parent confirms", or missing. | A wrong ✓ on a legal record is worse than none | [State requirements](state-requirements/README.md) |
+| 2026-10-11 | **Capture is parent-only for launch.** The Chrome extension is kept (nothing deleted) as an optional parent tool; prompting kids to save score pages is parked. | Most kids don't have a device with a camera; detecting score pages only works for a curated list of sites | [Product spine](product-spine.md#work-samples-adding-them-should-take-seconds) |
+| 2026-10-11 | **Attendance per child (one tap) and a calendar that reschedules within the family's and the state's guidelines are core features** | States count days or hours; life moves lessons around | [Product spine](product-spine.md#attendance-per-child-one-tap) |
 | 2026-10-11 | **Sticker journal rules:** a sticker lands on the lesson's finish date, or its scheduled date for older lessons with no finish date. Camp means every lesson scheduled that day is done. Each camp day wins that date's seasonal prize. Stickers are worked out from lessons, not stored. | Show a full journal from day one; keep one source of truth | [Sticker journal](../2-features/20-sticker-journal.md) |
 | 2026-10-11 | **The React app lives at `/next`, built into the Docker image,** with exact package versions released at least two weeks earlier (React 19.3, TypeScript 5.9, Vite 7.3, Tailwind 4.3, React Router 7.18, TanStack Query 5, Vitest 3). Until cookie sessions land, it shares the legacy sign-in token and `theme-boot.js`. | Ship screens one at a time beside the legacy app; established major versions over brand-new ones | [My trail](../2-features/19-my-trail.md), `frontend/README.md` |
 | 2026-10-11 | **The first React screen is the kid's My trail**, with a parent preview | The user asked for the map view; the screen is self-contained | [My trail](../2-features/19-my-trail.md) |
@@ -24,7 +35,7 @@ Product and technical decisions, newest first. Each says what was decided, why, 
 Tailwind v4 with Radix-based local components, React Router, TanStack Query, Storybook, and cookie sessions for the web app.
 
 ## Still to decide (by end of January 2027)
-- **Data tier:** SQLite per family plus replication, or Postgres.
+- **Data tier:** SQLite per family plus replication, or Postgres. **Now due before the backend spine** (2026-10-11).
 - **Hosting:** home lab or cloud; TLS, CDN.
 - **AI provider:** hosted model, data terms, cost, child safety.
 - **Billing and plans:** trial, prices, grandfathering beta families.

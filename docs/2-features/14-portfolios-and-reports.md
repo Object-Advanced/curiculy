@@ -8,6 +8,8 @@ Printable records of the school year: portfolios for an evaluator or state revie
 | **Where** | `#/portfolios`; **Print Weekly Checklist** on the Calendar and Kids page |
 | **Health** | **Works; email delivery isn't reliable yet** |
 
+> **Planned (core loop, 2026-10-11):** state requirement packs (Pennsylvania first) and a **Records** dashboard showing ✓, "parent confirms" or missing, with a report template per state. See [Requirements, Records and Tasks](../6-planning/product-spine.md#requirements-records-and-tasks) and [State requirements](../6-planning/state-requirements/README.md).
+
 ## Scope
 
 ### What it does
@@ -63,5 +65,5 @@ Printable records of the school year: portfolios for an evaluator or state revie
 |---|---|---|
 | High | Durable email jobs with retries, and a "sent / failed" status the parent can see | Phase 8 |
 | Medium | Subject from the book, so reports group by subject | Phase 5 |
-| Medium | Move Portfolios and attendance into one **Records** area | Phase 4 |
-| Low | Ready-made templates per state | Later |
+| High | Move Portfolios and attendance into one **Records** area, with the requirements dashboard | Core loop |
+| High | State requirement packs and report templates, Pennsylvania first | Core loop |
