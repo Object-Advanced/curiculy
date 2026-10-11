@@ -115,6 +115,42 @@ All families in one database. Every family table carries `household_id`. **Row-l
 - **Per-family export and import** (JSON plus work-sample files). One tool serves the lifetime archive, a parent's access and deletion requests, restoring one family, seeding demos, and moving between environments.
 - **Versions are pinned:** a Postgres major release and drivers (psycopg 3) that are established, not brand new (the project's version rule).
 
+## Could one family see another family's data?
+This is the most important risk of a shared database, and the owner's main concern. **Separate files are physical separation; row-level security is separation the database enforces by rule.** A rule can be misconfigured, so B is only safe with guardrails that check the setup automatically, rather than relying on anyone remembering.
+
+**How a leak could happen, and what stops it:**
+| How a leak could happen | SQLite per family | Postgres + row-level security |
+|---|---|---|
+| A query forgets to filter by family | Can't leak: other families aren't in the file | Can't leak: the database adds the filter itself |
+| The request is tied to the **wrong family** at sign-in | **Leaks** (the wrong file opens) | **Leaks** (the wrong family is set) |
+| A new table is added without its protection | Can't happen | **Stopped by a test:** every family table must have row-level security on and forced, and every table without `household_id` must be on a short, explicit list of shared tables |
+| The app connects with an account that can bypass the rules | Can't happen | **Stopped at startup:** the app refuses to run if its account owns the tables, is a superuser, or can bypass row-level security |
+| One request's family "sticks" to a pooled connection | Can't happen | **Stopped by design:** the family is set per transaction (`set_config(..., true)`, which is `SET LOCAL`), at the start of every transaction; tested with interleaved requests |
+| A view or function quietly skips the rules | Can't happen | **Stopped by a test:** views must use `security_invoker`, and no `SECURITY DEFINER` functions on family tables (both are known Postgres traps) |
+| A "unique" rule reveals that another family has something | Can't happen | **Design rule:** uniqueness on family tables always includes `household_id` |
+| Background jobs or admin scripts | Open any file they're given | Use a separate account, kept out of request handlers; they name the family explicitly |
+| Private details copied into shared data (like a shared guide) | Possible on the write-to-catalog path | Possible on the "Share this guide" path; in both, the share path copies structure only, and tests check it |
+
+**The leak both designs share is the most likely one in practice:** tying a request to the wrong family. That's guarded by sign-in and its tests either way. For everything else, B needs **several independent safeguards to fail at once** before anything shows.
+
+**Checks that run on every change, whichever option is chosen:**
+- **A cross-family probe suite:**
+  1. Make two families with data.
+  2. Call every API route as Family A, using Family B's ids.
+  3. Expect "not found" every time, B's data unchanged, and none of B's rows in any list.
+- **A database check** (B only): connected as the app with no family set, every family table returns zero rows; with Family A set, only A's rows.
+- **The coverage check above:** every table is either protected, or on the shared list.
+- **The planned penetration test before launch** includes cross-family access.
+
+## Quality: is Postgres more error-prone?
+**No. For data quality it's stricter than SQLite,** so it catches mistakes SQLite lets through silently:
+- **Types are enforced.** SQLite will store the text "abc" in a number column, and it doesn't enforce lengths like `String(255)`. Postgres refuses both.
+- **Dates are real dates,** not text that happens to look like one.
+- **Foreign keys are always on.** In SQLite they're on only because every connection turns them on, which is why `scripts/check_foreign_keys.py` exists.
+- **Schema changes run in a transaction:** one either fully applies or doesn't apply at all, instead of a patch running file by file.
+
+The new risks are the ones in the table above, and each has a test or a startup check.
+
 ## What changes if B is approved
 | Area | Change |
 |---|---|
