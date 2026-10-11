@@ -50,7 +50,9 @@ test("a kid's list points to the family's own materials, with the puzzle as an e
 
 test("the sign-in screen shows first names only", async ({ page }) => {
   await openStudentSignIn(page);
-  await expect(page.locator("#student-name-chips")).toHaveText(firstName);
+  const chips = page.locator("#student-name-chips");
+  await expect(chips.getByRole("button")).toHaveText([firstName, "Ben"]);
+  await expect(chips).not.toContainText("Okafor");
 });
 
 test("a remembered device goes straight to the names", async ({ page }) => {
@@ -125,18 +127,48 @@ test("stuck? gives one nudge, then sends the kid to a grown-up", async ({ page }
 
 test("My trail: a kid follows today's stops to camp", async ({ page }) => {
   await page.clock.setFixedTime(FROZEN_NOW);
-  // Start from a known day even on a retry: the worksheet is not done yet.
+  // Ben's day is the one tests change. Start from a known day even on a retry.
   const parent = await parentToken(page);
   const headers = { Authorization: `Bearer ${parent}` };
-  const { studentId } = loadHouseholdState();
+  const { secondStudentId } = loadHouseholdState();
   const day = await page.request.get(
-    `/api/students/${studentId}/assignments?start_date=2026-10-14&end_date=2026-10-14`,
+    `/api/students/${secondStudentId}/assignments?start_date=2026-10-14&end_date=2026-10-14`,
     { headers },
   );
   const { assignments } = (await day.json()) as { assignments: { id: number; title: string }[] };
-  const worksheet = assignments.find((row) => row.title === "Fractions worksheet");
-  expect(worksheet).toBeTruthy();
-  await page.request.patch(`/api/assignments/${worksheet!.id}/status`, { headers, data: { status: "assigned" } });
+  const mapSkills = assignments.find((row) => row.title === "Map skills");
+  expect(mapSkills).toBeTruthy();
+  await page.request.patch(`/api/assignments/${mapSkills!.id}/status`, { headers, data: { status: "assigned" } });
+
+  await openStudentSignIn(page);
+  await page.getByRole("button", { name: "Ben", exact: true }).click();
+  const pinForm = page.locator("#student-pin-form");
+  await pinForm.getByLabel("PIN").fill(HOUSEHOLD.secondKid.pin);
+  await pinForm.getByRole("button", { name: "Log In" }).click();
+
+  await page.getByRole("link", { name: "My trail" }).click();
+  await expect(page).toHaveURL(/\/next\/trail$/);
+  await expect(page.getByRole("heading", { name: "Hi Ben!" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Trail map: 1 of 2 stops done." })).toBeVisible();
+  const stops = page.getByRole("list", { name: "Today's stops" }).getByRole("listitem");
+  await expect(stops).toHaveCount(2);
+
+  await page.getByRole("button", { name: "I did it: Map skills" }).click();
+  await expect(page.getByRole("heading", { name: "You reached camp!" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Trail map: 2 of 2 stops done, camp reached." })).toBeVisible();
+
+  // Undo, and wait for the server before leaving so the next run starts clean.
+  const saved = page.waitForResponse((r) => r.url().includes("/status") && r.request().method() === "PATCH");
+  await page.getByRole("button", { name: "Not done yet: Map skills" }).click();
+  expect((await saved).ok()).toBeTruthy();
+  await expect(page.getByText("1 stop to camp")).toBeVisible();
+  await page.getByRole("link", { name: "My day" }).click();
+  await expect(page.locator("#page-title")).toHaveText("My work");
+});
+
+test("Sticker journal: this week's stickers and the month's collection", async ({ page }) => {
+  await page.clock.setFixedTime(FROZEN_NOW);
+  // Read-only: Ada's week never changes during the suite.
 
   await openStudentSignIn(page);
   await page.getByRole("button", { name: firstName, exact: true }).click();
@@ -144,21 +176,21 @@ test("My trail: a kid follows today's stops to camp", async ({ page }) => {
   await pinForm.getByLabel("PIN").fill(HOUSEHOLD.kid.pin);
   await pinForm.getByRole("button", { name: "Log In" }).click();
 
-  await page.getByRole("link", { name: "My trail" }).click();
-  await expect(page).toHaveURL(/\/next\/trail$/);
-  await expect(page.getByRole("heading", { name: `Hi ${firstName}!` })).toBeVisible();
+  await page.getByRole("link", { name: "Sticker journal" }).click();
+  await expect(page).toHaveURL(/\/next\/journal$/);
+  await expect(page.getByRole("heading", { name: "This week" })).toBeVisible();
+  await expect(page.getByText("Oct 12 – 16")).toBeVisible();
+
+  const days = page.getByRole("list", { name: "Stickers by day" }).getByRole("listitem");
+  const today = days.filter({ hasText: "Today" });
+  await today.getByRole("button", { name: "Reading sticker: Read The Hobbit, chapter 2" }).click();
+  await expect(page.getByText("Your Reading sticker is from “Read The Hobbit, chapter 2”, on Wednesday.")).toBeVisible();
+  await expect(today.getByRole("link", { name: "1 stop to go" })).toBeVisible();
+
+  const collection = page.getByRole("region", { name: "October collection" });
+  await expect(collection.getByText("0 of 8")).toBeVisible();
+  await expect(collection.getByText("Today’s prize")).toBeVisible();
+
+  await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "My trail" }).click();
   await expect(page.getByRole("img", { name: "Trail map: 1 of 2 stops done." })).toBeVisible();
-  const stops = page.getByRole("list", { name: "Today's stops" }).getByRole("listitem");
-  await expect(stops).toHaveCount(2);
-  await expect(stops.nth(1)).toContainText("Note: Pages 14–15 in the blue workbook.");
-
-  await page.getByRole("button", { name: "I did it: Fractions worksheet" }).click();
-  await expect(page.getByRole("heading", { name: "You reached camp!" })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Trail map: 2 of 2 stops done, camp reached." })).toBeVisible();
-
-  // Put the day back for the other tests, then return to My work.
-  await page.getByRole("button", { name: "Not done yet: Fractions worksheet" }).click();
-  await expect(page.getByText("1 stop to camp")).toBeVisible();
-  await page.getByRole("link", { name: "My day" }).click();
-  await expect(page.locator("#page-title")).toHaveText("My work");
 });

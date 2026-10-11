@@ -6,12 +6,12 @@ Four layers of checks run on every push and pull request (GitHub Actions, `.gith
 |---|---|---|---|
 | **Lint** | Python syntax errors and unused or undefined names (ruff 0.16.9, E9 + F rules) | `docker compose --profile dev run --build --rm tests ruff check app scripts tests` | — |
 | **Backend** | pytest against throwaway SQLite files; never touches `/data`, the AI or mail | `docker compose --profile dev run --rm tests pytest -q --tb=line` | about 1,000 tests in 54 files |
-| **Frontend** | React app: TypeScript (strict), Vitest + Testing Library + MSW, a production build, and a check that the typed API client matches `frontend/openapi.json` | `cd frontend && npm run typecheck && npm test && npm run build` | 28 tests |
-| **Browser** | Playwright 1.63 against a throwaway app in its own Compose project (`curiculy-e2e`); `e2e/run.sh` rebuilds the app image first so the React build is current | `e2e/run.sh` | 38 tests across 6 projects |
+| **Frontend** | React app: TypeScript (strict), Vitest + Testing Library + MSW, a production build, and a check that the typed API client matches `frontend/openapi.json` | `cd frontend && npm run typecheck && npm test && npm run build` | 43 tests |
+| **Browser** | Playwright 1.63 against a throwaway app in its own Compose project (`curiculy-e2e`); `e2e/run.sh` rebuilds the app image first so the React build is current | `e2e/run.sh` | 39 tests across 6 projects |
 
 ## The browser suite (`e2e/`)
 - **Projects:**
-  - `setup` registers the test family ("The Okafor family", kid "Ada", PIN 2468)
+  - `setup` registers the test family ("The Okafor family"): **Ada** (PIN 2468), whose day stays fixed for read-only and screenshot tests, and **Ben** (PIN 1357), whose lessons the check-off tests change. Tests run in parallel, so only Ben's day may change.
   - `functional` covers smoke, kid, a11y, offline and metrics
   - five **visual** projects: desktop light and dark, tablet light, phone light and dark
 - **Frozen clock:** `2026-10-14T15:00:00Z` (a Wednesday afternoon), so screenshots and counts don't drift.

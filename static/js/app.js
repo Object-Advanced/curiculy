@@ -7405,6 +7405,11 @@ const KID_MAP_SVG =
   'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
   '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>';
 
+const KID_BOOK_SVG =
+  '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="none" ' +
+  'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg>';
+
 function renderKidHello(todayItems) {
   const name = firstName(state.kidStudent?.name || state.sessionUser?.display_name);
   const total = todayItems.length;
@@ -7423,7 +7428,10 @@ function renderKidHello(todayItems) {
       <h2>Hi ${escapeHtml(name)}!</h2>
       <p class="kid-hello-progress">${escapeHtml(line)}</p>
       ${total ? `<div class="kid-stars" role="img" aria-label="${done} of ${total} stars earned today">${stars}</div>` : ""}
-      <a class="button kid-trail-link" href="/next/trail">${KID_MAP_SVG}My trail</a>
+      <div class="kid-hello-links">
+        <a class="button kid-trail-link" href="/next/trail">${KID_MAP_SVG}My trail</a>
+        <a class="button kid-trail-link kid-journal-link" href="/next/journal">${KID_BOOK_SVG}Sticker journal</a>
+      </div>
     </section>`;
 }
 

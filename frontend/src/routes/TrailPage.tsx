@@ -1,21 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
 
 import type { Lesson } from "../api/client";
-import { useDayLessons, useMe, useSetLessonStatus, useStudents } from "../api/queries";
+import { useKid } from "../api/kid";
+import { useDayLessons, useSetLessonStatus } from "../api/queries";
 import { BonusChest } from "../components/BonusChest";
 import { CampBanner } from "../components/CampBanner";
-import { KidHeader } from "../components/KidHeader";
+import { ChildPicker } from "../components/ChildPicker";
+import { KidHeader, trailLine } from "../components/KidHeader";
 import { StickerPanel } from "../components/StickerPanel";
 import { StopList } from "../components/StopList";
 import { TrailMap, type TrailStop } from "../components/TrailMap";
 import { seasonOf, todayISO } from "../lib/dates";
 import { buildDailySpark, sparkSolvedKey } from "../lib/spark";
 import { campPrize, lessonSticker } from "../lib/stickers";
-
-function firstName(name: string | null | undefined): string {
-  return String(name || "").trim().split(/\s+/)[0] || "there";
-}
 
 function readSolved(key: string, answer: string): boolean {
   try {
@@ -31,22 +28,8 @@ function readSolved(key: string, answer: string): boolean {
  */
 export function TrailPage() {
   const today = useMemo(() => todayISO(), []);
-  const [params, setParams] = useSearchParams();
-  const me = useMe();
-  const isChild = me.data?.role === "child";
-  const students = useStudents(me.isSuccess && !isChild);
-
-  const requested = Number(params.get("student"));
-  const child = isChild
-    ? me.data
-      ? { id: me.data.student_id ?? null, name: me.data.display_name, grade: me.data.grade ?? null }
-      : null
-    : (() => {
-        const list = students.data ?? [];
-        const pick = list.find((s) => s.id === requested) ?? list[0];
-        return pick ? { id: pick.id, name: pick.name, grade: pick.grade ?? null } : null;
-      })();
-  const studentId = child?.id ?? null;
+  const kid = useKid();
+  const { isChild, students, child, studentId, name } = kid;
 
   const day = useDayLessons(studentId, today);
   const setStatus = useSetLessonStatus(studentId, today);
@@ -58,7 +41,6 @@ export function TrailPage() {
   const done = lessons.length - lessons.filter((lesson) => lesson.status !== "completed").length;
   const campReached = lessons.length > 0 && done === lessons.length;
   const prize = campPrize(today);
-  const name = firstName(child?.name);
 
   const spark = useMemo(
     () => (studentId === null ? null : buildDailySpark({ id: studentId, grade: child?.grade }, lessons, today)),
@@ -92,7 +74,7 @@ export function TrailPage() {
     sticker: lessonSticker(lesson),
   }));
 
-  if (me.isError || day.isError) {
+  if (kid.error || day.isError) {
     return (
       <main className="trail-page">
         <section className="kid-card" role="alert">
@@ -106,7 +88,7 @@ export function TrailPage() {
     );
   }
 
-  const loading = me.isPending || (!isChild && students.isPending) || (studentId !== null && day.isPending);
+  const loading = kid.loading || (studentId !== null && day.isPending);
   if (loading) {
     return (
       <main className="trail-page" aria-busy="true">
@@ -137,29 +119,15 @@ export function TrailPage() {
     <main className="trail-page">
       <KidHeader
         name={name}
-        total={lessons.length}
-        done={done}
-        backHref={isChild ? "/#/my-work" : `/#/students/${studentId}`}
-        backLabel={isChild ? "My day" : "Back to Kids"}
+        line={trailLine(lessons.length, done)}
+        current="trail"
+        backHref={kid.backHref}
+        backLabel={kid.backLabel}
+        search={kid.search}
       />
 
-      {!isChild && (students.data?.length ?? 0) > 0 && (
-        <section className="preview-bar" aria-label="Choose a child">
-          <p>Parent preview. Checking off here counts for {name}.</p>
-          <div className="preview-chips">
-            {students.data!.map((student) => (
-              <button
-                key={student.id}
-                type="button"
-                className={`kid-chip${student.id === studentId ? " is-active" : ""}`}
-                aria-pressed={student.id === studentId}
-                onClick={() => setParams({ student: String(student.id) })}
-              >
-                {firstName(student.name)}
-              </button>
-            ))}
-          </div>
-        </section>
+      {!isChild && students.data && students.data.length > 0 && (
+        <ChildPicker students={students.data} currentId={studentId} name={name} onPick={kid.selectStudent} />
       )}
 
       {campReached && <CampBanner prize={prize} />}

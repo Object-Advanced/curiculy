@@ -19,6 +19,8 @@ A playful page a child opens to see their day as a path. **Built in October 2026
 - **No guilt:** a missed camp is an empty dashed tent, never a red mark.
 
 ## Sticker journal (kid)
+**Built in October 2026** at `/next/journal`; see [Sticker journal](../2-features/20-sticker-journal.md). Cheers from home are still to come.
+
 - **This week page:** each day's stickers, a tent on days the child reached camp, and today's "stops to go".
 - **The month's collection:** 8 seasonal stickers. Earned ones show; the next is "Today's prize"; the rest are mysteries.
 - **Cheers from home:** stickers parents sent ("Great job!", "So proud!").

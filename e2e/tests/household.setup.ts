@@ -47,6 +47,19 @@ test("register a household and give the first kid a PIN", async ({ page }) => {
       notes,
     });
   }
+  // Ben's day is the one tests may change (check-offs on My trail).
+  const ben = await apiAs<Student>(page, "POST", "/students", {
+    name: HOUSEHOLD.secondKid.name,
+    grade: HOUSEHOLD.secondKid.grade,
+  });
+  await apiAs(page, "POST", `/students/${ben.id}/pin`, { pin: HOUSEHOLD.secondKid.pin });
+  for (const [title, status] of [
+    ["Read Charlotte’s Web, chapter 1", "completed"],
+    ["Map skills", "assigned"],
+  ]) {
+    await apiAs(page, "POST", "/assignments", { student_id: ben.id, title, scheduled_date: isoDay(0), status });
+  }
+
   const { code } = await apiAs<{ code: string }>(page, "GET", "/auth/family-code");
-  saveHouseholdState({ studentId: kid.id, familyCode: code });
+  saveHouseholdState({ studentId: kid.id, secondStudentId: ben.id, familyCode: code });
 });

@@ -39,8 +39,7 @@ Today's lessons as stops on a winding trail to camp. A kid checks off each stop,
 **Guide, don't teach.** The stops are the parent's scheduled lessons. The page points to the family's own materials, and the puzzle and stickers are optional rewards.
 
 ### Out of scope (next)
-- **The Sticker journal page** (stickers by day, the month's collection, cheers from home). Lessons checked off since October 2026 record `completion_date`, which it needs.
-- **Parent "cheers"** waiting at camp. This needs an `assignment_reactions` table.
+- **Cheers from home** waiting at camp (see the [Sticker journal](20-sticker-journal.md), built next to this page).
 - **Offline support** for `/next`: the React app has no service worker yet (vite-plugin-pwa, Phase 3).
 - **Tapping a stop on the map** to jump to its card.
 
@@ -74,7 +73,7 @@ The server serves the app itself at `GET /next` and `/next/{path}` (the page) an
 - **Shares the legacy sign-in token** in `localStorage` until cookie sessions land (Phase 3).
 - **No offline support yet.** An offline visit falls back to the legacy app's cached page.
 - **The bundle is 387 KB (124 KB gzipped)** for one screen. That's fine for now; split routes as screens are added.
-- **The camp prize changes daily but isn't saved.** The Sticker journal will keep the collection.
+- **The camp prize is chosen by the date and isn't stored.** The [Sticker journal](20-sticker-journal.md) works out the month's collection from camp days.
 - **No parent setting** to turn the trail off or choose which stickers appear.
 
 ### Tests
@@ -89,7 +88,6 @@ The server serves the app itself at `GET /next` and `/next/{path}` (the page) an
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | Build the **Sticker journal** as the next React screen, from `completion_date` | Phase 3 |
 | High | Cookie sessions shared by both apps; then drop the token from `localStorage` | Phase 3 |
 | Medium | Offline support for `/next` (vite-plugin-pwa) | Phase 3 |
 | Medium | Parent cheers that appear at camp | Phase 3–6 |

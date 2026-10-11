@@ -134,4 +134,10 @@ test("a parent opens a child's trail from the Kids page", async ({ page }) => {
   await page.getByRole("button", { name: "Maya" }).click();
   await expect(page.getByRole("heading", { name: "Hi Maya!" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to Kids" })).toBeVisible();
+
+  // The journal keeps the chosen child.
+  await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Sticker journal" }).click();
+  await expect(page.getByRole("heading", { name: "This week" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hi Maya!" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Math sticker: Count by twos" })).toBeVisible();
 });
