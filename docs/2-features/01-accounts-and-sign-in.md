@@ -40,7 +40,7 @@ The family-code lookup returns **first names only**. It used to reveal children'
 |---|---|---|---|
 | POST | `/api/auth/register` | anyone with an invite key | Create a parent account and household |
 | POST | `/api/auth/token` | anyone | Parent sign-in |
-| GET | `/api/auth/me` | signed in | Who am I (role, household, child's student id) |
+| GET | `/api/auth/me` | signed in | Who am I (role, household, child's student id and grade) |
 | POST | `/api/auth/student-household` | anyone | Family code → first names for the sign-in screen |
 | POST | `/api/auth/student-token` | anyone | Kid PIN sign-in |
 | GET / POST | `/api/auth/family-code`, `/rotate` | parent | Show or replace the family code |
@@ -76,7 +76,7 @@ The family-code lookup returns **first names only**. It used to reveal children'
 
 ### Tests
 - `test_auth.py` (26 tests)
-- `test_kid_auth.py` (12), `test_family_codes.py` (14)
+- `test_kid_auth.py` (14), `test_family_codes.py` (14)
 - `test_rate_limit.py` (7), `test_create_invite.py` (7), `test_reset_password.py` (5)
 - `e2e/tests/kid.spec.ts`: family code → name → PIN, a wrong PIN, and a remembered device
 

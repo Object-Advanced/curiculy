@@ -16,7 +16,7 @@ Every major function of Curiculy has one page with two halves:
 | 03 | [Home](03-home.md) | Parents | Works, needs a content-first redesign | Greeting, today at a glance, next break |
 | 04 | [Calendar and lessons](04-calendar-and-lessons.md) | Parents | Works, needs phone and All Students redesign | Day/week/month; lesson details; grades; shared lessons |
 | 05 | [Kids page](05-kids-page.md) | Parents | Solid | One child's day plus "Ask Sam" |
-| 06 | [Kid's My work](06-kid-my-work.md) | Kids | Works (one known bug) | Playful list pointing to their own materials |
+| 06 | [Kid's My work](06-kid-my-work.md) | Kids | Works | Playful list pointing to their own materials |
 | 07 | [Stuck? nudges](07-stuck-nudges.md) | Kids, parents | Solid | One nudge, then a grown-up |
 | 08 | [Library and books](08-library-and-books.md) | Parents | Works, needs a simpler layout | Books by ISBN or by hand |
 | 09 | [Pacing and lesson plans](09-pacing-and-lesson-plans.md) | Parents | Works; AI imports least predictable | Auto-schedule books; import or build plans |

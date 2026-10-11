@@ -20,6 +20,8 @@ class TokenUserRead(BaseModel):
     role: str = "parent"
     student_id: int | None = None
     display_name: str = ""
+    # A child's own grade, so kid screens need no parent-only student route.
+    grade: str | None = None
 
 
 class RegisterRequest(BaseModel):

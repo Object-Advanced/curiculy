@@ -317,6 +317,7 @@ def test_auth_me_for_logged_in_user(auth_client: TestClient) -> None:
         "role": "parent",
         "student_id": None,
         "display_name": "Default household",
+        "grade": None,
     }
 
 

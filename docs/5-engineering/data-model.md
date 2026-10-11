@@ -63,6 +63,6 @@ erDiagram
 - **Planned:** stamp each file with `PRAGMA user_version` and apply patches lazily, so startup doesn't open every family's file (Phase 5).
 
 ## Known data gaps
-- **`assignments.completion_date` isn't set when a lesson is checked off** (only `status` changes). Home and Portfolios use status instead, but the Sticker Journal needs the date. Fix in Phase 5 or sooner.
+- **Lessons checked off before October 2026 have no `assignments.completion_date`.** Check-off has recorded the household's today since then (and unchecking clears it), but older completed lessons were never dated. Home and Portfolios count by `status`, so only the Sticker Journal will notice.
 - **Lessons aren't tied to a school year,** so reports use date ranges.
 - **The subject comes from a taxonomy nothing fills in,** which is why lessons say "Subject: Unfiled". Take it from the book instead.

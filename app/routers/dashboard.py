@@ -1,8 +1,8 @@
 """Family dashboard analytics: today's progress and a seven-day completion trend.
 
-Status is the completion signal; ``completion_date`` is often null because the
-checklist only patches status. Totals and daily buckets therefore use
-``scheduled_date``.
+Status is the completion signal; ``completion_date`` is null on lessons checked
+off before check-off started recording it (October 2026). Totals and daily
+buckets therefore use ``scheduled_date``.
 """
 
 from datetime import date, timedelta

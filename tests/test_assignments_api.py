@@ -9,7 +9,7 @@ a bound were open-ended.
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 
@@ -36,6 +36,7 @@ from app.models import (
     Student,
     SubjectTaxonomy,
 )
+from app.services import clock
 from app.services.assignments import (
     UNBOUNDED,
     AssignmentQuery,
@@ -1134,6 +1135,12 @@ class TestAssignmentUpdate:
 
 
 class TestAssignmentStatusPatch:
+    @pytest.fixture(autouse=True)
+    def frozen_today(self, monkeypatch: pytest.MonkeyPatch) -> date:
+        """Check-offs in this class happen the day after ANCHOR, at noon UTC."""
+        monkeypatch.setattr(clock, "_now", lambda: datetime(2026, 9, 17, 12, tzinfo=timezone.utc))
+        return date(2026, 9, 17)
+
     def test_patching_status_to_completed_updates_the_assignment(
         self, client: TestClient, db: Session, student: Student
     ) -> None:
@@ -1183,8 +1190,13 @@ class TestAssignmentStatusPatch:
 
         assert response.status_code == 200
         assert response.json()["status"] == "completed"
-        assert client.get(f"/api/assignments/{sibling.id}").json()["status"] == "completed"
-        assert client.get(f"/api/assignments/{unrelated.id}").json()["status"] == "assigned"
+        assert response.json()["completion_date"] == "2026-09-17"
+        sibling_body = client.get(f"/api/assignments/{sibling.id}").json()
+        assert sibling_body["status"] == "completed"
+        assert sibling_body["completion_date"] == "2026-09-17"
+        unrelated_body = client.get(f"/api/assignments/{unrelated.id}").json()
+        assert unrelated_body["status"] == "assigned"
+        assert unrelated_body["completion_date"] is None
 
     def test_a_child_completing_a_shared_assignment_does_not_mark_siblings(
         self,
@@ -1229,7 +1241,10 @@ class TestAssignmentStatusPatch:
 
         assert response.status_code == 200
         assert response.json()["status"] == "completed"
-        assert client.get(f"/api/assignments/{sibling.id}").json()["status"] == "assigned"
+        assert response.json()["completion_date"] == "2026-09-17"
+        sibling_body = client.get(f"/api/assignments/{sibling.id}").json()
+        assert sibling_body["status"] == "assigned"
+        assert sibling_body["completion_date"] is None
 
     def test_reopening_a_shared_assignment_reopens_the_siblings(
         self,
@@ -1250,6 +1265,7 @@ class TestAssignmentStatusPatch:
             student_id=other_student.id,
             title="Shared lesson",
             scheduled_date=ANCHOR,
+            completion_date=ANCHOR,
             status=AssignmentStatus.COMPLETED,
             shared_group_uuid=group,
         )
@@ -1262,7 +1278,157 @@ class TestAssignmentStatusPatch:
         )
 
         assert response.status_code == 200
-        assert client.get(f"/api/assignments/{sibling.id}").json()["status"] == "assigned"
+        assert response.json()["completion_date"] is None
+        sibling_body = client.get(f"/api/assignments/{sibling.id}").json()
+        assert sibling_body["status"] == "assigned"
+        assert sibling_body["completion_date"] is None
+
+    def test_a_sibling_who_finished_earlier_keeps_their_own_date(
+        self,
+        client: TestClient,
+        db: Session,
+        student: Student,
+        other_student: Student,
+    ) -> None:
+        group = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        target = Assignment(
+            student_id=student.id,
+            title="Shared lesson",
+            scheduled_date=ANCHOR,
+            shared_group_uuid=group,
+        )
+        early_bird = Assignment(
+            student_id=other_student.id,
+            title="Shared lesson",
+            scheduled_date=ANCHOR,
+            completion_date=ANCHOR,
+            status=AssignmentStatus.COMPLETED,
+            shared_group_uuid=group,
+        )
+        db.add_all([target, early_bird])
+        db.commit()
+
+        response = client.patch(
+            f"/api/assignments/{target.id}/status",
+            json={"status": "completed"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["completion_date"] == "2026-09-17"
+        assert client.get(f"/api/assignments/{early_bird.id}").json()["completion_date"] == (
+            ANCHOR.isoformat()
+        )
+
+    def test_checking_off_records_the_household_today(
+        self, client: TestClient, db: Session, student: Student
+    ) -> None:
+        assignment = add_assignment(db, student, ANCHOR)
+
+        response = client.patch(
+            f"/api/assignments/{assignment.id}/status",
+            json={"status": "completed"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["completion_date"] == "2026-09-17"
+        assert client.get(f"/api/assignments/{assignment.id}").json()["completion_date"] == (
+            "2026-09-17"
+        )
+        assert assignment.completion_date == date(2026, 9, 17)
+
+    def test_today_follows_the_household_clock_not_the_server(
+        self,
+        client: TestClient,
+        db: Session,
+        student: Student,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # 03:00 UTC on the 18th is still the evening of the 17th in California.
+        monkeypatch.setattr(clock, "_now", lambda: datetime(2026, 9, 18, 3, tzinfo=timezone.utc))
+        student.household.timezone = "America/Los_Angeles"
+        db.commit()
+        assignment = add_assignment(db, student, ANCHOR)
+
+        response = client.patch(
+            f"/api/assignments/{assignment.id}/status",
+            json={"status": "completed"},
+        )
+
+        assert response.json()["completion_date"] == "2026-09-17"
+
+    def test_checking_off_again_keeps_the_first_date(
+        self, client: TestClient, db: Session, student: Student
+    ) -> None:
+        assignment = Assignment(
+            student_id=student.id,
+            title="Lesson 1",
+            scheduled_date=ANCHOR,
+            completion_date=ANCHOR,
+            status=AssignmentStatus.COMPLETED,
+        )
+        db.add(assignment)
+        db.commit()
+
+        response = client.patch(
+            f"/api/assignments/{assignment.id}/status",
+            json={"status": "completed"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["completion_date"] == ANCHOR.isoformat()
+
+    @pytest.mark.parametrize("status", ["assigned", "in_progress", "skipped", "excused"])
+    def test_moving_away_from_completed_clears_the_date(
+        self, client: TestClient, db: Session, student: Student, status: str
+    ) -> None:
+        assignment = Assignment(
+            student_id=student.id,
+            title="Lesson 1",
+            scheduled_date=ANCHOR,
+            completion_date=ANCHOR,
+            status=AssignmentStatus.COMPLETED,
+        )
+        db.add(assignment)
+        db.commit()
+
+        response = client.patch(
+            f"/api/assignments/{assignment.id}/status",
+            json={"status": status},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == status
+        assert response.json()["completion_date"] is None
+        assert assignment.completion_date is None
+
+    def test_working_ahead_records_the_real_day_and_the_editor_can_resave_it(
+        self, client: TestClient, db: Session, student: Student
+    ) -> None:
+        """Done on the 17th, scheduled for the 18th: the dates stay as they happened."""
+        assignment = add_assignment(db, student, date(2026, 9, 18))
+
+        checked = client.patch(
+            f"/api/assignments/{assignment.id}/status",
+            json={"status": "completed"},
+        )
+        resaved = client.put(
+            f"/api/assignments/{assignment.id}",
+            json={
+                "status": "completed",
+                "scheduled_date": "2026-09-18",
+                "completion_date": "2026-09-17",
+            },
+        )
+        moved = client.put(
+            f"/api/assignments/{assignment.id}",
+            json={"scheduled_date": "2026-09-19"},
+        )
+
+        assert checked.json()["completion_date"] == "2026-09-17"
+        assert resaved.status_code == 200
+        assert resaved.json()["completion_date"] == "2026-09-17"
+        # Moving a date still has to leave the pair in order.
+        assert moved.status_code == 400
 
     def test_put_status_also_syncs_the_shared_group(
         self,

@@ -1,11 +1,13 @@
 """A child may complete their own assignments and nothing else."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.enums import AssignmentStatus
+from app.services import clock
 from tests.test_auth import bearer, seed_user
 from tests.test_kid_auth import _child_token, _login, _parent_ready, _set_pin
 
@@ -13,12 +15,22 @@ pytest_plugins = ["tests.test_auth"]
 
 ANCHOR = date.today().isoformat()
 
+# Noon UTC is the same date on any household clock from Hawaii to Moscow.
+NOON = datetime(2026, 10, 8, 12, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def frozen_today(monkeypatch: pytest.MonkeyPatch) -> date:
+    monkeypatch.setattr(clock, "_now", lambda: NOON)
+    return NOON.date()
+
 
 def _add_assignment(
     client: TestClient,
     token: str,
     student_id: int,
     title: str = "Lesson 1",
+    scheduled_date: str = ANCHOR,
 ) -> dict:
     response = client.post(
         "/api/assignments",
@@ -26,7 +38,7 @@ def _add_assignment(
         json={
             "student_id": student_id,
             "title": title,
-            "scheduled_date": ANCHOR,
+            "scheduled_date": scheduled_date,
         },
     )
     assert response.status_code == 201
@@ -68,6 +80,64 @@ def test_child_can_patch_own_assignment_status(auth_client: TestClient) -> None:
     )
     assert done.status_code == 200
     assert done.json()["status"] == AssignmentStatus.COMPLETED.value
+
+
+def test_child_check_off_records_today_and_uncheck_clears_it(
+    auth_client: TestClient, frozen_today: date
+) -> None:
+    token, student = _parent_ready(auth_client)
+    _set_pin(auth_client, token, student["id"])
+    assignment = _add_assignment(
+        auth_client, token, student["id"], "Fractions", frozen_today.isoformat()
+    )
+    assert assignment["completion_date"] is None
+    child = bearer(_child_token(auth_client, student["id"]))
+    url = f"/api/assignments/{assignment['id']}/status"
+
+    done = auth_client.patch(url, headers=child, json={"status": AssignmentStatus.COMPLETED.value})
+
+    assert done.status_code == 200
+    assert done.json()["completion_date"] == frozen_today.isoformat()
+    stored = auth_client.get(f"/api/assignments/{assignment['id']}", headers=bearer(token))
+    assert stored.json()["completion_date"] == frozen_today.isoformat()
+
+    undone = auth_client.patch(url, headers=child, json={"status": AssignmentStatus.ASSIGNED.value})
+
+    assert undone.status_code == 200
+    assert undone.json()["status"] == AssignmentStatus.ASSIGNED.value
+    assert undone.json()["completion_date"] is None
+
+
+def test_child_working_ahead_records_the_day_it_was_done(
+    auth_client: TestClient, frozen_today: date
+) -> None:
+    """A lesson from "Coming up" keeps its real date, and the parent can still edit it."""
+    token, student = _parent_ready(auth_client)
+    _set_pin(auth_client, token, student["id"])
+    friday = (frozen_today + timedelta(days=2)).isoformat()
+    assignment = _add_assignment(auth_client, token, student["id"], "Spelling", friday)
+    child = bearer(_child_token(auth_client, student["id"]))
+
+    done = auth_client.patch(
+        f"/api/assignments/{assignment['id']}/status",
+        headers=child,
+        json={"status": AssignmentStatus.COMPLETED.value},
+    )
+
+    assert done.status_code == 200
+    assert done.json()["completion_date"] == frozen_today.isoformat()
+    # The parent's lesson editor sends both dates back with every save.
+    resaved = auth_client.put(
+        f"/api/assignments/{assignment['id']}",
+        headers=bearer(token),
+        json={
+            "status": AssignmentStatus.COMPLETED.value,
+            "scheduled_date": friday,
+            "completion_date": frozen_today.isoformat(),
+        },
+    )
+    assert resaved.status_code == 200
+    assert resaved.json()["completion_date"] == frozen_today.isoformat()
 
 
 def test_child_cannot_patch_sibling_assignment_status(auth_client: TestClient) -> None:

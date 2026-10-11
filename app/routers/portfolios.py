@@ -2,7 +2,8 @@
 
 Assignments are not keyed to a school year, so the year bound is the inclusive
 ``scheduled_date`` window. Status is the completion signal; ``completion_date``
-is often null because the dashboard only patches status.
+is null on lessons checked off before check-off started recording it (October
+2026).
 """
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
