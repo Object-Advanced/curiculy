@@ -28,7 +28,7 @@ A daily record of whether each child did school. Many states require this.
 | POST | `/api/attendance` | parent | Save one child's day (add or update) |
 
 ### Data
-The household's own file holds `attendance` (student, date, status), one row per student per date.
+The family's own rows (walled off by row-level security) are in `attendance` (student, date, status), one row per student per date.
 
 ### Code
 - `app/routers/attendance.py`

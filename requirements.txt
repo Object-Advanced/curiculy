@@ -1,6 +1,8 @@
 fastapi==0.116.1
 uvicorn[standard]==0.35.0
 sqlalchemy==2.0.43
+psycopg[binary]==3.3.6
+alembic==1.19.2
 pydantic==2.11.7
 pydantic-settings==2.10.1
 PyMuPDF==1.28.2

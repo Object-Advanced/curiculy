@@ -7,16 +7,13 @@ cover what happens when application code calls ``Session.delete``; the
 a bulk ``DELETE`` that never loads an object still behaves.
 """
 
-from collections.abc import Iterator
 from datetime import date
 
 import pytest
-from sqlalchemy import create_engine, event, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.orm import Session
 
-from app.db import CatalogBase, TenantBase
 from app.enums import AssignmentStatus, AttendanceStatus, ResourceKind, ScoreType, UnitKind
 from app.models import (
     Assignment,
@@ -36,31 +33,9 @@ from app.models import (
 
 
 @pytest.fixture
-def fk_db() -> Iterator[Session]:
-    """A session whose connection enforces foreign keys.
-
-    SQLite ignores ``ON DELETE`` clauses unless the pragma is set per connection,
-    which the application does not do, so it is set here to test the schema's own
-    guarantees rather than the ORM's cascade bookkeeping.
-    """
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    @event.listens_for(engine, "connect")
-    def _enable_foreign_keys(connection, _record) -> None:  # type: ignore[no-untyped-def]
-        connection.execute("PRAGMA foreign_keys=ON")
-
-    CatalogBase.metadata.create_all(engine)
-    TenantBase.metadata.create_all(engine)
-    session = sessionmaker(bind=engine, autoflush=False, autocommit=False)()
-    try:
-        yield session
-    finally:
-        session.close()
-        engine.dispose()
+def fk_db(db: Session) -> Session:
+    """Postgres always enforces foreign keys, so the schema's own ON DELETE rules apply."""
+    return db
 
 
 def seed_student(db: Session, name: str = "Ada") -> Student:

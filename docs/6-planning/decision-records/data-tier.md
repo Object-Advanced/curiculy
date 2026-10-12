@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Question** | Keep one SQLite file per family, or move to Postgres? |
-| **Status** | **Decided 2026-10-11: option B, Postgres with row-level security** |
+| **Status** | **Decided 2026-10-11: option B, Postgres with row-level security. Built 2026-10-12** (not yet deployed) |
 | **Recommendation** | **Postgres: one database, every family's rows walled off by the database itself (row-level security)** |
 | **Decide by** | Now: before the backend spine (subjects, curricula, courses) is built |
 
@@ -204,3 +204,5 @@ Revisit when the service needs a second server or cross-family features outgrow 
 
 ## Decision
 **2026-10-11: option B, Postgres with row-level security.** The owner was concerned about leaks between families and about backups; both are answered above (the leak table and guardrails, and the layered backups). The owner's TankTrack product already runs on Postgres. Recorded in [Decisions](../decisions.md).
+
+**Built 2026-10-12:** the guardrails above (forced row-level security, the two roles, the startup safety check, family-matching references, the cross-family probe), backup layers 2 and 3, and the nightly restore test. Still to do: layer 1 (continuous archive) and the off-site copy. How it works now: [Data model](../../5-engineering/data-model.md), [Backups](../../4-operations/backups-and-restore.md).

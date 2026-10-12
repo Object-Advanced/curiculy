@@ -54,18 +54,21 @@ def jwt_secret_is_insecure(secret: str) -> bool:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    catalog_database_url: str = "sqlite:////data/catalog.db"
-    tenant_database_url: str = "sqlite:////data/tenant.db"
-    admin_database_url: str = "sqlite:////data/admin.db"
+    # Postgres. The app connects as a role that cannot bypass row-level
+    # security (each family's rows are walled off by the database); the owner
+    # role owns the tables and runs migrations, startup upkeep and backups.
+    # See docs/6-planning/decision-records/data-tier.md.
+    database_url: SecretStr = SecretStr("")
+    database_owner_url: SecretStr = SecretStr("")
+    database_pool_size: int = 10
     evidence_dir: Path = Path("data/evidence")
     index_html_path: Path = Path("index.html")
     static_dir: Path = Path("static")
     # The React app (frontend/), built into the image; served under /next.
     frontend_dist_dir: Path = Path("frontend/dist")
 
-    # Auth. DEV_MODE skips JWTs and keeps using tenant_database_url so local
-    # docker data is not stranded behind an empty admin.db. JWT_SECRET is
-    # required in non-dev; see validate_runtime_configuration().
+    # Auth. DEV_MODE skips JWTs and uses one fixed development household.
+    # JWT_SECRET is required in non-dev; see validate_runtime_configuration().
     dev_mode: bool = False
     jwt_secret: SecretStr = SecretStr("")
     jwt_algorithm: str = "HS256"
@@ -111,7 +114,8 @@ class Settings(BaseSettings):
     def __repr__(self) -> str:
         return (
             f"Settings(dev_mode={self.dev_mode!r}, jwt_secret={_REDACTED}, "
-            f"mail_password={_REDACTED}, google_books_api_key={_REDACTED})"
+            f"mail_password={_REDACTED}, google_books_api_key={_REDACTED}, "
+            f"database_url={_REDACTED}, database_owner_url={_REDACTED})"
         )
 
     def __str__(self) -> str:
@@ -120,7 +124,13 @@ class Settings(BaseSettings):
     def model_dump(self, *args, **kwargs):  # type: ignore[override]
         data = super().model_dump(*args, **kwargs)
         redacted = dict(data)
-        for key in ("jwt_secret", "mail_password", "google_books_api_key"):
+        for key in (
+            "jwt_secret",
+            "mail_password",
+            "google_books_api_key",
+            "database_url",
+            "database_owner_url",
+        ):
             if key in redacted and redacted[key] not in (None, ""):
                 redacted[key] = _REDACTED
         return redacted
@@ -154,6 +164,12 @@ def validate_runtime_configuration(config: Settings | None = None) -> None:
     """
     config = settings if config is None else config
     _validate_default_timezone(config)
+    for name in ("database_url", "database_owner_url"):
+        if not reveal_secret(getattr(config, name)).strip():
+            raise ConfigurationError(
+                f"{name.upper()} is required: a postgresql+psycopg:// URL. "
+                "See docs/5-engineering/development-setup.md."
+            )
     if config.dev_mode:
         apply_dev_jwt_fallback(config)
         return

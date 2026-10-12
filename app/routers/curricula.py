@@ -36,10 +36,6 @@ from app.schemas import (
 from app.services.catalog import create_curriculum as persist_curriculum
 from app.services.curriculum_import import CurriculumImporter, CurriculumImportError
 from app.services.curriculum_structure import load_resources, load_tree, select_edition
-from app.services.legacy_tables import (
-    delete_legacy_rows_for_enrollments,
-    delete_legacy_rows_for_units,
-)
 
 router = APIRouter(
     prefix="/curricula",
@@ -201,18 +197,6 @@ def delete_curriculum(
             detail="Unschedule this curriculum before deleting it",
         )
     _delete_enrollments(tenant_db, curriculum.id)
-    edition_ids = _edition_ids(tenant_db, curriculum.id)
-    unit_ids = (
-        [
-            unit_id
-            for (unit_id,) in tenant_db.query(CurriculumUnit.id)
-            .filter(CurriculumUnit.curriculum_edition_id.in_(edition_ids))
-            .all()
-        ]
-        if edition_ids
-        else []
-    )
-    delete_legacy_rows_for_units(tenant_db, unit_ids)
     tenant_db.delete(curriculum)
     tenant_db.commit()
     return Response(status_code=204)
@@ -433,8 +417,6 @@ def _clear_schedule(tenant_db: Session, curriculum: Curriculum) -> None:
     if not generated_ids:
         return
 
-    delete_legacy_rows_for_units(tenant_db, generated_ids)
-
     units = tenant_db.query(CurriculumUnit).filter(CurriculumUnit.id.in_(generated_ids)).all()
     generated_id_set = generated_ids
     roots = [
@@ -454,9 +436,6 @@ def _delete_enrollments(tenant_db: Session, curriculum_id: int) -> None:
     enrollments = (
         tenant_db.query(Enrollment).filter(Enrollment.curriculum_id == curriculum_id).all()
     )
-    enrollment_ids = [row.id for row in enrollments]
-    if enrollment_ids:
-        delete_legacy_rows_for_enrollments(tenant_db, enrollment_ids)
     for enrollment in enrollments:
         tenant_db.delete(enrollment)
 

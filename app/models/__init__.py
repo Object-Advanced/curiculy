@@ -52,20 +52,11 @@ def next_unused_student_color(taken: set[str] | list[str]) -> str:
     return STUDENT_COLOR_PALETTE[len(taken_lower) % len(STUDENT_COLOR_PALETTE)]
 
 
-class Jurisdiction(TimestampMixin, TenantBase):
-    __tablename__ = "jurisdictions"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    rules_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-    households: Mapped[list["Household"]] = relationship(back_populates="jurisdiction")
-    packets: Mapped[list["CompliancePacket"]] = relationship(back_populates="jurisdiction")
-
-
 class Household(TimestampMixin, TenantBase):
+    """The family itself: exactly one row per family (``tenant_id``)."""
+
     __tablename__ = "households"
+    __table_args__ = (UniqueConstraint("tenant_id", name="uq_households_tenant"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -73,12 +64,7 @@ class Household(TimestampMixin, TenantBase):
     # IANA zone ("America/Chicago"). "Today" for this family follows it; the
     # SPA fills it from the parent's browser when it is missing.
     timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    jurisdiction_id: Mapped[int | None] = mapped_column(
-        ForeignKey("jurisdictions.id"),
-        nullable=True,
-    )
 
-    jurisdiction: Mapped[Jurisdiction | None] = relationship(back_populates="households")
     students: Mapped[list["Student"]] = relationship(back_populates="household")
     school_years: Mapped[list["SchoolYear"]] = relationship(back_populates="household")
     settings: Mapped["HouseholdSettings | None"] = relationship(
@@ -87,9 +73,6 @@ class Household(TimestampMixin, TenantBase):
         cascade="all, delete-orphan",
     )
     calendar_exceptions: Mapped[list["CalendarException"]] = relationship(
-        back_populates="household"
-    )
-    compliance_packets: Mapped[list["CompliancePacket"]] = relationship(
         back_populates="household"
     )
 
@@ -208,23 +191,6 @@ class CalendarException(TimestampMixin, TenantBase):
     student: Mapped[Student | None] = relationship(back_populates="calendar_exceptions")
 
 
-class CompliancePacket(TimestampMixin, TenantBase):
-    __tablename__ = "compliance_packets"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    household_id: Mapped[int] = mapped_column(ForeignKey("households.id"), nullable=False)
-    jurisdiction_id: Mapped[int] = mapped_column(
-        ForeignKey("jurisdictions.id"),
-        nullable=False,
-    )
-    period_start: Mapped[date] = mapped_column(Date, nullable=False)
-    period_end: Mapped[date] = mapped_column(Date, nullable=False)
-    file_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
-
-    household: Mapped[Household] = relationship(back_populates="compliance_packets")
-    jurisdiction: Mapped[Jurisdiction] = relationship(back_populates="packets")
-
-
 __all__ = [
     "DEFAULT_STUDENT_COLOR",
     "STUDENT_COLOR_PALETTE",
@@ -236,7 +202,6 @@ __all__ = [
     "Author",
     "BookEdition",
     "CalendarException",
-    "CompliancePacket",
     "Curriculum",
     "CurriculumClassification",
     "CurriculumEdition",
@@ -251,7 +216,6 @@ __all__ = [
     "HomeworkHelpSession",
     "Household",
     "HouseholdSettings",
-    "Jurisdiction",
     "ParentNotification",
     "Publisher",
     "ReportingCategory",

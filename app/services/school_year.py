@@ -8,9 +8,7 @@ Field split:
 - Scheduling preferences: ``HouseholdSettings.weekdays``.
 - UI preferences: ``HouseholdSettings.exception_colors``.
 
-``HouseholdSettings`` does not store school-year dates. Leftover
-``start_date`` / ``end_date`` columns on older tenant files are retired by
-``app.schema_patches.retire_household_settings_date_columns``.
+``HouseholdSettings`` does not store school-year dates.
 
 The settings calendar is household-wide: student-specific sick days stay on
 the existing exceptions list and do not appear as global no-school days.

@@ -5,7 +5,7 @@ What protects families today, and what's still open. Children's data lives here,
 ## In place (as of October 2026)
 | Area | Protection |
 |---|---|
-| **Families kept apart** | One database file per family; every request is tied to its family; work-sample paths are checked so one family can't reach another's files |
+| **Families kept apart** | Every family table is walled off by Postgres row-level security; the app's database role can't switch it off; the app refuses to start unless every family table is protected; references between family tables must match the family; a test calls every API route as one family with another's ids. Every request is tied to its family, and work-sample paths are checked so one family can't reach another's files. See [Data model](../5-engineering/data-model.md). |
 | **Kids' access** | A child can read and change only their own lessons and files; they can't open notifications, Settings or other pages |
 | **Kid sign-in** | Family code (about 40 bits, look-alike characters left out) plus a PIN; first names only on the sign-in screen; PIN locks for 15 minutes after 5 wrong tries |
 | **Rate limits** | Register, parent sign-in (per address and per email), demo, family-code lookup, kid PIN and switch user |

@@ -16,6 +16,7 @@ from app.core.middleware import (
     SelectiveGZipMiddleware,
 )
 from app.core.rate_limit import RateLimiter
+from app.db import dispose_engines
 from app.evidence import EvidenceRejected, evidence_root
 from app.routers import (
     admin,
@@ -68,6 +69,7 @@ async def lifespan(_app: FastAPI):
     evidence_root()
     purge_expired_records()
     yield
+    dispose_engines()
 
 
 def create_app() -> FastAPI:

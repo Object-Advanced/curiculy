@@ -109,8 +109,9 @@ def _require_references(
 ) -> None:
     """Resolve the optional catalog links up front.
 
-    Left to the database these would surface as an opaque integrity error, or as
-    nothing at all on a SQLite file with foreign keys switched off.
+    Left to the database these would surface as an opaque integrity error.
+    Row-level security makes another family's rows look missing, so they get
+    the same 404.
     """
     if tenant_db.get(Student, payload.student_id) is None:
         raise HTTPException(status_code=404, detail="Student not found")

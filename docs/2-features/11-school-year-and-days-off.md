@@ -44,7 +44,7 @@ When school happens: the school year's dates, which weekdays are school days, an
 | POST | `/api/exceptions/import-holidays` | parent | Public holidays |
 
 ### Data
-The household's own file holds:
+The family's own rows (walled off by row-level security) are in:
 - `school_years`
 - `household_settings`: weekdays and colors
 - `calendar_exceptions`: household-wide, or for one child when `student_id` is set

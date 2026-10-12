@@ -32,7 +32,7 @@ In-app messages for parents: a child needs them, a child got a nudge, a lesson p
 Kids can't read notifications.
 
 ### Data
-The household's own file holds `parent_notifications`: type, child, lesson, title, body and the time it was read.
+The family's own rows (walled off by row-level security) are in `parent_notifications`: type, child, lesson, title, body and the time it was read.
 
 ### Code
 - `app/routers/notifications.py`, `app/services/notifications.py`

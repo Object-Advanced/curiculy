@@ -307,7 +307,7 @@ When a requirement asks for something Curiculy doesn't have, we don't squeeze it
 | Today | Becomes |
 |---|---|
 | `curricula` + `curriculum_editions` | **Curriculum** (title, publisher, edition, subject, grade) |
-| `curriculum_resources` | **Material** (kind; ISBN linked to `catalog.db` `book_editions`) |
+| `curriculum_resources` | **Material** (kind; ISBN linked to the shared `book_editions`) |
 | `curriculum_units`, `curriculum_page_mappings`, `curriculum_plans`, `curriculum_lessons` (two unconnected structures) | **Guide** + **guide lessons** (number, title, type, pages per material, minutes, optional reading-book link) |
 | none | **Reading book** (linked to a catalog work) and **reading-list entry** (child, status, started and finished dates, counts toward, optional schedule) |
 | `enrollments` | **Course** (child, curriculum, guide, school year, weekdays, start date, pauses, default minutes; credits and final grade in grades 9–12) |
@@ -322,7 +322,7 @@ When a requirement asks for something Curiculy doesn't have, we don't squeeze it
 | `household_settings` | adds a daily load limit and days-or-hours mode |
 | `households` | adds the **state**, with the date it applies from (a move adds a new one) |
 | `students` | grade from a fixed list, re-confirmed each July 1; a yes/no IEP flag. **No birth date**: ages go into form blanks only ([Privacy](#privacy-keep-the-minimum)). |
-| shared `catalog.db` | adds community guides, curriculum programs (their materials' ISBNs) and chapter lists |
+| the shared book cache | adds community guides, curriculum programs (their materials' ISBNs) and chapter lists |
 
 **Data tier: Postgres** ([decided 2026-10-11](decision-records/data-tier.md)), one database with each family walled off by row-level security, built before the spine.
 

@@ -40,7 +40,7 @@ The phases from October 2026 still describe the engineering work; the core loop 
 
 ## Next up (in order)
 1. **Confirm the last Pennsylvania wordings** against the statute (see the [worksheet](state-requirements/pennsylvania.md)); Q1–Q14 are decided.
-2. **Move to Postgres** ([decided 2026-10-11](decision-records/data-tier.md)): the database, the cross-family guardrails and the backups, before the spine is built.
+2. **Deploy the move to Postgres** ([built 2026-10-12](decision-records/data-tier.md)): the database, the cross-family guardrails and backup layers 2–3 are done and tested; then layer 1 (continuous archive) and the off-site copy.
 3. **Subjects**, then **Curriculum, Materials and Guide**: the first pieces of the backend spine.
 4. Ops tasks that still stand: an off-site backup copy, an uptime monitor, turning off the public `/docs`.
 

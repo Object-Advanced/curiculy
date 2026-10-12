@@ -12,10 +12,11 @@ flowchart LR
     T[cloudflare_tunnel]
     API[curiculy_api<br/>FastAPI app, port 3040]
     B[curiculy_backup<br/>nightly snapshots]
+    PG[curiculy_db<br/>Postgres 18]
     O[Ollama<br/>local AI on the GPU]
   end
   subgraph Storage
-    DB[(NVMe: ./data<br/>admin.db · catalog.db<br/>tenant_&lt;household&gt;.db)]
+    DB[(NVMe: ./data/postgres<br/>one database, each family<br/>walled off)]
     EV[(Data array:<br/>/datalake/.../evidence)]
     BK[(Data array:<br/>/datalake/.../backups)]
   end
@@ -23,11 +24,12 @@ flowchart LR
   K --> CF
   X --> CF
   CF --> T --> API
-  API --> DB
+  API --> PG
+  PG --> DB
   API --> EV
   API --> O
   API -. portfolio email .-> M[Mail relay, Brevo]
-  B --> DB
+  B --> PG
   B --> BK
 ```
 
@@ -37,22 +39,21 @@ flowchart LR
   - It switches to the **kid look** when a child signs in.
   - A small **service worker** (`sw.js`) keeps the app's files on the device so it opens offline. See [Offline](../2-features/16-offline-and-sync.md).
 - **The server** (`curiculy_api`) is a Python **FastAPI** app in Docker. It answers every `/api/...` request, about 100 of them (see [API reference](../5-engineering/api-reference.md)), and serves the web app.
-- **Data is kept in separate SQLite files:**
-  - `admin.db`: sign-ins (parents and kids' PINs), invite keys, family codes, capture tokens, and recent request keys
-  - `catalog.db`: a shared cache of book details looked up by ISBN
-  - `tenant_<household id>.db`: **one file per family**, holding their kids, lessons, plans, attendance, notes, notifications and so on
-  
-  One file per family keeps families apart and makes backups and restores simple.
+- **Data is kept in one Postgres database** (`curiculy_db`), with each family walled off from every other by the database itself (row-level security):
+  - **shared tables:** sign-ins (parents and kids' PINs), invite keys, family codes, capture tokens and recent request keys; and a cache of book details looked up by ISBN
+  - **family tables:** each family's kids, lessons, plans, attendance, notes, notifications and so on. Every row carries its family's id, and a request can only see and change its own family's rows.
+
+  The app connects with a role that can't switch this off, and it refuses to start unless every family table is protected. See [Data model](../5-engineering/data-model.md).
 - **Work samples** (photos and PDFs) are files on the big data array, one folder per family. Only paths are stored in the database.
 - **AI** runs locally on the home server's GPU through **Ollama**. It's used for "Stuck?" nudges, "Ask Sam", and reading PDF and handwritten lesson plans. Every AI feature has a fallback. See [AI features](../2-features/17-ai-features.md).
-- **Backups:** the `curiculy_backup` container snapshots every database nightly, checks each copy, mirrors new work samples, and keeps 14 days. See [Backups](../4-operations/backups-and-restore.md).
+- **Backups:** the `curiculy_backup` container dumps the database nightly, proves the dump restores, writes one file per family, mirrors new work samples, and keeps 14 days. See [Backups](../4-operations/backups-and-restore.md).
 - **Public access:** Cloudflare handles HTTPS for **curiculy.com** and forwards traffic through a tunnel to the server's port 3040. The app records each visitor's real address for rate limits and logs.
 
 ## A request, start to finish (checking off a lesson)
 1. Ada taps the check box on her tablet. The app sends `PATCH /api/assignments/42/status` with her sign-in token and a unique "idempotency key".
 2. Cloudflare → tunnel → `curiculy_api`.
 3. The server confirms the token, sees she's a child, and checks that lesson 42 is **hers**.
-4. It opens her family's `tenant_….db`, sets the status to completed, and saves.
+4. It opens a session for her family: Postgres now shows that session only her family's rows. It sets the status to completed, and saves.
 5. The reply comes back. The app shows the celebration and fills in a star.
 6. If the internet had dropped, the change would wait on the tablet and be sent once when it returns (see [Offline](../2-features/16-offline-and-sync.md)).
 

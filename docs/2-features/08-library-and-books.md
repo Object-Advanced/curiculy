@@ -15,7 +15,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 ### What it does
 - **Catalog list** of books and programs, with filters (all / scheduled / …) and a switch between books and lesson plans.
 - **Add curriculum** by **ISBN lookup** (barcode number) or by hand: title, subject, publisher, and page count (pacing uses it).
-- ISBN lookup checks the shared book cache (`catalog.db`) first, then **Open Library**, then **Google Books**.
+- ISBN lookup checks the shared book cache first, then **Open Library**, then **Google Books**.
 - **Auto-schedule** a book onto a child's calendar (see [Pacing](09-pacing-and-lesson-plans.md)).
 - **Remove a book's schedule** (deletes its lessons that aren't done yet) or **delete the book**.
 - **Enrollments and years:** enroll a child in a book for a school year; add a school year. These forms also appear in Settings.
@@ -37,8 +37,8 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 | POST | `/api/books/resolve`, GET `/api/books/isbn/{isbn}`, GET `/api/books/{id}` | parent | **API only**: the scanner's entry point |
 
 ### Data
-- **Shared** (`catalog.db`): book editions, works, authors and publishers, which act as a cache of looked-up ISBNs.
-- **The household's own file:** `curricula`, `curriculum_editions`, `curriculum_units`, `curriculum_resources`, `enrollments`.
+- **Shared** (the book cache tables): book editions, works, authors and publishers, which act as a cache of looked-up ISBNs.
+- **The family's own rows:** `curricula`, `curriculum_editions`, `curriculum_units`, `curriculum_resources`, `enrollments`.
 
 ### Code
 - `app/routers/curricula.py`, `catalog.py`, `books.py`, `enrollments.py`

@@ -52,7 +52,6 @@ class HealthResponse(BaseModel):
 class HouseholdRead(ORMModel):
     id: int
     name: str
-    jurisdiction_id: int | None
     icon: str | None = None
     timezone: str | None = None
 

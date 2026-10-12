@@ -99,7 +99,17 @@ class TestStageEvidence:
 
 
 class TestListStagedEvidence:
-    def test_returns_unlinked_rows_newest_first(self, client: TestClient, db: Session) -> None:
+    def test_returns_unlinked_rows_newest_first(
+        self, client: TestClient, db: Session, as_family
+    ) -> None:
+        as_family("other")
+        db.add(
+            EvidenceStaging(
+                file_path="other/hidden.webp",
+                captured_at=datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc),
+            )
+        )
+        as_family("test")
         older = EvidenceStaging(
             tenant_id="test",
             file_path="test/older.webp",
@@ -110,12 +120,7 @@ class TestListStagedEvidence:
             file_path="test/newer.webp",
             captured_at=datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc),
         )
-        other_tenant = EvidenceStaging(
-            tenant_id="other",
-            file_path="other/hidden.webp",
-            captured_at=datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc),
-        )
-        db.add_all([older, newer, other_tenant])
+        db.add_all([older, newer])
         db.commit()
 
         response = client.get("/api/evidence/staging")
@@ -200,22 +205,27 @@ class TestLinkStagedEvidence:
         assert db.get(EvidenceStaging, staged.id) is not None
 
     def test_another_tenant_cannot_link_a_staged_row(
-        self, client: TestClient, db: Session, student: Student
+        self, client: TestClient, db: Session, student: Student, as_family
     ) -> None:
         assignment = add_assignment(db, student)
+        as_family("other")
         staged = EvidenceStaging(
-            tenant_id="other",
             file_path="other/secret.webp",
             captured_at=datetime.now(timezone.utc) - timedelta(minutes=1),
         )
         db.add(staged)
+        db.flush()
+        staged_id = staged.id
+        as_family("test")
         db.commit()
 
         response = client.post(
             "/api/evidence/link",
-            json={"evidence_id": staged.id, "assignment_id": assignment.id},
+            json={"evidence_id": staged_id, "assignment_id": assignment.id},
         )
 
         assert response.status_code == 404
-        assert db.get(EvidenceStaging, staged.id) is not None
         assert db.query(AssignmentEvidence).count() == 0
+        db.expunge_all()
+        as_family("other")
+        assert db.get(EvidenceStaging, staged_id) is not None

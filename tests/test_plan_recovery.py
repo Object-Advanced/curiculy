@@ -1,72 +1,69 @@
 """Imports interrupted by a restart don't stay 'processing' forever."""
 
-from pathlib import Path
-
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
 
-import app.db as db_module
-from app.config import settings
-from app.db import TenantBase, init_databases
+from app.db import open_family_session, owner_engine
 from app.enums import CurriculumPlanStatus, ParentNotificationType
 from app.models import CurriculumPlan, ParentNotification
 from app.services.plan_recovery import fail_interrupted_plans
 
+pytestmark = pytest.mark.usefixtures("committed_db")
 
-def _household_file(path: Path) -> Engine:
-    engine = create_engine(f"sqlite:///{path}")
-    TenantBase.metadata.create_all(engine)
-    with Session(engine) as session:
-        session.add_all(
-            [
-                CurriculumPlan(title="Abeka PDF", status=CurriculumPlanStatus.PROCESSING),
-                CurriculumPlan(title="Paper Import", status=CurriculumPlanStatus.PROCESSING),
-                CurriculumPlan(title="Finished guide", status=CurriculumPlanStatus.READY),
-            ]
-        )
+
+def _plans(tenant_id: str, *plans: tuple[str, CurriculumPlanStatus]) -> None:
+    session = open_family_session(tenant_id)
+    try:
+        session.add_all(CurriculumPlan(title=title, status=status) for title, status in plans)
         session.commit()
-    return engine
+    finally:
+        session.close()
 
 
-def _statuses(engine: Engine) -> dict[str, CurriculumPlanStatus]:
-    with Session(engine) as session:
+def _statuses(tenant_id: str) -> dict[str, CurriculumPlanStatus]:
+    session = open_family_session(tenant_id)
+    try:
         return {plan.title: plan.status for plan in session.query(CurriculumPlan).all()}
-
-
-def test_processing_plans_are_failed_and_parents_told(tmp_path: Path) -> None:
-    engine = _household_file(tmp_path / "tenant_family.db")
-    try:
-        assert fail_interrupted_plans(engine) == 2
-
-        assert _statuses(engine) == {
-            "Abeka PDF": CurriculumPlanStatus.FAILED,
-            "Paper Import": CurriculumPlanStatus.FAILED,
-            "Finished guide": CurriculumPlanStatus.READY,
-        }
-        with Session(engine) as session:
-            notes = session.query(ParentNotification).all()
-        assert [note.type for note in notes] == [ParentNotificationType.CURRICULUM_PLAN_FAILED] * 2
-        assert "“Abeka PDF” could not be processed" in notes[0].body
-
-        assert fail_interrupted_plans(engine) == 0
     finally:
-        engine.dispose()
+        session.close()
 
 
-def test_boot_recovers_every_household_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in ("catalog", "tenant", "admin"):
-        monkeypatch.setattr(settings, f"{name}_database_url", f"sqlite:///{tmp_path / name}.db")
-    monkeypatch.setattr(db_module, "catalog_engine", create_engine(f"sqlite:///{tmp_path / 'catalog.db'}"))
-    monkeypatch.setattr(db_module, "tenant_engine", create_engine(f"sqlite:///{tmp_path / 'tenant.db'}"))
-    household = _household_file(tmp_path / "tenant_family.db")
-    household.dispose()
+def test_processing_plans_are_failed_and_parents_told() -> None:
+    _plans(
+        "family-a",
+        ("Abeka PDF", CurriculumPlanStatus.PROCESSING),
+        ("Paper Import", CurriculumPlanStatus.PROCESSING),
+        ("Finished guide", CurriculumPlanStatus.READY),
+    )
 
-    init_databases()
+    assert fail_interrupted_plans(owner_engine()) == 2
 
-    engine = create_engine(f"sqlite:///{tmp_path / 'tenant_family.db'}")
+    assert _statuses("family-a") == {
+        "Abeka PDF": CurriculumPlanStatus.FAILED,
+        "Paper Import": CurriculumPlanStatus.FAILED,
+        "Finished guide": CurriculumPlanStatus.READY,
+    }
+    session = open_family_session("family-a")
     try:
-        assert _statuses(engine)["Abeka PDF"] == CurriculumPlanStatus.FAILED
+        notes = session.query(ParentNotification).order_by(ParentNotification.id).all()
     finally:
-        engine.dispose()
+        session.close()
+    assert [note.type for note in notes] == [ParentNotificationType.CURRICULUM_PLAN_FAILED] * 2
+    assert "“Abeka PDF” could not be processed" in notes[0].body
+
+    assert fail_interrupted_plans(owner_engine()) == 0
+
+
+def test_every_family_is_recovered_and_told_only_about_its_own() -> None:
+    _plans("family-a", ("A's guide", CurriculumPlanStatus.PROCESSING))
+    _plans("family-b", ("B's guide", CurriculumPlanStatus.PROCESSING))
+
+    assert fail_interrupted_plans(owner_engine()) == 2
+
+    for tenant_id, title in (("family-a", "A's guide"), ("family-b", "B's guide")):
+        assert _statuses(tenant_id) == {title: CurriculumPlanStatus.FAILED}
+        session = open_family_session(tenant_id)
+        try:
+            bodies = [note.body for note in session.query(ParentNotification).all()]
+        finally:
+            session.close()
+        assert len(bodies) == 1 and title in bodies[0]
