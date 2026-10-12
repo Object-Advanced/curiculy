@@ -35,6 +35,7 @@ from app.routers import (
     health,
     household,
     homework_help,
+    library,
     notifications,
     pacing,
     portfolios,
@@ -43,6 +44,7 @@ from app.routers import (
     school_years,
     settings as settings_routes,
     students,
+    subjects,
 )
 
 # Python's table predates WOFF2; without this the self-hosted fonts go out as text/plain.
@@ -102,6 +104,9 @@ def create_app() -> FastAPI:
     application.include_router(notifications.router, prefix="/api")
     application.include_router(household.router, prefix="/api")
     application.include_router(students.router, prefix="/api")
+    application.include_router(subjects.reference_router, prefix="/api")
+    application.include_router(subjects.router, prefix="/api")
+    application.include_router(library.router, prefix="/api")
     application.include_router(curricula.router, prefix="/api")
     application.include_router(curriculum_plans.router, prefix="/api")
     application.include_router(catalog.router, prefix="/api")

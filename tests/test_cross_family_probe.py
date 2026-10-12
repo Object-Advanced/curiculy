@@ -40,9 +40,12 @@ from app.models import (
     EvidenceStaging,
     HomeworkHelpSession,
     Household,
+    LibraryChapter,
+    LibraryItem,
     ParentNotification,
     SchoolYear,
     Student,
+    StudentSubject,
 )
 from app.services.family_data import export_family
 from tests.test_auth import bearer, seed_user
@@ -60,10 +63,12 @@ ID_PARAMS = {
     "enrollment_id": "enrollment",
     "notification_id": "notification",
     "session_id": "session",
+    "subject_id": "student_subject",
+    "item_id": "library_item",
     "file_path": "file_path",
 }
 # Path parameters that aren't a family's record (shared book cache, static files).
-NOT_FAMILY_PARAMS = {"book_id", "isbn", "path"}
+NOT_FAMILY_PARAMS = {"book_id", "isbn", "path", "state_code"}
 
 # Request bodies for writes, so they get past validation to the ownership check.
 BODIES = {
@@ -118,8 +123,22 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             body=f"{prefix} notice body",
         )
         staged = EvidenceStaging(file_path=f"{tenant_id}/{prefix.lower()}-staged.webp")
+        student_subject = StudentSubject(
+            student_id=student.id,
+            school_year_id=year.id,
+            subject_code=None,
+            name=f"{prefix} subject",
+            kind="own",
+            objective=f"{prefix} objective",
+        )
+        library_item = LibraryItem(
+            kind="reading_book", title=f"{prefix} library book", author=f"{prefix} author", total_pages=99,
+            chapters=[LibraryChapter(position=0, name=f"{prefix} chapter", start_page=1)],
+        )
         session.add_all(
             [
+                library_item,
+                student_subject,
                 enrollment,
                 help_session,
                 notification,
@@ -152,6 +171,8 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             "notification": notification.id,
             "session": help_session.id,
             "staged": staged.id,
+            "student_subject": student_subject.id,
+            "library_item": library_item.id,
             "file_path": file_path,
         }
     finally:

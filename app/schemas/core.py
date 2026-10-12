@@ -5,6 +5,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.enums import CurriculumSource, ExceptionKind
+from app.reference.grades import GRADE_LABELS, normalize_grade
+from app.reference.states import STATES, normalize_state
 
 _HEX_COLOR = r"^#[0-9A-Fa-f]{6}$"
 
@@ -49,11 +51,50 @@ class HealthResponse(BaseModel):
     dev_mode: bool = False
 
 
+class HouseholdStatePeriod(BaseModel):
+    """The family homeschools in ``state_code`` from ``starts_on`` (until the next period)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    state_code: str
+    starts_on: date
+
+    @field_validator("state_code")
+    @classmethod
+    def _state(cls, value: str) -> str:
+        return normalize_state(value)
+
+    @computed_field
+    @property
+    def state_name(self) -> str:
+        return STATES[self.state_code]
+
+
+class HouseholdStateAdd(BaseModel):
+    """Set the family's state from a date: today when ``starts_on`` is left out (a move)."""
+
+    state_code: str
+    starts_on: date | None = None
+
+    @field_validator("state_code")
+    @classmethod
+    def _state(cls, value: str) -> str:
+        return normalize_state(value)
+
+
 class HouseholdRead(ORMModel):
     id: int
     name: str
     icon: str | None = None
     timezone: str | None = None
+    # The state today, and every period (a move adds one).
+    state_code: str | None = None
+    states: list[HouseholdStatePeriod] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def state_name(self) -> str | None:
+        return STATES.get(self.state_code) if self.state_code else None
 
     @computed_field
     @property
@@ -111,9 +152,21 @@ class HouseholdUpdate(BaseModel):
 
 class StudentCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    # Any common spelling ("3rd", "Kindergarten", "pre-k") becomes a grade code.
     grade: str | None = None
     notes: str | None = None
     color_hex: str | None = Field(default=None, min_length=7, max_length=7)
+    # Left out means "unchanged" on an edit, so older screens can't clear it.
+    has_iep: bool | None = None
+
+    @field_validator("grade", mode="before")
+    @classmethod
+    def _grade(cls, value: object) -> object:
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return None
+        if isinstance(value, str):
+            return normalize_grade(value)
+        return value
 
     @field_validator("color_hex", mode="before")
     @classmethod
@@ -138,6 +191,27 @@ class StudentRead(ORMModel):
     notes: str | None
     color_hex: str
     has_login: bool = False
+    has_iep: bool = False
+    grade_confirmed_on: date | None = None
+    # True when the grade is missing, or hasn't been confirmed since the last
+    # July 1 (a new school year): the app asks "Is Ada in 4th grade now?"
+    grade_needs_confirming: bool = False
+
+    @computed_field
+    @property
+    def grade_label(self) -> str | None:
+        return GRADE_LABELS.get(self.grade) if self.grade else None
+
+
+class GradeConfirm(BaseModel):
+    """The child's grade for the new school year (may be unchanged)."""
+
+    grade: str
+
+    @field_validator("grade", mode="before")
+    @classmethod
+    def _grade(cls, value: object) -> object:
+        return normalize_grade(value) if isinstance(value, str) else value
 
 
 class CurriculumCreate(BaseModel):

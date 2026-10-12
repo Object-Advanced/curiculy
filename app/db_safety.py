@@ -21,6 +21,8 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
+import app.models  # noqa: F401  (every table must be registered before checking)
+import app.models.admin  # noqa: F401
 from app.db import AdminBase, CatalogBase, TenantBase
 
 SCHEMA = "public"

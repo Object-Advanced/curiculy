@@ -1086,6 +1086,205 @@ export interface paths {
         patch: operations["update_household_route_api_household_patch"];
         trace?: never;
     };
+    "/api/household/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set State
+         * @description The family's state from a date (today if left out): picked at sign-up, or after a move.
+         */
+        post: operations["set_state_api_household_state_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/household/states": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set State History
+         * @description Replace every state period (Settings edits the history as a list).
+         */
+        put: operations["set_state_history_api_household_states_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Library */
+        get: operations["list_library_api_library_get"];
+        put?: never;
+        /** Create Item */
+        post: operations["create_item_api_library_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Library
+         * @description Your library, the shared book cache, then Open Library and Google Books; each with a guessed kind.
+         */
+        get: operations["search_library_api_library_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Item */
+        get: operations["read_item_api_library__item_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Item */
+        delete: operations["delete_item_api_library__item_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Item */
+        patch: operations["update_item_api_library__item_id__patch"];
+        trace?: never;
+    };
+    "/api/library/{item_id}/chapters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Chapters
+         * @description Replace the chapters (reading books and workbooks), in order.
+         */
+        put: operations["put_chapters_api_library__item_id__chapters_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Cover */
+        get: operations["read_cover_api_library__item_id__cover_get"];
+        put?: never;
+        /**
+         * Upload Cover
+         * @description A real cover image (not a photo of the book). Shown to this family now; reviewed before others see it.
+         */
+        post: operations["upload_cover_api_library__item_id__cover_post"];
+        /** Delete Cover */
+        delete: operations["delete_cover_api_library__item_id__cover_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/lessons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Lessons
+         * @description Replace a curriculum's whole lesson list, in order.
+         */
+        put: operations["put_lessons_api_library__item_id__lessons_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/lessons/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Generate Lessons
+         * @description Add numbered lessons to fill in ("make lessons 1-170").
+         */
+        post: operations["post_generate_lessons_api_library__item_id__lessons_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Materials
+         * @description Replace a curriculum's materials; keep a material by sending its ``id``.
+         */
+        put: operations["put_materials_api_library__item_id__materials_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notifications": {
         parameters: {
             query?: never;
@@ -1285,6 +1484,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reference
+         * @description The fixed lists: states, grades and subjects. Public: nothing private in it.
+         */
+        get: operations["reference_api_reference_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/weekly-manifest": {
         parameters: {
             query?: never;
@@ -1374,6 +1593,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/state-requirements/{state_code}/subjects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Required Subjects
+         * @description What a state requires for a grade (public, like the state pages on the website).
+         */
+        get: operations["required_subjects_api_state_requirements__state_code__subjects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student-subjects/{subject_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Subject */
+        delete: operations["delete_subject_api_student_subjects__subject_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Subject
+         * @description Turn a subject on or off for this year, write its objective, or rename your own.
+         */
+        patch: operations["update_subject_api_student_subjects__subject_id__patch"];
+        trace?: never;
+    };
     "/api/students": {
         parameters: {
             query?: never;
@@ -1425,6 +1685,26 @@ export interface paths {
         get: operations["list_student_assignments_api_students__student_id__assignments_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/students/{student_id}/confirm-grade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Grade
+         * @description The child's grade for the new school year (asked again after each July 1).
+         */
+        post: operations["confirm_grade_api_students__student_id__confirm_grade_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1483,6 +1763,27 @@ export interface paths {
         get: operations["get_student_spark_api_students__student_id__spark_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/students/{student_id}/subjects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Subjects
+         * @description The child's subjects this school year; the state's required ones are added automatically.
+         */
+        get: operations["list_subjects_api_students__student_id__subjects_get"];
+        put?: never;
+        /** Create Subject */
+        post: operations["create_subject_api_students__student_id__subjects_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1854,6 +2155,14 @@ export interface components {
              */
             file: string;
         };
+        /** Body_upload_cover_api_library__item_id__cover_post */
+        Body_upload_cover_api_library__item_id__cover_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /** BookEditionRead */
         BookEditionRead: {
             /** Barcode */
@@ -2003,11 +2312,40 @@ export interface components {
             /** Expires At */
             expires_at?: string | null;
         };
+        /** ChapterRead */
+        ChapterRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Start Page */
+            start_page: number;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
+        /** ChapterWrite */
+        ChapterWrite: {
+            /** Name */
+            name: string;
+            /** Start Page */
+            start_page: number;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
         /**
          * ContributorRole
          * @enum {string}
          */
         ContributorRole: "author" | "co_author" | "editor" | "illustrator" | "translator" | "contributor";
+        /** CoverRead */
+        CoverRead: {
+            /** Review */
+            review?: string | null;
+            /** Source */
+            source: string | null;
+            /** Url */
+            url: string | null;
+        };
         /** CurriculumCreate */
         CurriculumCreate: {
             /** Description */
@@ -2484,6 +2822,21 @@ export interface components {
             /** Code */
             code: string;
         };
+        /**
+         * GradeConfirm
+         * @description The child's grade for the new school year (may be unchanged).
+         */
+        GradeConfirm: {
+            /** Grade */
+            grade: string;
+        };
+        /** GradeOption */
+        GradeOption: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2579,8 +2932,52 @@ export interface components {
             readonly letter: string;
             /** Name */
             name: string;
+            /** State Code */
+            state_code?: string | null;
+            /** State Name */
+            readonly state_name: string | null;
+            /** States */
+            states?: components["schemas"]["HouseholdStatePeriod-Output"][];
             /** Timezone */
             timezone?: string | null;
+        };
+        /**
+         * HouseholdStateAdd
+         * @description Set the family's state from a date: today when ``starts_on`` is left out (a move).
+         */
+        HouseholdStateAdd: {
+            /** Starts On */
+            starts_on?: string | null;
+            /** State Code */
+            state_code: string;
+        };
+        /**
+         * HouseholdStatePeriod
+         * @description The family homeschools in ``state_code`` from ``starts_on`` (until the next period).
+         */
+        "HouseholdStatePeriod-Input": {
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** State Code */
+            state_code: string;
+        };
+        /**
+         * HouseholdStatePeriod
+         * @description The family homeschools in ``state_code`` from ``starts_on`` (until the next period).
+         */
+        "HouseholdStatePeriod-Output": {
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** State Code */
+            state_code: string;
+            /** State Name */
+            readonly state_name: string;
         };
         /** HouseholdUpdate */
         HouseholdUpdate: {
@@ -2691,10 +3088,311 @@ export interface components {
             key: string;
         };
         /**
+         * LessonGenerate
+         * @description 'Make lessons 1-170': numbered lessons to fill in.
+         */
+        LessonGenerate: {
+            /** Count */
+            count: number;
+            /** First Number */
+            first_number?: number | null;
+            /**
+             * Type
+             * @default lesson
+             */
+            type: string;
+        };
+        /** LessonPagesRead */
+        LessonPagesRead: {
+            /** End Page */
+            end_page: number;
+            /** Material Id */
+            material_id: number;
+            /** Start Page */
+            start_page: number;
+        };
+        /** LessonPagesWrite */
+        LessonPagesWrite: {
+            /** End Page */
+            end_page: number;
+            /** Material Id */
+            material_id: number;
+            /** Start Page */
+            start_page: number;
+        };
+        /** LessonRead */
+        LessonRead: {
+            /** Id */
+            id: number;
+            /** Minutes */
+            minutes: number | null;
+            /** Name */
+            name: string | null;
+            /** Number */
+            number: number | null;
+            /** Pages */
+            pages: components["schemas"]["LessonPagesRead"][];
+            /** Type */
+            type: string;
+            /** Unit */
+            unit: string | null;
+        };
+        /** LessonWrite */
+        LessonWrite: {
+            /** Minutes */
+            minutes?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Number */
+            number?: number | null;
+            /** Pages */
+            pages?: components["schemas"]["LessonPagesWrite"][];
+            /**
+             * Type
+             * @default lesson
+             */
+            type: string;
+            /** Unit */
+            unit?: string | null;
+        };
+        /**
+         * LibraryItemCreate
+         * @description ``kind`` is asked first, so every question after it makes sense.
+         */
+        LibraryItemCreate: {
+            /** Answer Key Start Page */
+            answer_key_start_page?: number | null;
+            /** Author */
+            author?: string | null;
+            /** Consumable */
+            consumable?: boolean | null;
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Edition */
+            edition?: string | null;
+            /** Grade */
+            grade?: string | null;
+            /** Isbn */
+            isbn?: string | null;
+            /** Kind */
+            kind: string;
+            /** Lesson Count */
+            lesson_count?: number | null;
+            /** Login Note */
+            login_note?: string | null;
+            /** Measure */
+            measure?: string | null;
+            /** Minutes Per Session */
+            minutes_per_session?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Reading Kind */
+            reading_kind?: string | null;
+            /** Series */
+            series?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages?: number | null;
+            /** Usual Pages Per Day */
+            usual_pages_per_day?: number | null;
+            /** Website Url */
+            website_url?: string | null;
+        };
+        /** LibraryItemRead */
+        LibraryItemRead: {
+            /** Answer Key Start Page */
+            answer_key_start_page: number | null;
+            /** Author */
+            author: string | null;
+            /** Chapters */
+            chapters: components["schemas"]["ChapterRead"][];
+            /** Consumable */
+            consumable: boolean;
+            cover: components["schemas"]["CoverRead"];
+            /** Days Per Week */
+            days_per_week: number | null;
+            /** Edition */
+            edition: string | null;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Isbn */
+            isbn: string | null;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Lesson Count */
+            lesson_count: number | null;
+            /** Lessons */
+            lessons: components["schemas"]["LessonRead"][];
+            /** Login Note */
+            login_note: string | null;
+            /** Materials */
+            materials: components["schemas"]["MaterialRead"][];
+            /** Measure */
+            measure: string | null;
+            /** Minutes Per Session */
+            minutes_per_session: number | null;
+            /** Missing Count */
+            missing_count: number;
+            /** Notes */
+            notes: string | null;
+            /** Problems Count */
+            problems_count: number;
+            /** Publisher */
+            publisher: string | null;
+            readiness: components["schemas"]["ReadinessRead"];
+            /** Reading Kind */
+            reading_kind: string | null;
+            /** Ready */
+            ready: boolean;
+            /** Series */
+            series: string | null;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages: number | null;
+            /** Usual Pages Per Day */
+            usual_pages_per_day: number | null;
+            /** Website Url */
+            website_url: string | null;
+        };
+        /** LibraryItemSummary */
+        LibraryItemSummary: {
+            /** Author */
+            author: string | null;
+            cover: components["schemas"]["CoverRead"];
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Missing Count */
+            missing_count: number;
+            /** Problems Count */
+            problems_count: number;
+            /** Ready */
+            ready: boolean;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+        };
+        /** LibraryItemUpdate */
+        LibraryItemUpdate: {
+            /** Answer Key Start Page */
+            answer_key_start_page?: number | null;
+            /** Author */
+            author?: string | null;
+            /** Consumable */
+            consumable?: boolean | null;
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Edition */
+            edition?: string | null;
+            /** Grade */
+            grade?: string | null;
+            /** Isbn */
+            isbn?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Lesson Count */
+            lesson_count?: number | null;
+            /** Login Note */
+            login_note?: string | null;
+            /** Measure */
+            measure?: string | null;
+            /** Minutes Per Session */
+            minutes_per_session?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Reading Kind */
+            reading_kind?: string | null;
+            /** Series */
+            series?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Total Pages */
+            total_pages?: number | null;
+            /** Usual Pages Per Day */
+            usual_pages_per_day?: number | null;
+            /** Website Url */
+            website_url?: string | null;
+        };
+        /**
          * MappingSource
          * @enum {string}
          */
         MappingSource: "manual" | "imported" | "ai_parsed";
+        /** MaterialRead */
+        MaterialRead: {
+            /** Audience */
+            audience: string;
+            /** Id */
+            id: number;
+            /** Isbn */
+            isbn: string | null;
+            /** Kind */
+            kind: string;
+            /** Pages */
+            pages: number | null;
+            /** Title */
+            title: string;
+        };
+        /**
+         * MaterialWrite
+         * @description Leave out ``id`` to add a material; include it to keep or edit one.
+         */
+        MaterialWrite: {
+            /**
+             * Audience
+             * @default student
+             */
+            audience: string;
+            /** Id */
+            id?: number | null;
+            /** Isbn */
+            isbn?: string | null;
+            /** Kind */
+            kind: string;
+            /** Pages */
+            pages?: number | null;
+            /** Title */
+            title: string;
+        };
+        /** MissingRead */
+        MissingRead: {
+            /** Field */
+            field: string;
+            /** Label */
+            label: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * PacingCalculation
          * @description The arithmetic behind a preview, so the caller can show its reasoning.
@@ -3177,6 +3875,15 @@ export interface components {
             notes?: components["schemas"]["AssignmentDetailRead"][];
             student: components["schemas"]["StudentRead"];
         };
+        /** ProblemRead */
+        ProblemRead: {
+            /** Level */
+            level: string;
+            /** Message */
+            message: string;
+            /** Where */
+            where: string;
+        };
         /** PublisherRead */
         PublisherRead: {
             /** Id */
@@ -3185,6 +3892,33 @@ export interface components {
             name: string;
             /** Website */
             website?: string | null;
+        };
+        /**
+         * ReadinessRead
+         * @description ``ready`` means it can be scheduled; otherwise what's missing, and why.
+         */
+        ReadinessRead: {
+            /**
+             * Lessons Total
+             * @default 0
+             */
+            lessons_total: number;
+            /**
+             * Lessons With Names
+             * @default 0
+             */
+            lessons_with_names: number;
+            /**
+             * Lessons With Pages
+             * @default 0
+             */
+            lessons_with_pages: number;
+            /** Missing */
+            missing: components["schemas"]["MissingRead"][];
+            /** Problems */
+            problems: components["schemas"]["ProblemRead"][];
+            /** Ready */
+            ready: boolean;
         };
         /** RecalibrateExecuteRead */
         RecalibrateExecuteRead: {
@@ -3255,6 +3989,18 @@ export interface components {
              */
             saturdays_used: number;
         };
+        /**
+         * ReferenceRead
+         * @description The fixed lists every screen picks from.
+         */
+        ReferenceRead: {
+            /** Grades */
+            grades: components["schemas"]["GradeOption"][];
+            /** States */
+            states: components["schemas"]["StateOption"][];
+            /** Subjects */
+            subjects: components["schemas"]["SubjectOption"][];
+        };
         /** RegisterRequest */
         RegisterRequest: {
             /** Email */
@@ -3263,6 +4009,20 @@ export interface components {
             invite_key: string;
             /** Password */
             password: string;
+        };
+        /** RequiredSubject */
+        RequiredSubject: {
+            /** Code */
+            code: string;
+            /**
+             * Every Year
+             * @default false
+             */
+            every_year: boolean;
+            /** Name */
+            name: string;
+            /** State Label */
+            state_label: string;
         };
         /**
          * ResourceKind
@@ -3350,6 +4110,71 @@ export interface components {
          * @enum {string}
          */
         ScoreType: "percentage" | "letter" | "points" | "pass_fail" | "complete_incomplete" | "custom";
+        /** SearchResult */
+        SearchResult: {
+            /** Authors */
+            authors?: string[];
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Guessed Kind */
+            guessed_kind: string;
+            /** Guessed Kind Label */
+            guessed_kind_label: string;
+            /** Isbn */
+            isbn?: string | null;
+            /** Library Item Id */
+            library_item_id?: number | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Source */
+            source: string;
+            /** Subtitle */
+            subtitle?: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages?: number | null;
+            /** Year */
+            year?: number | null;
+        };
+        /** SearchResults */
+        SearchResults: {
+            /** Notice */
+            notice?: string | null;
+            /** Query */
+            query: string;
+            /** Results */
+            results: components["schemas"]["SearchResult"][];
+        };
+        /** StateOption */
+        StateOption: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * StateSubjectsRead
+         * @description What a state requires for a grade. ``supported`` is False until a state's rules are reviewed.
+         */
+        StateSubjectsRead: {
+            /** Band */
+            band?: string | null;
+            /** Grade */
+            grade: string | null;
+            /** Rule */
+            rule?: string | null;
+            /** Sources */
+            sources?: string[];
+            /** State Code */
+            state_code: string;
+            /** State Name */
+            state_name: string;
+            /** Subjects */
+            subjects?: components["schemas"]["RequiredSubject"][];
+            /** Supported */
+            supported: boolean;
+        };
         /**
          * StudentCourseRead
          * @description One active course on a student dashboard, with lesson completion counts.
@@ -3370,6 +4195,8 @@ export interface components {
             color_hex?: string | null;
             /** Grade */
             grade?: string | null;
+            /** Has Iep */
+            has_iep?: boolean | null;
             /** Name */
             name: string;
             /** Notes */
@@ -3406,6 +4233,20 @@ export interface components {
             color_hex: string;
             /** Grade */
             grade: string | null;
+            /** Grade Confirmed On */
+            grade_confirmed_on?: string | null;
+            /** Grade Label */
+            readonly grade_label: string | null;
+            /**
+             * Grade Needs Confirming
+             * @default false
+             */
+            grade_needs_confirming: boolean;
+            /**
+             * Has Iep
+             * @default false
+             */
+            has_iep: boolean;
             /**
              * Has Login
              * @default false
@@ -3433,6 +4274,86 @@ export interface components {
             source: string;
             /** Student Id */
             student_id: number;
+        };
+        /**
+         * StudentSubjectCreate
+         * @description Add a listed subject (``subject_code``) or the family's own (``name``, counting toward one or none).
+         */
+        StudentSubjectCreate: {
+            /** Counts Toward */
+            counts_toward?: string | null;
+            /** Name */
+            name?: string | null;
+            /** School Year Id */
+            school_year_id?: number | null;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
+        /** StudentSubjectRead */
+        StudentSubjectRead: {
+            /** Active */
+            active: boolean;
+            /** Counts Toward */
+            counts_toward: string | null;
+            /** Counts Toward Name */
+            counts_toward_name: string | null;
+            /**
+             * Covered Before
+             * @default false
+             */
+            covered_before: boolean;
+            /**
+             * Every Year
+             * @default false
+             */
+            every_year: boolean;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Objective */
+            objective: string | null;
+            /** State Label */
+            state_label?: string | null;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Warning */
+            warning?: string | null;
+        };
+        /** StudentSubjectUpdate */
+        StudentSubjectUpdate: {
+            /** Active */
+            active?: boolean | null;
+            /**
+             * Clear Counts Toward
+             * @default false
+             */
+            clear_counts_toward: boolean;
+            /** Counts Toward */
+            counts_toward?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Objective */
+            objective?: string | null;
+        };
+        /** StudentSubjectsRead */
+        StudentSubjectsRead: {
+            /** Band */
+            band?: string | null;
+            /** Rule */
+            rule?: string | null;
+            /** School Year Id */
+            school_year_id: number;
+            /** State Code */
+            state_code: string | null;
+            /** Student Id */
+            student_id: number;
+            /** Subjects */
+            subjects: components["schemas"]["StudentSubjectRead"][];
+            /** Supported */
+            supported: boolean;
         };
         /**
          * StudentTodayProgress
@@ -3472,6 +4393,20 @@ export interface components {
             name: string;
             /** Student Id */
             student_id: number;
+        };
+        /** SubjectOption */
+        SubjectOption: {
+            /** Code */
+            code: string;
+            /**
+             * Covers
+             * @default
+             */
+            covers: string;
+            /** Group */
+            group: string;
+            /** Name */
+            name: string;
         };
         /** SubjectTaxonomyRead */
         SubjectTaxonomyRead: {
@@ -5741,6 +6676,501 @@ export interface operations {
             };
         };
     };
+    set_state_api_household_state_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdStateAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_state_history_api_household_states_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdStatePeriod-Input"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_library_api_library_get: {
+        parameters: {
+            query?: {
+                /** @description reading_book, workbook, curriculum or online_program */
+                kind?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_item_api_library_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_library_api_library_search_get: {
+        parameters: {
+            query: {
+                /** @description An ISBN, title, author or series */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResults"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_item_api_library__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_item_api_library__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_item_api_library__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_chapters_api_library__item_id__chapters_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChapterWrite"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_cover_api_library__item_id__cover_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_cover_api_library__item_id__cover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_cover_api_library__item_id__cover_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_cover_api_library__item_id__cover_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_lessons_api_library__item_id__lessons_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonWrite"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_generate_lessons_api_library__item_id__lessons_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonGenerate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_materials_api_library__item_id__materials_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterialWrite"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_notifications_api_notifications_get: {
         parameters: {
             query?: never;
@@ -6076,6 +7506,26 @@ export interface operations {
             };
         };
     };
+    reference_api_reference_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenceRead"];
+                };
+            };
+        };
+    };
     weekly_manifest_api_reports_weekly_manifest_get: {
         parameters: {
             query: {
@@ -6335,6 +7785,103 @@ export interface operations {
             };
         };
     };
+    required_subjects_api_state_requirements__state_code__subjects_get: {
+        parameters: {
+            query?: {
+                grade?: string | null;
+            };
+            header?: never;
+            path: {
+                state_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StateSubjectsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_subject_api_student_subjects__subject_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_subject_api_student_subjects__subject_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentSubjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSubjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_students_api_students_get: {
         parameters: {
             query?: never;
@@ -6521,6 +8068,41 @@ export interface operations {
             };
         };
     };
+    confirm_grade_api_students__student_id__confirm_grade_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GradeConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_student_courses_api_students__student_id__courses_get: {
         parameters: {
             query?: never;
@@ -6636,6 +8218,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudentSparkRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_subjects_api_students__student_id__subjects_get: {
+        parameters: {
+            query?: {
+                school_year_id?: number | null;
+            };
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSubjectsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_subject_api_students__student_id__subjects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentSubjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSubjectsRead"];
                 };
             };
             /** @description Validation Error */

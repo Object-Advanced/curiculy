@@ -59,12 +59,12 @@ def _tenant_dir(tenant_uuid: str) -> Path:
     return path
 
 
-def _compress_to_webp(data: bytes) -> bytes | None:
-    """Resize to 1600px and encode WebP, or return None if this is not an image."""
+def _compress_to_webp(data: bytes, max_dimension: int = MAX_IMAGE_DIMENSION) -> bytes | None:
+    """Resize to fit ``max_dimension`` and encode WebP, or return None if this is not an image."""
     try:
         with Image.open(BytesIO(data)) as image:
             rgb = image.convert("RGB")
-            rgb.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION))
+            rgb.thumbnail((max_dimension, max_dimension))
             buffer = BytesIO()
             rgb.save(buffer, format="WEBP", quality=WEBP_QUALITY)
             return buffer.getvalue()
@@ -98,6 +98,27 @@ def store_capture(source: BinaryIO, *, tenant_uuid: str) -> str:
     destination = _tenant_dir(tenant_uuid) / filename
     destination.write_bytes(payload)
     return relative_path
+
+
+MAX_COVER_BYTES = 5 * 1024 * 1024
+MAX_COVER_DIMENSION = 800
+
+
+def store_cover(source: BinaryIO, *, tenant_uuid: str) -> str:
+    """Keep an uploaded cover image (a real cover, not a photo); return its relative path.
+
+    Same safety as work samples: the type comes from the bytes, metadata is
+    dropped by re-encoding, and the name is random. Covers must be images.
+    """
+    data = source.read(MAX_COVER_BYTES + 1)
+    if len(data) > MAX_COVER_BYTES:
+        raise EvidenceRejected(413, "Cover images can be up to 5 MB.")
+    compressed = _compress_to_webp(data, MAX_COVER_DIMENSION)
+    if compressed is None:
+        raise EvidenceRejected(415, "A cover must be a PNG, JPG, WebP or GIF image.")
+    filename = f"cover-{uuid4()}.webp"
+    (_tenant_dir(tenant_uuid) / filename).write_bytes(compressed)
+    return f"{tenant_uuid}/{filename}"
 
 
 def stored_relative_path(file_path: str | None) -> str | None:

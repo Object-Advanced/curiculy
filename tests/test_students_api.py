@@ -91,6 +91,10 @@ class TestStudentColors:
                 "notes": None,
                 "color_hex": "#224466",
                 "has_login": False,
+                "has_iep": False,
+                "grade_confirmed_on": None,
+                "grade_needs_confirming": True,
+                "grade_label": None,
             }
         ]
 

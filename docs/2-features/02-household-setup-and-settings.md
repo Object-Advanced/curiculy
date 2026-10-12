@@ -15,9 +15,13 @@ First-run setup, then the place a parent manages the family: kids, PINs, the fam
 - **Household:**
   - rename the family
   - the household **time zone**, which is set automatically from the parent's browser the first time and is what "today" means everywhere
+  - **the state** the family homeschools in, from a date (a move adds a period). API ready; the setup screens come with the year-setup interview.
 - **Appearance:** light or dark mode. The choice is remembered on that device.
 - **Students:**
   - add, rename, recolor or remove a child
+  - **grade from a fixed list** (Pre-K, Kindergarten, 1st–12th), a dropdown in the wizard and the student form; re-confirmed after each July 1 (`grade_needs_confirming`, `POST /api/students/{id}/confirm-grade`)
+  - a yes/no **IEP** flag, only so a state's special-education rules can apply (nothing else about it is stored)
+  - **subjects for each school year** (`/api/students/{id}/subjects`): the state's required ones appear on their own; families add listed subjects or their own, and write one objective each. API ready; the screens come with the year-setup interview.
   - set or clear their sign-in **PIN**
   - see and rotate the **family code**
   - make or revoke the **Chrome extension capture token** (see [Evidence](13-evidence-and-capture.md))

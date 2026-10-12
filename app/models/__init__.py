@@ -1,6 +1,19 @@
 from datetime import date
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    text,
+    true,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import TenantBase
@@ -30,6 +43,13 @@ from app.models.education import (
 )
 from app.models.evidence_staging import EvidenceStaging
 from app.models.homework import HomeworkHelpMessage, HomeworkHelpSession, ParentNotification
+from app.models.library import (
+    LibraryChapter,
+    LibraryItem,
+    LibraryLesson,
+    LibraryLessonPages,
+    LibraryMaterial,
+)
 from app.models.mixins import TimestampMixin
 
 DEFAULT_STUDENT_COLOR = "#356b46"
@@ -75,6 +95,33 @@ class Household(TimestampMixin, TenantBase):
     calendar_exceptions: Mapped[list["CalendarException"]] = relationship(
         back_populates="household"
     )
+    states: Mapped[list["HouseholdState"]] = relationship(
+        back_populates="household",
+        cascade="all, delete-orphan",
+        order_by="HouseholdState.starts_on",
+    )
+
+
+class HouseholdState(TimestampMixin, TenantBase):
+    """Which state the family homeschools in, from a date (a move adds a row).
+
+    The state on a given day is the row with the latest ``starts_on`` on or
+    before it, so each part of a school year is checked against the right law.
+    """
+
+    __tablename__ = "household_states"
+    __table_args__ = (
+        UniqueConstraint("household_id", "starts_on", name="uq_household_states_start"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    state_code: Mapped[str] = mapped_column(String(2), nullable=False)
+    starts_on: Mapped[date] = mapped_column(Date, nullable=False)
+
+    household: Mapped[Household] = relationship(back_populates="states")
 
 
 class Student(TimestampMixin, TenantBase):
@@ -83,7 +130,16 @@ class Student(TimestampMixin, TenantBase):
     id: Mapped[int] = mapped_column(primary_key=True)
     household_id: Mapped[int] = mapped_column(ForeignKey("households.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # A code from app.reference.grades ("PreK", "K", "1" … "12").
     grade: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # When a parent last set or confirmed the grade; it's asked again after
+    # each July 1 (a new school year).
+    grade_confirmed_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Only so a state's special-education rules apply. The IEP itself and any
+    # diagnosis are never stored (docs: Privacy, keep the minimum).
+    has_iep: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     color_hex: Mapped[str] = mapped_column(
         String(7),
@@ -107,6 +163,45 @@ class Student(TimestampMixin, TenantBase):
         foreign_keys="Attendance.student_id",
         cascade="all, delete-orphan",
     )
+
+
+class StudentSubject(TimestampMixin, TenantBase):
+    """One subject slot for one child in one school year.
+
+    ``kind``: ``required`` (the family's state requires it for the child's
+    grade), ``common`` (a preset from the subject list) or ``own`` (named by
+    the family, counting toward a listed subject or nothing). ``active`` is
+    whether it's taught this year; ``objective`` is the one line that prints
+    in the state's "objectives by subject" outline.
+    """
+
+    __tablename__ = "student_subjects"
+    __table_args__ = (
+        Index(
+            "uq_student_subjects_listed",
+            "student_id",
+            "school_year_id",
+            "subject_code",
+            unique=True,
+            postgresql_where=text("subject_code IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    school_year_id: Mapped[int] = mapped_column(
+        ForeignKey("school_years.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # A code from app.reference.subjects; NULL for the family's own subjects.
+    subject_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    counts_toward: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true(), nullable=False)
+    objective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    position: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
 
 
 class SchoolYear(TimestampMixin, TenantBase):
@@ -216,11 +311,18 @@ __all__ = [
     "HomeworkHelpSession",
     "Household",
     "HouseholdSettings",
+    "HouseholdState",
+    "LibraryChapter",
+    "LibraryItem",
+    "LibraryLesson",
+    "LibraryLessonPages",
+    "LibraryMaterial",
     "ParentNotification",
     "Publisher",
     "ReportingCategory",
     "SchoolYear",
     "Student",
+    "StudentSubject",
     "SubjectTaxonomy",
     "Work",
     "WorkAuthor",

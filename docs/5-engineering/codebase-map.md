@@ -13,6 +13,7 @@ curiculy/
 │   ├── db_safety.py          Refuses to start unless families are walled off (roles, policies, references)
 │   ├── db_startup.py         Startup upkeep: wait for Postgres, migrate, safety check, recovery, demo cleanup
 │   ├── enums.py              Every status and kind (lesson status, days-off kinds, report types…)
+│   ├── reference/            Fixed lists in code: states, grades, subjects, each reviewed state's required subjects
 │   ├── core/                 Cross-cutting pieces
 │   │   ├── security.py       Passwords, sign-in tokens, who's signed in, parent and admin guards
 │   │   ├── deps.py           "Signed-in user plus their family's database" dependency
@@ -20,7 +21,7 @@ curiculy/
 │   │   ├── idempotency.py    Retried writes are applied once
 │   │   └── rate_limit.py     Sign-in attempt limits
 │   ├── routers/              One file per area of the API (25 files, about 100 endpoints)
-│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…); family_data.py (export, delete, restore one family), demo_households.py
+│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…); family_data.py (export, delete, restore one family), demo_households.py, subjects.py, library.py (+ library_rules.py: what each kind needs and why), text_checks.py (keyboard mashing)
 │   │   └── providers/        ISBN lookups: Open Library, Google Books
 │   ├── models/               Database tables (SQLAlchemy 2)
 │   ├── schemas/              Request and response shapes (Pydantic)
@@ -48,7 +49,7 @@ curiculy/
 ├── migrations/               Alembic migrations (versions/), tenancy.py (row-level security steps)
 ├── docker/postgres/          The database container's first-start role setup
 ├── scripts/                  Operator tools: backup, restore one family, invites, password reset
-├── tests/                    Backend tests (pytest on Postgres, 52 files, 952 tests)
+├── tests/                    Backend tests (pytest on Postgres, 55 files, 1,033 tests)
 ├── e2e/                      Browser tests (Playwright): functional, visual snapshots, accessibility, offline, metrics
 ├── .github/workflows/        CI: lint, pytest, e2e on every push and pull request
 ├── Dockerfile                The app image: a Node stage builds frontend/, then Python 3.12, WeasyPrint, Tesseract
