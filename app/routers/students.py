@@ -1,5 +1,7 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from app.core.security import CurrentUser, get_current_user, require_parent
 from app.db import get_admin_db
@@ -12,7 +14,8 @@ from app.models import (
     Student,
     next_unused_student_color,
 )
-from app.schemas import StudentCreate, StudentRead, StudentSparkRead
+from app.reference.grades import grade_needs_confirming
+from app.schemas import GradeConfirm, StudentCreate, StudentRead, StudentSparkRead
 from app.schemas.auth import StudentPinUpsert
 from app.services.clock import household_today
 from app.services.child_accounts import (
@@ -43,6 +46,7 @@ def _student_read(
     login_ids: set[int] | None = None,
     admin_db: Session | None = None,
     tenant_uuid: str | None = None,
+    today: date | None = None,
 ) -> StudentRead:
     if login_ids is None:
         login_ids = (
@@ -50,8 +54,14 @@ def _student_read(
             if admin_db is not None and tenant_uuid
             else set()
         )
+    today = today or household_today(object_session(student))
     return StudentRead.model_validate(student).model_copy(
-        update={"has_login": student.id in login_ids}
+        update={
+            "has_login": student.id in login_ids,
+            "grade_needs_confirming": grade_needs_confirming(
+                student.grade, student.grade_confirmed_on, today
+            ),
+        }
     )
 
 
@@ -74,7 +84,8 @@ def list_students(
 ) -> list[StudentRead]:
     students = db.query(Student).order_by(Student.id).all()
     login_ids = child_login_student_ids(admin_db, user.tenant_uuid)
-    return [_student_read(student, login_ids=login_ids) for student in students]
+    today = household_today(db)
+    return [_student_read(student, login_ids=login_ids, today=today) for student in students]
 
 
 @router.get("/{student_id}", response_model=StudentRead)
@@ -126,6 +137,9 @@ def create_student(
 ) -> StudentRead:
     household = get_default_household(db)
     data = payload.model_dump()
+    data["has_iep"] = bool(data.get("has_iep"))
+    if data.get("grade"):
+        data["grade_confirmed_on"] = household_today(db)
     if not data.get("color_hex"):
         taken = {
             (color or DEFAULT_STUDENT_COLOR).lower()
@@ -153,8 +167,30 @@ def update_student(
     data = payload.model_dump()
     if not data.get("color_hex"):
         data["color_hex"] = student.color_hex or DEFAULT_STUDENT_COLOR
+    if data.get("has_iep") is None:
+        data.pop("has_iep")
+    # Re-sending the same grade (older screens send every field) isn't a confirmation.
+    if data.get("grade") and data["grade"] != student.grade:
+        data["grade_confirmed_on"] = household_today(db)
     for field, value in data.items():
         setattr(student, field, value)
+    db.commit()
+    db.refresh(student)
+    return _student_read(student, admin_db=admin_db, tenant_uuid=user.tenant_uuid)
+
+
+@router.post("/{student_id}/confirm-grade", response_model=StudentRead)
+def confirm_grade(
+    student_id: int,
+    payload: GradeConfirm,
+    db: Session = Depends(get_tenant_db),
+    admin_db: Session = Depends(get_admin_db),
+    user: CurrentUser = Depends(get_current_user),
+) -> StudentRead:
+    """The child's grade for the new school year (asked again after each July 1)."""
+    student = _get_student(student_id, db)
+    student.grade = payload.grade
+    student.grade_confirmed_on = household_today(db)
     db.commit()
     db.refresh(student)
     return _student_read(student, admin_db=admin_db, tenant_uuid=user.tenant_uuid)

@@ -1641,6 +1641,18 @@ function shuffleCopy(items, rand) {
   return next;
 }
 
+/** The fixed grade list (app/reference/grades.py); stored codes, shown labels. */
+const GRADE_OPTIONS = [
+  ["", "Not set"],
+  ["PreK", "Pre-K"],
+  ["K", "Kindergarten"],
+  ...Array.from({ length: 12 }, (_, i) => {
+    const n = i + 1;
+    const suffix = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
+    return [String(n), `${n}${suffix} grade`];
+  }),
+];
+
 function gradeBand(grade) {
   const g = String(grade || "").trim().toLowerCase();
   if (!g) return "elem";
@@ -2699,7 +2711,11 @@ function renderStudentSettings() {
         <h2>${editing ? "Edit student" : "Add a student"}</h2>
         ${editing ? `<input type="hidden" name="id" value="${editing.id}">` : ""}
         <label>Name<input name="name" required maxlength="255" value="${editing ? escapeHtml(editing.name) : ""}"></label>
-        <label>Grade<input name="grade" maxlength="64" value="${editing ? escapeHtml(editing.grade || "") : ""}"></label>
+        <label>Grade
+          <select name="grade">
+            ${GRADE_OPTIONS.map(([code, label]) => `<option value="${code}"${(editing?.grade || "") === code ? " selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
         <label>Color
           <input name="color_hex" type="color" value="${color}" aria-label="Student color">
         </label>

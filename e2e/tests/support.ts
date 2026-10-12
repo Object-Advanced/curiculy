@@ -98,7 +98,7 @@ export async function completeWizard(page: Page, household: string, kid: Kid = F
   await step(3).getByRole("button", { name: "Next" }).click();
   await expect(step(4)).toBeVisible();
   await step(4).getByLabel("Name").fill(kid.name);
-  await step(4).getByLabel("Grade").fill(kid.grade);
+  await step(4).getByLabel("Grade").selectOption(kid.grade);
   await step(4).getByRole("button", { name: "Finish" }).click();
   await expect(page.locator("#onboarding-wizard")).toBeHidden();
 }

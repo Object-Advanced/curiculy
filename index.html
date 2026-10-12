@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curiculy</title>
-    <script src="/static/js/theme-boot.js?v=20261011-journal"></script>
-    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261011-journal">
-    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261011-journal">
-    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261011-journal" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="/static/css/tokens.css?v=20261011-journal">
-    <link rel="stylesheet" href="/static/css/app.css?v=20261011-journal">
+    <script src="/static/js/theme-boot.js?v=20261012-grades"></script>
+    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261012-grades">
+    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261012-grades">
+    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261012-grades" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/css/tokens.css?v=20261012-grades">
+    <link rel="stylesheet" href="/static/css/app.css?v=20261012-grades">
 </head>
 <body>
     <div id="auth-page">
         <section class="auth-card" aria-labelledby="auth-title-signin">
             <header class="auth-brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261011-journal" alt="" width="72" height="72" aria-hidden="true">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261012-grades" alt="" width="72" height="72" aria-hidden="true">
                 <p class="auth-product">Curiculy</p>
             </header>
             <p id="login-error" class="banner error" hidden></p>
@@ -108,7 +108,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261011-journal" alt="" width="40" height="40">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261012-grades" alt="" width="40" height="40">
                 <div>
                     <strong>Curiculy</strong>
                     <p>Homeschool planner</p>
@@ -383,7 +383,7 @@
                 </header>
                 <p class="muted">Start with one child. You can add the rest later in Settings.</p>
                 <label>Name<input name="name" required maxlength="255" placeholder="First and last name" autocomplete="name"></label>
-                <label>Grade<input name="grade" maxlength="64" placeholder="3rd, Grade 4, K…" autocomplete="off"></label>
+                <label>Grade<select name="grade"><option value="">Not set</option><option value="PreK">Pre-K</option><option value="K">Kindergarten</option><option value="1">1st grade</option><option value="2">2nd grade</option><option value="3">3rd grade</option><option value="4">4th grade</option><option value="5">5th grade</option><option value="6">6th grade</option><option value="7">7th grade</option><option value="8">8th grade</option><option value="9">9th grade</option><option value="10">10th grade</option><option value="11">11th grade</option><option value="12">12th grade</option></select></label>
                 <footer class="modal-actions">
                     <button type="button" class="ghost" data-action="wizard-back">Back</button>
                     <button type="submit">Finish</button>
@@ -688,7 +688,7 @@
     <input type="file" id="curriculum-pdf-input" accept="application/pdf" hidden>
     <input type="file" id="paper-import-input" accept="image/*" capture="environment" style="display: none;">
     <div id="toast-container" aria-live="polite" aria-relevant="additions text"></div>
-    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261011-journal"></script>
-    <script src="/static/js/app.js?v=20261011-journal"></script>
+    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261012-grades"></script>
+    <script src="/static/js/app.js?v=20261012-grades"></script>
 </body>
 </html>

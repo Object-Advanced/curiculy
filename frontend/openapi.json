@@ -3071,6 +3071,20 @@
         "title": "FamilyCodeRead",
         "type": "object"
       },
+      "GradeConfirm": {
+        "description": "The child's grade for the new school year (may be unchanged).",
+        "properties": {
+          "grade": {
+            "title": "Grade",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grade"
+        ],
+        "title": "GradeConfirm",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3275,6 +3289,36 @@
             "title": "Name",
             "type": "string"
           },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "state_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "State Name"
+          },
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/HouseholdStatePeriod-Output"
+            },
+            "title": "States",
+            "type": "array"
+          },
           "timezone": {
             "anyOf": [
               {
@@ -3290,9 +3334,82 @@
         "required": [
           "id",
           "name",
+          "state_name",
           "letter"
         ],
         "title": "HouseholdRead",
+        "type": "object"
+      },
+      "HouseholdStateAdd": {
+        "description": "Set the family's state from a date: today when ``starts_on`` is left out (a move).",
+        "properties": {
+          "starts_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts On"
+          },
+          "state_code": {
+            "title": "State Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state_code"
+        ],
+        "title": "HouseholdStateAdd",
+        "type": "object"
+      },
+      "HouseholdStatePeriod-Input": {
+        "description": "The family homeschools in ``state_code`` from ``starts_on`` (until the next period).",
+        "properties": {
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "state_code": {
+            "title": "State Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state_code",
+          "starts_on"
+        ],
+        "title": "HouseholdStatePeriod",
+        "type": "object"
+      },
+      "HouseholdStatePeriod-Output": {
+        "description": "The family homeschools in ``state_code`` from ``starts_on`` (until the next period).",
+        "properties": {
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "state_code": {
+            "title": "State Code",
+            "type": "string"
+          },
+          "state_name": {
+            "readOnly": true,
+            "title": "State Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state_code",
+          "starts_on",
+          "state_name"
+        ],
+        "title": "HouseholdStatePeriod",
         "type": "object"
       },
       "HouseholdUpdate": {
@@ -5211,6 +5328,17 @@
             ],
             "title": "Grade"
           },
+          "has_iep": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Iep"
+          },
           "name": {
             "maxLength": 255,
             "minLength": 1,
@@ -5317,6 +5445,40 @@
             ],
             "title": "Grade"
           },
+          "grade_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Confirmed On"
+          },
+          "grade_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Grade Label"
+          },
+          "grade_needs_confirming": {
+            "default": false,
+            "title": "Grade Needs Confirming",
+            "type": "boolean"
+          },
+          "has_iep": {
+            "default": false,
+            "title": "Has Iep",
+            "type": "boolean"
+          },
           "has_login": {
             "default": false,
             "title": "Has Login",
@@ -5352,7 +5514,8 @@
           "name",
           "grade",
           "notes",
-          "color_hex"
+          "color_hex",
+          "grade_label"
         ],
         "title": "StudentRead",
         "type": "object"
@@ -9080,6 +9243,104 @@
         ]
       }
     },
+    "/api/household/state": {
+      "post": {
+        "description": "The family's state from a date (today if left out): picked at sign-up, or after a move.",
+        "operationId": "set_state_api_household_state_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdStateAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Set State",
+        "tags": [
+          "household"
+        ]
+      }
+    },
+    "/api/household/states": {
+      "put": {
+        "description": "Replace every state period (Settings edits the history as a list).",
+        "operationId": "set_state_history_api_household_states_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/HouseholdStatePeriod-Input"
+                },
+                "title": "Payload",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Set State History",
+        "tags": [
+          "household"
+        ]
+      }
+    },
     "/api/notifications": {
       "get": {
         "operationId": "get_notifications_api_notifications_get",
@@ -10278,6 +10539,64 @@
         "summary": "List Student Assignments",
         "tags": [
           "assignments"
+        ]
+      }
+    },
+    "/api/students/{student_id}/confirm-grade": {
+      "post": {
+        "description": "The child's grade for the new school year (asked again after each July 1).",
+        "operationId": "confirm_grade_api_students__student_id__confirm_grade_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "title": "Student Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Confirm Grade",
+        "tags": [
+          "students"
         ]
       }
     },

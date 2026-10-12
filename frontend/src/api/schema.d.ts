@@ -1086,6 +1086,46 @@ export interface paths {
         patch: operations["update_household_route_api_household_patch"];
         trace?: never;
     };
+    "/api/household/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set State
+         * @description The family's state from a date (today if left out): picked at sign-up, or after a move.
+         */
+        post: operations["set_state_api_household_state_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/household/states": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set State History
+         * @description Replace every state period (Settings edits the history as a list).
+         */
+        put: operations["set_state_history_api_household_states_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notifications": {
         parameters: {
             query?: never;
@@ -1425,6 +1465,26 @@ export interface paths {
         get: operations["list_student_assignments_api_students__student_id__assignments_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/students/{student_id}/confirm-grade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Grade
+         * @description The child's grade for the new school year (asked again after each July 1).
+         */
+        post: operations["confirm_grade_api_students__student_id__confirm_grade_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2484,6 +2544,14 @@ export interface components {
             /** Code */
             code: string;
         };
+        /**
+         * GradeConfirm
+         * @description The child's grade for the new school year (may be unchanged).
+         */
+        GradeConfirm: {
+            /** Grade */
+            grade: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2579,8 +2647,52 @@ export interface components {
             readonly letter: string;
             /** Name */
             name: string;
+            /** State Code */
+            state_code?: string | null;
+            /** State Name */
+            readonly state_name: string | null;
+            /** States */
+            states?: components["schemas"]["HouseholdStatePeriod-Output"][];
             /** Timezone */
             timezone?: string | null;
+        };
+        /**
+         * HouseholdStateAdd
+         * @description Set the family's state from a date: today when ``starts_on`` is left out (a move).
+         */
+        HouseholdStateAdd: {
+            /** Starts On */
+            starts_on?: string | null;
+            /** State Code */
+            state_code: string;
+        };
+        /**
+         * HouseholdStatePeriod
+         * @description The family homeschools in ``state_code`` from ``starts_on`` (until the next period).
+         */
+        "HouseholdStatePeriod-Input": {
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** State Code */
+            state_code: string;
+        };
+        /**
+         * HouseholdStatePeriod
+         * @description The family homeschools in ``state_code`` from ``starts_on`` (until the next period).
+         */
+        "HouseholdStatePeriod-Output": {
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** State Code */
+            state_code: string;
+            /** State Name */
+            readonly state_name: string;
         };
         /** HouseholdUpdate */
         HouseholdUpdate: {
@@ -3370,6 +3482,8 @@ export interface components {
             color_hex?: string | null;
             /** Grade */
             grade?: string | null;
+            /** Has Iep */
+            has_iep?: boolean | null;
             /** Name */
             name: string;
             /** Notes */
@@ -3406,6 +3520,20 @@ export interface components {
             color_hex: string;
             /** Grade */
             grade: string | null;
+            /** Grade Confirmed On */
+            grade_confirmed_on?: string | null;
+            /** Grade Label */
+            readonly grade_label: string | null;
+            /**
+             * Grade Needs Confirming
+             * @default false
+             */
+            grade_needs_confirming: boolean;
+            /**
+             * Has Iep
+             * @default false
+             */
+            has_iep: boolean;
             /**
              * Has Login
              * @default false
@@ -5741,6 +5869,72 @@ export interface operations {
             };
         };
     };
+    set_state_api_household_state_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdStateAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_state_history_api_household_states_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdStatePeriod-Input"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_notifications_api_notifications_get: {
         parameters: {
             query?: never;
@@ -6508,6 +6702,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignmentCalendarRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_grade_api_students__student_id__confirm_grade_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GradeConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentRead"];
                 };
             };
             /** @description Validation Error */
