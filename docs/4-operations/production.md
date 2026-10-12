@@ -14,7 +14,7 @@ How the live site runs, how a new version goes out, and how to roll back.
   - **So never edit or `git switch` in the production folder except as part of a deploy.** Develop in `/home/objadv/curiculy-dev`.
 - **Secrets** live in `/home/objadv/curiculy/.env` (never commit or print it):
   - `JWT_SECRET`
-  - `POSTGRES_PASSWORD` (the database superuser; only for the container itself), `CURICULY_OWNER_PASSWORD`, `CURICULY_APP_PASSWORD`. Each one a long random value, for example `openssl rand -base64 33`.
+  - `POSTGRES_PASSWORD` (the database superuser; only for the container itself), `CURICULY_OWNER_PASSWORD`, `CURICULY_APP_PASSWORD`. Each one a long random value of letters and digits only, because they go inside database addresses where `/`, `+` or `=` would break them: `openssl rand -hex 32`.
   - `MAIL_*`
   - `FORWARDED_ALLOW_IPS=172.22.0.1`, the Docker gateway, so the app records visitors' real addresses
   - `BACKUP_HOST_DIR=/datalake/projects/curiculy/backups`
