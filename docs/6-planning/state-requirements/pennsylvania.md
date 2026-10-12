@@ -1,9 +1,9 @@
 # Pennsylvania: requirement worksheet
 
-**Draft for review (2026-10-11).** This is the first state pack. Nothing here is built. Statuses are judged against the planned design in the [Product spine](../product-spine.md), using the process in [State requirements](README.md). **Not legal advice.**
+**Reviewed with the owner on 2026-10-11 (two passes; Q1–Q14 decided).** This is the first state pack. Nothing here is built. Statuses are judged against the planned design in the [Product spine](../product-spine.md), using the process in [State requirements](README.md). **Not legal advice.**
 
 ## Scope
-- **Covered here:** Option 1, the **home education program**, 24 P.S. §13-1327.1 (Section 1327.1 of the Public School Code of 1949). This is the option most Pennsylvania homeschoolers use.
+- **Covered here:** Option 1, the **home education program**, 24 P.S. §13-1327.1 (Section 1327.1 of the Public School Code of 1949). This is the option most Pennsylvania homeschoolers use. **Everything a Pennsylvania portfolio needs is in scope**, including grades 9–12 and special education.
 - **Not covered:** the other three options:
   - a certified private tutor
   - a satellite of a religious day school
@@ -13,25 +13,36 @@
 
 ## Sources
 - PA Department of Education, *Basic Education Circular: Home Education Program*, 24 P.S. §13-1327.1, issued **2023-08-21**: [pa.gov](https://www.pa.gov/agencies/education/resources/policies-acts-and-laws/basic-education-circulars-becs/purdons-statutes/home-education-program)
-- HSLDA, [How to comply with Pennsylvania's homeschool law](https://hslda.org/post/how-to-comply-with-pennsylvanias-homeschool-law), and the [Pennsylvania page](https://hslda.org/legal/pennsylvania)
+- PA Department of Education, *Home Education and Private Tutoring Guide*, [Diplomas](https://www.education.pa.gov/K-12/Home%20Education%20and%20Private%20Tutoring/HomeEdPrivateTutoringGuide/Diplomas/Pages/default.aspx)
+- HSLDA, [How to comply with Pennsylvania's homeschool law](https://hslda.org/post/how-to-comply-with-pennsylvanias-homeschool-law), [Special needs provisions for Pennsylvania](https://hslda.org/post/special-needs-provisions-for-pennsylvania), and the [Pennsylvania page](https://hslda.org/legal/pennsylvania)
 - **To confirm:** the statute's exact wording on [palegis.us](https://www.palegis.us) (Public School Code of 1949, Act 14, §1327.1). Rows marked *(to confirm)* rest on secondary sources only.
 
-## Open questions for review
-Each needs a decision before its rule is built.
-
-| # | Question | Rows |
+## Decisions (2026-10-11)
+| # | Question | Decision |
 |---|---|---|
-| Q1 | **Health records.** The affidavit must include evidence of immunization (or an exemption) and of required health and medical services. Should Curiculy store these documents at all? They're sensitive data about children. Or do we mark them "outside Curiculy" with a reminder? | 6, 7 |
-| Q2 | **How much of the affidavit do we make?** Districts may use their own forms. Options: (a) only the **objectives outline**, generated from courses; (b) a filled-in copy of PDE's sample affidavit. Option (b) needs a birth date or age, the address and the phone number, none of which Curiculy stores today. | 3, 5 |
-| Q3 | **Objectives by subject.** A list of courses and materials isn't really "education objectives". Should each course get a short objectives field (pre-filled from the curriculum's description and edited by the parent)? Or is a course list acceptable? | 5 |
-| Q4 | **Subjects without their own curriculum:** safety education (including fire prevention), health, physical education, music, art, civics. How does a family show these? A light activity log, tagging a lesson as covering a second subject, or "parent confirms"? | 11, 12 |
-| Q5 | **Days or hours.** The family picks one. Hours need lesson minutes, which Curiculy doesn't track yet. Is an estimate from the guide (editable) acceptable? | 10 |
-| Q6 | **The log "made at the time of instruction".** Curiculy records the date a lesson is checked off. Should the report show the date each entry was *logged*? Should lessons checked off long after their date be flagged? | 14 |
-| Q7 | **How many work samples?** The law asks for samples but doesn't give a number; the evaluator decides. Should the pack ship with no number (the family enters their evaluator's expectation; until then it's "parent confirms"), or with a suggested default to check with evaluators (e.g. beginning, middle and end of year per subject)? | 15 |
-| Q8 | **Standardized tests (grades 3, 5, 8).** Curiculy can't verify a test. Should the parent record the test's name from PDE's approved list, who gave it (not a parent), and the results, with an upload? Status would be "parent confirms" with that structure. | 16 |
-| Q9 | **Grades 9–12:** graduation course minimums (and diplomas). In scope for launch? | 22 |
-| Q10 | **Special education (IDEA):** separate provisions apply. In scope for launch? | 23 |
-| Q11 | **Grade levels.** Rules depend on grade (tests in 3, 5 and 8; elementary vs secondary subjects and hours). Today a child's grade is free text. Should it become a fixed list? | 10–12, 16 |
+| Q1 | Store immunization and health records? | **No.** Curiculy never stores sensitive records. The "Your state" page explains how to get them, and the checklist shows a checkbox and date only. See [Privacy](../product-spine.md#privacy-keep-the-minimum). |
+| Q2 | How much of the affidavit do we make? | **A fillable PDF:** what Curiculy knows is filled in (child's name, grade, school year, subjects, objectives); private details (age or birth date, address, phone, signatures, certifications) are left blank for the parent to type, e-sign or ink. Nothing typed into the blanks is saved. Districts' own forms and PDE's sample forms are linked. |
+| Q3 | Objectives by subject | **Written in setup:** picking the state shows the required subjects; each gets a one-line objective (suggested, then edited) that prints as the outline. |
+| Q4 | Subjects without their own curriculum | **Activities:** notes, minutes, photos, videos or links (a race for PE, an instrument for music, drawings for art). Basic first. |
+| Q5 | Days or hours; minutes | Hours mode uses **a default per course** set in setup, adjusted with **one tap at check-off** or when adding work, and a suggestion from the kid's Start and Done. |
+| Q6 | The log "made at the time of instruction" | **A finished lesson's completion date is the calendar day it sits on.** Lessons move with days off and catching up; checking off a lesson late asks "Done on Tuesday, or today?" and moves it to the day it was really done. The log reads off the calendar. |
+| Q7 | How many work samples? | **The evaluator decides, so the family sets it:** the portfolio builder starts from the Pennsylvania preset, and the family enters a number of samples per subject and date range (Math: 6, Sep 1 – Jan 31). Missing samples are flagged, with "Add samples" or "Change the filter or dates". No built-in number. |
+| Q8 | Standardized tests | **Parent confirms,** with structure: the test from PDE's approved list, the date, who gave it (not a parent), and an optional upload of the score report. Link the state's forms and lists. |
+| Q9 | Grades 9–12 | **In scope:** transcript and credits, the graduation minimums, and the supervisor-issued diploma. |
+| Q10 | Special education | **In scope:** a yes/no IEP flag (no IEP or diagnosis stored) turns on the special-education rules (row 24). |
+| Q11 | Grade levels | **A fixed list,** picked at setup and re-confirmed every July 1. |
+
+## Decided in the second pass (2026-10-11)
+| # | Question | Decision |
+|---|---|---|
+| Q12 | Must every required subject be taught every year? | **Setup shows the rule and the full subject list; the parent picks this year's subjects** and can change them in Settings at any time. Subjects covered in earlier years show as checked. The checklist tracks coverage across the grade band, and fire safety ("regular and continuous") every year. *To confirm:* the exact statutory wording, for the "Your state" page. |
+| Q13 | How long must the portfolio be kept? | **Curiculy keeps everything for the child's whole education** (a selling point), so the legal minimum is always met. *To confirm:* the statutory period, to quote on "Your state". |
+| Q14 | Showing "sustained progress" | **Progress is part of the core:** per course, subject and child, by year, quarter or month, shown calmly in the app and as a professional progress page that opens the portfolio. See [Progress you can see](../product-spine.md#progress-you-can-see). |
+
+## Still to confirm against the statute
+- Q12's exact wording on which subjects must be taught each year.
+- Q13's retention period.
+- Every row marked *(to confirm)* below.
 
 ## Requirements
 **Option 1: home education program, 24 P.S. §13-1327.1**
@@ -44,53 +55,67 @@ Each needs a decision before its rule is built.
 ### B. Affidavit (or unsworn declaration)
 | # | Requirement | Source | Curiculy today | Status | Notes |
 |---|---|---|---|---|---|
-| 2 | File with the superintendent of the district of residence **before starting**, then **by August 1** every year. Notarized affidavit or unsworn declaration. | PDE BEC; HSLDA | nothing | **Outside Curiculy** (filing); deadline as a **Task** | Curiculy reminds; the parent uploads a copy as proof ("parent confirms") |
-| 3 | Names of supervisor and child, child's age, address, phone | HSLDA | child's name only; no birth date, address or phone | **Needs a decision** | Q2 |
+| 2 | File with the superintendent of the district of residence **before starting**, then **by August 1** every year. Notarized affidavit or unsworn declaration. | PDE BEC; HSLDA | nothing | **Outside Curiculy** (filing); deadline as a **Task** | Checkbox and date ("Filed July 28"). No upload: the filed copy holds private details. |
+| 3 | Names of supervisor and child, child's age, address, phone | HSLDA | child's name only | **Outside Curiculy** | Q2: blanks on the fillable form; never stored |
 | 4 | Assurance that subjects are taught in English | HSLDA | nothing | **Outside Curiculy** | Attested |
-| 5 | **Outline of proposed education objectives by subject area** | PDE BEC; HSLDA | none (courses planned) | **Partly covered** | Courses give subject and materials; objectives need Q3 |
-| 6 | Evidence of immunization, or a medical or religious/philosophical exemption | PDE BEC; HSLDA | nothing | **Needs a decision** | Q1 |
-| 7 | Evidence of required health and medical services (Article XIV), or an exemption | PDE BEC; HSLDA | nothing | **Needs a decision** | Q1 |
+| 5 | **Outline of proposed education objectives by subject area** | PDE BEC; HSLDA | none | **Covered** (planned) | Q3: objectives written in setup, one per subject; printed on the fillable form |
+| 6 | Evidence of immunization, or a medical or religious/philosophical exemption | PDE BEC; HSLDA | nothing | **Outside Curiculy** | Q1: never stored; "Your state" explains where to get it |
+| 7 | Evidence of required health and medical services (Article XIV), or an exemption | PDE BEC; HSLDA | nothing | **Outside Curiculy** | Q1, as row 6 |
 | 8 | Certification of compliance with §1327.1 | HSLDA | nothing | **Outside Curiculy** | Attested |
-| 9 | Certification that the supervisor, adults in the home and legal custodians have no specified criminal convictions in the past five years | HSLDA | nothing | **Outside Curiculy** | Attested |
+| 9 | Certification that the supervisor, adults in the home and legal custodians have no specified criminal convictions in the past five years | HSLDA | nothing | **Outside Curiculy** | Attested; never stored |
 
 ### C. Instruction
 | # | Requirement | Source | Curiculy today | Status | Notes |
 |---|---|---|---|---|---|
-| 10 | **180 days**, or **900 hours** (elementary) / **990 hours** (secondary) | HSLDA | attendance per child per day; no minutes | **Partly covered** | Days: attendance marked present. Hours: Q5. Elementary vs secondary: Q11. |
-| 11 | **Elementary subjects:** English (spelling, reading, writing); arithmetic; science; geography; civics; history of the U.S. and Pennsylvania; health and physiology; physical education; music; art; safety education, including regular and continuous instruction in the dangers and prevention of fires | HSLDA | no real subjects ("Subject: Unfiled") | **Partly covered** | Courses' subjects checked against this list; subjects without a curriculum: Q4 |
-| 12 | **Secondary subjects:** English (language, literature, speech, composition); mathematics (general math, algebra, geometry); science; geography; social studies (civics, world history, history of the U.S. and Pennsylvania); health; physical education; music; art; safety education, including fire prevention | HSLDA | as above | **Partly covered** | As row 11; Q4, Q9 |
+| 10 | **180 days**, or **900 hours** (elementary) / **990 hours** (secondary) | HSLDA | attendance per child per day; no minutes | **Covered** (planned) | Days: attendance marked present. Hours: Q5 minutes. Elementary or secondary from the grade (Q11). |
+| 11 | **Elementary subjects:** English (spelling, reading, writing); arithmetic; science; geography; civics; history of the U.S. and Pennsylvania; health and physiology; physical education; music; art; safety education, including regular and continuous instruction in the dangers and prevention of fires | HSLDA | no real subjects ("Subject: Unfiled") | **Covered** (planned) | Subject slots per grade band, filled by curricula or activities (Q4); coverage tracked across years, fire safety every year (Q12) |
+| 12 | **Secondary subjects:** English (language, literature, speech, composition); mathematics (general math, algebra, geometry); science; geography; social studies (civics, world history, history of the U.S. and Pennsylvania); health; physical education; music; art; safety education, including fire prevention | HSLDA | as above | **Covered** (planned) | As row 11 |
 | 13 | Instruction in English | HSLDA | nothing | **Outside Curiculy** | |
 
 ### D. Portfolio (kept by the family; reviewed by the evaluator, not sent to the district)
 | # | Requirement | Source | Curiculy today | Status | Notes |
 |---|---|---|---|---|---|
-| 14 | A **log made at the time of instruction** that names, by title, the reading materials used | HSLDA; statute wording *(to confirm)* | completed lessons with completion dates (since Oct 2026); reading-list preset | **Partly covered** | Planned: completed lessons plus titles from both Library shelves. Q6. |
-| 15 | **Samples** of writings, worksheets, workbooks or creative materials used or developed by the student | HSLDA; statute wording *(to confirm)* | work samples on lessons; inbox | **Partly covered** | Planned: samples per subject per term; how many is Q7 |
-| 16 | **Grades 3, 5 and 8:** results in reading/language arts and math from the PSSA or a nationally normed test on PDE's approved list; not given by a parent | PDE BEC; HSLDA | nothing | **Needs a decision** | Q8. PDE's approved list: California Achievement Test, Comprehensive Testing Program (CTP IV), Iowa Test of Basic Skills, Measures of Academic Progress (MAP), Metropolitan Achievement Test, Peabody Individual Achievement Test (revised), Stanford Achievement Test, TerraNova, Woodcock-Johnson, Wechsler Individual Achievement Test (current versions). The district must let the child take the PSSA at school if the family asks. |
-| 17 | The portfolio is kept for a period after the school year | *(to confirm the rule and the period)* | files kept indefinitely | **Needs a decision** | Confirm against the statute before relying on it |
+| 14 | A **log made at the time of instruction** that names, by title, the reading materials used | HSLDA; statute wording *(to confirm)* | completed lessons with completion dates; reading-list preset | **Covered** (planned) | Q6: completion date = calendar day; titles from both Library shelves |
+| 15 | **Samples** of writings, worksheets, workbooks or creative materials used or developed by the student | HSLDA; statute wording *(to confirm)* | work samples on lessons; inbox | **Covered** (planned) | Q7: counts set by the family per subject and date range, flagged when short; activities' photos and videos count too |
+| 16 | **Grades 3, 5 and 8:** results in reading/language arts and math from the PSSA or a nationally normed test on PDE's approved list; not given by a parent | PDE BEC; HSLDA | nothing | **Outside Curiculy** (testing); **parent confirms** in Records | Q8. PDE's approved list: California Achievement Test, Comprehensive Testing Program (CTP IV), Iowa Test of Basic Skills, Measures of Academic Progress (MAP), Metropolitan Achievement Test, Peabody Individual Achievement Test (revised), Stanford Achievement Test, TerraNova, Woodcock-Johnson, Wechsler Individual Achievement Test (current versions). The district must let the child take the PSSA at school if the family asks. No exemption for students with disabilities (HSLDA). |
+| 17 | The portfolio is kept for a period after the school year | *(to confirm the rule and the period)* | files kept indefinitely | **Covered** | Q13: everything is kept for the child's whole education |
 
 ### E. Annual evaluation
 | # | Requirement | Source | Curiculy today | Status | Notes |
 |---|---|---|---|---|---|
 | 18 | A yearly evaluation by a **qualified evaluator**: a licensed psychologist; a PA-certified teacher with two years' experience; or a nonpublic teacher or administrator with two years' experience in the last ten. Others need the superintendent's prior consent. Not the supervisor or their spouse. | PDE BEC; HSLDA | nothing | **Outside Curiculy** | Store the evaluator's name and contact; "Book your evaluator" **Task** |
 | 19 | The evaluator **interviews the child and reviews the portfolio** | HSLDA | portfolio presets and PDF | **Partly covered** | Curiculy makes the portfolio; the interview is outside Curiculy |
-| 20 | Written **certification that an appropriate education is occurring**, submitted to the superintendent **by June 30** | PDE BEC; HSLDA | nothing | **Outside Curiculy** (submitting); deadline as a **Task** | The parent uploads the letter ("parent confirms"). Missing it can lead to a hearing, probation or losing the right to homeschool for up to a year (PDE BEC). |
+| 20 | Written **certification that an appropriate education is occurring**, submitted to the superintendent **by June 30** | PDE BEC; HSLDA | nothing | **Outside Curiculy** (submitting); deadline as a **Task** | The parent may upload the letter. Missing it can lead to a hearing, probation or losing the right to homeschool for up to a year (PDE BEC). |
 | 21 | If concerns arise during the year, the superintendent may require an evaluation within 30 days | HSLDA | nothing | **Outside Curiculy** | A Task added by hand |
 
-### F. Other
+### F. High school (grades 9–12)
 | # | Requirement | Source | Curiculy today | Status | Notes |
 |---|---|---|---|---|---|
-| 22 | **Graduation (grades 9–12):** 4 years of English, 3 of math, 3 of science, 3 of social studies, 2 of arts and humanities | §1327.1(d) as quoted on pa.gov; HSLDA | nothing (no credits or transcript) | **Needs a decision** | Q9 |
-| 23 | **Special education (IDEA):** separate provisions, including evaluator rules | HSLDA (special needs article not yet read) | nothing | **Needs a decision** | Q10; read HSLDA's special-needs article and the statute first |
-| 24 | Moving districts: request a letter of transfer by registered mail 30 days before moving, then file it with the new district | HSLDA | nothing | **Outside Curiculy** | A Task added by hand |
+| 22 | **Graduation minimums:** 4 years of English, 3 of math, 3 of science, 3 of social studies, 2 of arts and humanities | §1327.1(d) as quoted on pa.gov; HSLDA | nothing (no credits or transcript) | **Partly covered** (to build) | Q9: courses carry credits and final grades; a running transcript checked against these minimums |
+| 23 | **Supervisor-issued diploma** (Act 196 of 2014): an affidavit filed for the 12th-grade year; graduation requirements finished while in the program; awarded on **PDE's form (PDE-6008)**; signed by the same evaluator who did the 12th-grade evaluation, who must meet the secondary-level qualifications. Diplomas can also come from an approved diploma-granting organization. | PDE guide, Diplomas | nothing | **Outside Curiculy** (signing, awarding); checklist and Tasks in Records | Q9: link the official form; check the requirements beforehand |
+
+### G. Special education
+| # | Requirement | Source | Curiculy today | Status | Notes |
+|---|---|---|---|---|---|
+| 24 | For a child with an IEP, the program must address the child's specific needs and be **approved by** a PA-certified special-education teacher or a licensed clinical or certified school psychologist. **Written notice of the approval goes with the affidavit.** Not required if the IEP ended because consent was revoked. | HSLDA (24 P.S. §13-1327(d)) | nothing | **Outside Curiculy** (approval); **parent confirms** and a **Task** before August 1 | Q10: the IEP flag turns these on; the IEP itself is never stored |
+| 25 | Special-education services from the district or intermediate unit are possible if both agree | HSLDA (24 P.S. §13-1327(d)) | nothing | **Not a requirement** | Mention on "Your state" |
+
+### H. Other
+| # | Requirement | Source | Curiculy today | Status | Notes |
+|---|---|---|---|---|---|
+| 26 | Moving districts: request a letter of transfer by registered mail 30 days before moving, then file it with the new district | HSLDA | nothing | **Outside Curiculy** | A Task, offered when the family changes its address or state in Settings |
+| 27 | Records show instruction in the required subjects and **"sustained progress in the overall program"** | HSLDA (24 P.S. §13-1327.1(a)) | per-book progress | **Covered** (planned) | Q14: progress by course, subject and term, in the app and on the portfolio's first page; the evaluator judges it |
 
 **Not requirements on the family:** the right to join district extracurricular, cocurricular, academic and CTE programs (PDE BEC); districts lending curriculum materials on request.
 
 ## What this means for the spine
-These are needed whatever the answers above:
-- **A state on the household.** Today only a placeholder exists.
-- **A structured grade per child** (Q11) and probably a birth date (Q2).
-- **Subjects** that map to Pennsylvania's elementary and secondary lists.
-- **Attendance** in days, and **minutes** if hours mode is wanted (Q5).
-- **Tasks** for August 1, the evaluator and June 30.
-- **"Parent confirms" items with uploads,** for everything outside Curiculy.
+- **A state on the household,** chosen at sign-up and changeable from a date.
+- **A grade per child from a fixed list,** re-confirmed each July 1, and a yes/no IEP flag. **No birth date.**
+- **Subjects** with slots for Pennsylvania's elementary and secondary lists, **objectives** per subject, and **activities** for subjects without a curriculum.
+- **Attendance** in days, and **minutes** for hours mode.
+- **The completion-date rule** (a finished lesson's date is its calendar day).
+- **The portfolio builder** with per-subject, per-date-range sample counts and flags.
+- **Fillable forms** that leave private details blank.
+- **Transcript and credits** for grades 9–12.
+- **Tasks:** August 1, the evaluator, June 30, the diploma, special-education approval, a move.
+- **"Parent confirms" items:** with uploads only where safe, and a checkbox and date for anything sensitive.

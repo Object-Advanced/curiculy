@@ -1,6 +1,7 @@
 # Lint, the React app (typecheck, Vitest, build), the pytest suite, and the
-# Playwright suite on every push and pull request. No production secrets, SMTP, or Ollama: pytest uses tmp paths and
-# the browser suite runs against a throwaway app with tmpfs databases.
+# Playwright suite on every push and pull request. No production secrets, SMTP,
+# or Ollama: pytest runs against a throwaway Postgres (the compose `db-test`
+# service), and the browser suite against a throwaway app and database.
 #
 # Docker layers are cached between runs (GitHub Actions cache), so unchanged
 # dependencies are not reinstalled. `-T` disables a TTY; the pytest step is
@@ -27,7 +28,7 @@ jobs:
       - name: Ruff (syntax errors and pyflakes)
         run: |
           pip install ruff==0.16.9
-          ruff check app scripts tests
+          ruff check app scripts tests migrations
 
   frontend:
     runs-on: ubuntu-latest
@@ -68,6 +69,12 @@ jobs:
           cache-from: type=gha,scope=tests
           cache-to: type=gha,mode=max,scope=tests
       - name: Run the full pytest suite
+        # docker-compose.yml requires the production database passwords even
+        # for services it doesn't start; these placeholders are never used.
+        env:
+          POSTGRES_PASSWORD: ci-placeholder
+          CURICULY_OWNER_PASSWORD: ci-placeholder
+          CURICULY_APP_PASSWORD: ci-placeholder
         run: docker compose --profile dev run --rm -T tests pytest -q --tb=line
 
   e2e:

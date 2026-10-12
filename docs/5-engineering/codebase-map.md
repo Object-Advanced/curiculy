@@ -9,8 +9,9 @@ curiculy/
 ├── app/                      The server (Python, FastAPI)
 │   ├── main.py               Builds the app: middleware, routers, the web page and the service worker
 │   ├── config.py             Settings from the environment; refuses to start with a weak JWT_SECRET
-│   ├── db.py                 The three kinds of SQLite database; per-family files; demo files; startup
-│   ├── schema_patches.py     The schema runner: create_all plus ordered, repeat-safe ALTERs
+│   ├── db.py                 Postgres engines; TenantSession (one family per transaction); shared sessions
+│   ├── db_safety.py          Refuses to start unless families are walled off (roles, policies, references)
+│   ├── db_startup.py         Startup upkeep: wait for Postgres, migrate, safety check, recovery, demo cleanup
 │   ├── enums.py              Every status and kind (lesson status, days-off kinds, report types…)
 │   ├── core/                 Cross-cutting pieces
 │   │   ├── security.py       Passwords, sign-in tokens, who's signed in, parent and admin guards
@@ -19,7 +20,7 @@ curiculy/
 │   │   ├── idempotency.py    Retried writes are applied once
 │   │   └── rate_limit.py     Sign-in attempt limits
 │   ├── routers/              One file per area of the API (25 files, about 100 endpoints)
-│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…)
+│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…); family_data.py (export, delete, restore one family), demo_households.py
 │   │   └── providers/        ISBN lookups: Open Library, Google Books
 │   ├── models/               Database tables (SQLAlchemy 2)
 │   ├── schemas/              Request and response shapes (Pydantic)
@@ -44,8 +45,10 @@ curiculy/
 │   ├── curiculy-logo.png     The logo
 │   └── night-mountains.jpg   Sign-in page background
 ├── extension/                The "Curiculy Capture" Chrome extension (Manifest V3)
-├── scripts/                  Operator tools: backup, invites, password reset, checks, one-time cleanups
-├── tests/                    Backend tests (pytest, 54 files, about 1,000 tests)
+├── migrations/               Alembic migrations (versions/), tenancy.py (row-level security steps)
+├── docker/postgres/          The database container's first-start role setup
+├── scripts/                  Operator tools: backup, restore one family, invites, password reset
+├── tests/                    Backend tests (pytest on Postgres, 52 files, 952 tests)
 ├── e2e/                      Browser tests (Playwright): functional, visual snapshots, accessibility, offline, metrics
 ├── .github/workflows/        CI: lint, pytest, e2e on every push and pull request
 ├── Dockerfile                The app image: a Node stage builds frontend/, then Python 3.12, WeasyPrint, Tesseract
@@ -78,6 +81,7 @@ curiculy/
 ## Conventions
 - **Imports run one way:** `core/security` uses `db`, never the reverse. `tests/test_import_order.py` guards this; a circular import once crashed startup.
 - **"Today" is always `household_today(db)`**, never `date.today()`.
-- **Schema changes go in `schema_patches.py`**, each with a test (fresh file, old file, second run).
+- **Schema changes are Alembic migrations;** a new family table needs the steps in `migrations/tenancy.py` (the safety check enforces it).
+- **Family data only through a family session** (`get_tenant_db`, `open_tenant_session`, `open_family_session`). The owner engine bypasses row-level security, so it's for upkeep and backups only, and never reads family rows for a request.
 - **Colors and sizes only through `tokens.css`** (enforced by tests).
 - **Kid-facing copy follows "guide, don't teach"** (see [What Curiculy is](../1-overview/what-curiculy-is.md)).

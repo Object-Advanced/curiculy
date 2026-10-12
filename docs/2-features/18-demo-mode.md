@@ -11,8 +11,8 @@
 ## Scope
 
 ### What it does
-- **Creates a temporary household** with its own throwaway database file, then runs the normal first-run wizard (the tests name it "The Rivera family", with Sam and Maya).
-- **The demo session lasts 2 hours.** Demo households are cleaned up automatically; at most 64 are kept at once, and the oldest are dropped first.
+- **Creates a temporary household:** each demo token gets its own throwaway family (`demo-…`), walled off from real families and other visitors like any family. Then it runs the normal first-run wizard (the tests name it "The Rivera family", with Sam and Maya).
+- **The demo session lasts 2 hours.** A demo family with no activity for that long is deleted: at startup, and every 10 minutes or so while new demos start. Backups skip demo families.
 - **Limited to 10 starts per 10 minutes** per address.
 - **Some actions are off or simplified** in demo (for example the admin panel).
 
@@ -23,12 +23,12 @@
 
 ### Code
 - `app/routers/auth.py` (`demo_access_token`)
-- `app/db.py` (demo databases, `purge_stale_demo_households`)
+- `app/db.py` (`tenant_id_for`: one `demo-…` family per demo token), `app/services/demo_households.py` (clearing expired demos)
 
 ## Review (October 2026)
 
 ### Working well
-- **Stable since Phase 0.** Several requests at once used to break the demo; it now uses temporary files with tidy cleanup, and a test guards against the bug returning.
+- **Stable since Phase 0.** Several requests at once used to break the demo; each demo is its own family in Postgres, cleared when it expires, and a test guards against the bug returning.
 
 ### Problems and risks
 - **Every demo starts empty** apart from the wizard. A pre-filled week of lessons would show off the app better.

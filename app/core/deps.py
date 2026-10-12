@@ -20,8 +20,8 @@ def get_tenant_db(
 
     ``get_current_user`` rejects capture credentials and reads tenant_uuid
     from the admin ``users`` row; as a dependency it is resolved once per
-    request and shared with the route. Opening a tenant file is not capture
-    authorization. Staging must use ``get_staging_tenant_db``.
+    request and shared with the route. Opening a family's session is not
+    capture authorization. Staging must use ``get_staging_tenant_db``.
     """
     db = open_tenant_session(user.tenant_uuid, user.jti)
     try:
@@ -36,7 +36,7 @@ def get_staging_tenant_db(
     """Session for a parent JWT or a live capture credential.
 
     Only evidence staging should depend on this. Capture tokens cannot open a
-    tenant file through ``get_tenant_db``.
+    family's session through ``get_tenant_db``.
     """
     db = open_tenant_session(user.tenant_uuid, user.jti)
     try:

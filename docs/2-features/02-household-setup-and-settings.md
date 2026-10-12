@@ -45,7 +45,7 @@ First-run setup, then the place a parent manages the family: kids, PINs, the fam
 
 ### Data
 - The household database holds `households`, `students`, `household_settings` and `enrollments`.
-- `admin.db` holds child sign-ins (`users`) and `family_codes`.
+- The shared sign-in tables hold child sign-ins (`users`) and `family_codes`.
 
 ### Code
 - `app/routers/household.py`, `students.py`, `settings.py`, `enrollments.py`

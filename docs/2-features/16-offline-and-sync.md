@@ -25,7 +25,7 @@ What happens when the internet drops: the app still opens, and changes made offl
 ### Code
 - `sw.js`: shell cache only
 - `static/js/app.js`: `api()`, `shouldQueueRequest`, `enqueueOutboxRequest`, the outbox replay, `#sync-pill`
-- `app/core/idempotency.py`: records live two days in `admin.db`
+- `app/core/idempotency.py`: records live two days in the shared `idempotency_records` table
 
 ## Review (October 2026)
 

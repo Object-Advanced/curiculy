@@ -8,7 +8,7 @@
 3. **State requirements, met and not just explained:** each state's law becomes a checklist Curiculy fills from the family's records.
 4. **Records that build themselves:** work is attached to lessons as it happens, and reports show what's missing and print as PDFs.
 
-How the pieces fit is on [Product spine](../6-planning/product-spine.md) (agreed October 2026; mostly not built yet).
+**The two selling points:** scheduling several curricula is easy, and families follow their state's rules and end the year with the right portfolio. Think tax software: plain questions, rules explained where they matter, a "what's left" checklist, and a finished packet at the end. How the pieces fit is on [Product spine](../6-planning/product-spine.md) (agreed October 2026; mostly not built yet).
 
 ## Who it's for
 - **Parents** who homeschool one or more children and want the plan, the daily list, and the records in one calm place.
@@ -36,8 +36,9 @@ How the pieces fit is on [Product spine](../6-planning/product-spine.md) (agreed
 2. **Calm for parents, playful for kids.** Parents get "Morning Light": airy, natural, social-app modern, with light whimsy. Kids get "Sticker Book": chunky, bright, collectible. One design system serves both (see [Design system](../3-design/design-system.md)).
 3. **The family's day comes first.** "Today" follows the family's own clock and time zone, and every scheduler respects school days and days off.
 4. **Parents see everything said to a child.** Nudges and AI questions are visible to the parent.
-5. **The family's records are safe.** Each family has its own database file, with nightly snapshots and integrity checks.
+5. **The family's records are safe.** Each family's rows are walled off by the database itself (row-level security, checked on every start and by tests), with nightly backups that are restored to prove they work.
 6. **Honest records, no square pegs.** When a state asks for something Curiculy can't check, it says so ("parent confirms") instead of forcing a fit. See [State requirements](../6-planning/state-requirements/README.md).
+7. **Keep the minimum.** No sensitive records (health, birth dates, addresses); state forms leave private details blank for the parent. See [Privacy](../6-planning/product-spine.md#privacy-keep-the-minimum).
 
 ## Where it is today (October 2026)
 - **Pre-beta: still being built.** No families use it yet; invites go out once the core loop works. It runs on a home server at **curiculy.com** behind a Cloudflare tunnel.

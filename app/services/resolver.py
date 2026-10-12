@@ -1,7 +1,7 @@
 """Resolve an ISBN or barcode to a catalogued ``BookEdition``.
 
 Resolution is cache-first: a scan that has been seen before is answered from
-SQLite and costs no network at all. Only a miss reaches the providers, which are
+the database and costs no network at all. Only a miss reaches the providers, which are
 tried in order — Open Library first because it needs no credentials, Google
 Books second.
 
@@ -168,8 +168,8 @@ class BookResolver:
     async def resolve(self, isbn: str, *, commit: bool = True) -> BookEdition:
         """Return the stored edition for an ISBN or SKU, fetching on a miss.
 
-        Local rows win: a custom SKU saved by hand is answered from SQLite and
-        never reaches a provider. Only a miss of a real ISBN goes to the network.
+        Local rows win: a custom SKU saved by hand is answered from the database
+        and never reaches a provider. Only a miss of a real ISBN goes to the network.
         ``commit=False`` leaves a newly ingested edition on the caller's session
         so a curriculum can be attached in the same transaction.
         """

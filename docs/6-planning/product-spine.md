@@ -13,6 +13,20 @@ Curiculy had many good parts that didn't obviously fit: a pacing engine, lesson-
 
 Curiculy still **guides and doesn't teach** ([decision, 2026-10-10](decisions.md)). The parent owns the curriculum; the app is the plan, the nudge and the record.
 
+## Like tax software for homeschooling
+The two main selling points:
+- **Scheduling several curricula is easy.** There's some setup at the start; after that, the days run themselves.
+- **You follow your state's rules and end the year with the right portfolio.**
+
+The model is tax software: it asks plain questions, explains each rule at the moment it matters, keeps a "what's left" checklist, and at the end hands over a finished, checked packet.
+
+| When | What Curiculy does |
+|---|---|
+| **Sign-up (year setup)** | A guided interview: your state → your kids and their grades → the subjects your state requires for each grade → a one-line objective per subject → a curriculum (or activities) for each subject → schedule it |
+| **Through the year** | Today, the calendar and Add work. Records keeps a "what's left" checklist: days, subjects, samples, deadlines. |
+| **Each July 1** | "Set up 2027–28": confirm each child's grade, your state, and next year's subjects and curricula. Tasks for anything due (Pennsylvania: the affidavit by August 1). |
+| **Year end** | "Build your portfolio": start from your state's preset, adjust it for your evaluator, fix any flags, then print or send |
+
 ## The core loop
 ```mermaid
 flowchart LR
@@ -20,7 +34,11 @@ flowchart LR
     C[Curricula<br/>materials + guide]
     R[Reading books]
   end
+  ST[State + grades] --> SU[Subjects<br/>required · common · own]
+  SU --> C
+  SU --> AC[Activities<br/>notes · photos · minutes]
   C --> CO[Courses<br/>child · curriculum · year]
+  AC --> CAL
   R --> RL[Reading lists<br/>track or schedule]
   CO --> CAL[Calendar<br/>dated lessons]
   RL --> CAL
@@ -43,20 +61,36 @@ Parents see: **Today · Calendar · Library (Curricula · Reading books) · Reco
 | Word | Means | Example |
 |---|---|---|
 | **Library** | The family's shelf, in **two separate sections** with separate Add flows | |
-| **Curriculum** | A program you teach from: its materials plus its guide. Has a subject. One meaning only. | BJU Math 5 (4th ed.); Saxon 5/4; a single Spectrum workbook |
+| **Curriculum** | A program you teach from: its materials plus its guide. Fills one or more subject slots. One meaning only. | BJU Math 5 (4th ed.); Saxon 5/4; a single Spectrum workbook |
 | **Material** | One physical item in a curriculum; each can have an ISBN | Student text, worktext, teacher's edition, answer key, test pack |
 | **Guide** | A curriculum's lesson list, each lesson pointing at pages in its materials. **What the community shares.** | "Lesson 42: Text pp. 212–215, Worktext p. 88" |
 | **Reading book** | A book to *read*. It has chapters, not a guide. | The Lord of the Rings, a biography, a read-aloud |
 | **Reading list** | One child's reading books, with started and finished dates and the subject each counts toward | |
 | **Course** | One child + one curriculum + one school year, with weekdays and a start date. A child's courses *are* "their curriculum this year." | Ada · Math · BJU Math 5 · 2026–27 |
-| **Lesson** | One dated item on the calendar: from a course, a scheduled reading book, or a one-off | |
+| **Subject** | What a child studies, of three kinds: **required** by the state for the child's grade, a **common** preset, or the family's **own**. Curricula and activities belong to subjects. | Math; Safety education; Bible |
+| **Objective** | One line per subject, per child, per year, written in setup. Together they make the state's "objectives by subject" outline. | "Finish BJU Math 5: fractions, decimals, early geometry" |
+| **Lesson** | One dated item on the calendar: from a course, a scheduled reading book, or a one-off. **Replaces "assignment" everywhere, including the code and API** (cheap now, with no users). | |
+| **Activity** | Something logged for a subject without a curriculum: a note, photos, a video or a link, and minutes. Counts like a lesson. | "5K race, PE, 40 min"; "Piano recital" |
 | **Work sample** | A photo, scan, PDF or screenshot on a lesson, or on child + subject + date with no lesson | A worksheet; a field-trip photo |
 | **Attendance** | Whether each child did school that day (and, in hours mode, for how long) | |
 | **Requirement** | One rule from a **state pack**, adjusted for the family's evaluator | "180 days"; "samples of work" |
 | **Records** | The dashboard that checks the requirements, and the reports it prints | |
 | **Task** | A **parent** to-do with a due date, mostly made by the state pack | "Affidavit due Aug 1"; "Book your evaluator" |
 
-**Words we stop using:** "Curriculum" for a single book or for a child's whole year; "Lesson plan" (it's a **guide**); "Auto-schedule" and "Apply" (both become **Schedule**); "Enrollment" (it's a **course**).
+**Words we stop using:** "Assignment" (it's a **lesson**); "Curriculum" for a single book or for a child's whole year; "Lesson plan" (it's a **guide**); "Auto-schedule" and "Apply" (both become **Schedule**); "Enrollment" (it's a **course**).
+
+## Subjects: what everything hangs on
+- **The state is picked at sign-up** and can be changed in Settings when a family moves. A move takes effect from a date, so each part of the year is checked against the right state.
+- **Each child's grade** is picked from a fixed list at setup and re-confirmed every **July 1**.
+- **The state's required subjects for that grade appear on the dashboard as slots**, per child: "Math: add a curriculum", "Safety education: add a curriculum or log activities". Families can add **common subjects** (Bible, a foreign language, typing, logic, life skills) or **their own**.
+- **A slot is filled by a curriculum, activities, or both.** One curriculum can cover several subjects, or several parts of one (an English program covering reading, writing and spelling).
+- **Each subject says what it counts toward.** Presets map automatically. For a custom subject, the parent picks: "Language Arts" counts toward Pennsylvania's English, for example, or it counts toward nothing. The choice is the parent's and is shown plainly (no square pegs).
+- **Objectives are written in setup:** one line per subject, starting from a suggestion the parent edits. Together they print as the state's "objectives by subject" outline.
+- **Not every subject every year, where the state allows it.**
+  - Setup shows the state's rule in plain words and the full subject list for the child's grade band.
+  - The parent picks which subjects this year, and can change them in Settings at any time.
+  - Subjects covered in earlier years show as **checked** when the next year is set up.
+  - The checklist tracks coverage across the grade band, plus anything the state wants every year (Pennsylvania: fire-safety instruction, "regular and continuous").
 
 ## Library: two shelves, two setups
 A workbook-and-textbook program and a novel are different things, and they get different setups.
@@ -88,6 +122,14 @@ Light, about 30 seconds, done often.
 - **The Library page has two buttons:** **Add curriculum** · **Add reading book**.
 - **Kid side:** lessons point to materials ("Get your BJU Math 5 Worktext, p. 88"), and a **My books** shelf shows their reading list.
 
+## Activities: subjects without a curriculum
+Many required subjects (PE, music, art, health, safety education) rarely have a curriculum. They're recorded as **activities**.
+- **Log an activity** from ＋ or from the subject's slot: which children, which subjects, the date, minutes, a note, and photos, a video or a link. Examples: "5K race, PE, 40 min" with a photo at the finish line; "Piano practice, Music, 20 min"; a drawing for Art.
+- **Repeating activities** ("Piano Mon/Wed/Fri, 20 min") appear on the calendar like light lessons, and one tap logs them.
+- **Activities count like lessons:** toward subjects, days and hours. Their photos and videos are work samples in the portfolio.
+- **Videos:** short clips upload with a size cap, or paste a link (an unlisted YouTube video, a Google Drive file). Work samples already have a link field.
+- **Basic first:** notes, attachments and minutes. More only as real needs show up.
+
 ## Attendance: per child, one tap
 Today: one record per child per day (present, absent, sick, vacation), marked with Yes/No radios in every calendar cell. Nothing is suggested, and there's no "everyone present".
 - **A "School today?" card on Today** has one row per child, pre-filled from activity. A child who started or finished a lesson today shows **Present (suggested)**.
@@ -99,6 +141,14 @@ Today: one record per child per day (present, absent, sick, vacation), marked wi
 - **Per child, always:** siblings can differ. On the calendar, each day shows one small dot per child instead of radios.
 - **A sick day connects to the calendar:** marking a child Sick offers "Move Ada's lessons from today?"
 - **Counts on Today and Records:** "Ada: 92 of 180 days; on track for 181 by June 5." In **hours mode**, a present day adds up its lesson minutes (estimated from the guide or course, and editable).
+
+## Lesson minutes
+States that count hours need minutes. Kept simple:
+- **A default per course,** asked once at setup ("About how long is a math lesson? 45 min"). Once a shared guide has data, it suggests one ("Families say about 40 min").
+- **One tap at check-off:** time chips pre-filled with the default (30 · 45 · 60 · other). Also offered when adding work.
+- **From the kid's trail:** when a child taps Start and later Done, the time in between is suggested (capped, and editable).
+- **Only asked in hours mode.** Families counting days aren't asked.
+- **The community learns:** real minutes feed back into the shared guide's estimate.
 
 ## Calendar: move things, stay within the guidelines
 Today: Day, Week and Month views, plus **Recalibrate**, which pushes overdue lessons forward. There's no single-lesson move, no preview, and no checks.
@@ -125,6 +175,13 @@ Today: Day, Week and Month views, plus **Recalibrate**, which pushes overdue les
 
 **Warnings, not blocks:** the parent owns the plan. The one hard rule is that finished lessons never move.
 
+### A finished lesson sits on the day it was done
+Lessons move (sick days, days off, catching up), so the record follows the calendar: **a finished lesson's completion date is the calendar day it sits on.**
+- **Checked off on its own day:** done, dated that day.
+- **Checked off late** (it's Thursday; the lesson is on Tuesday): one question, "Done on Tuesday, or today?" If today, the lesson moves to today, and nothing after it moves.
+- **Done early** (tomorrow's lesson, today): it moves to today.
+- **The portfolio's log reads straight off the calendar,** so it's right by construction. This answers Pennsylvania's "log made at the time of instruction".
+
 **Views:** an agenda list on phones; Week and Month on computers; **All Students** shows every lesson, with a filter chip per child.
 
 ## Work samples: adding them should take seconds
@@ -145,6 +202,7 @@ Parents may add work every day, so this has to be nearly free. **Capture is pare
 7. **Uploads never make you wait.** Photos shrink on the phone before sending, upload in the background with a small progress chip, and wait for a connection when offline. iPhone (HEIC) photos are converted.
 8. **Mistakes take one tap to fix:** **Move to another lesson** and **Remove** on every sample.
 9. **See it build up:** Records shows a gallery per child, subject and term, and "sample wanted" disappears once a sample covers it.
+10. **Location stays private:** photos lose their GPS location and camera details when Curiculy re-saves them (checked 2026-10-11). The same check found that phone photos can be stored sideways, because the "rotate" tag is dropped along with the rest; turning them upright first is a one-line fix. PDFs get their metadata scrubbed (PyMuPDF, already installed), and videos are stripped before video uploads open.
 
 ### After launch
 - **A private upload email address** per family: forward photos to it, or point a home printer's scan-to-email at it. Items land in the inbox with suggestions.
@@ -162,14 +220,74 @@ Anything not filed straight onto a lesson lands in the inbox with a **suggested 
 
 ## Requirements, Records and Tasks
 - **State packs are data:** versioned and dated ("reviewed 2027-05"), written from the statute and the state's own guidance, linking to HSLDA rather than copying it, with a "not legal advice" note.
+- **One state at a time for the hard ones; shared bases for the easy ones.** States with demanding laws (Pennsylvania, New York) each get their own pack. States with similar, light laws share a **base pack**, and each adds only its differences. Every state still gets a worksheet and a review; for a state that matches a base, the worksheet is short.
 - **Each pack is built from a few rule types**, confirmed only through review: deadline; subjects by grade band; days or hours; a log kept as you go; reading list; samples per subject per term; tests by grade; evaluator letter; periodic report; and **parent confirms**, the honest fallback.
-- **The family adjusts the pack for their evaluator.** Laws often say "samples of work", and the evaluator decides how many.
-- **Records** shows each child's checklist in three states:
-  - **✓ Shown by your records:** worked out from the data
-  - **Parent confirms:** a checklist item with an optional upload
-  - **Missing:** each line goes straight to the fix ("Q2 science: 1 of 2 samples. Attach to a lesson")
-- **Report templates per state come first;** a generic custom-report designer comes later. Today's portfolio presets and WeasyPrint PDFs are the output layer.
 - **Tasks** are parent to-dos with due dates, made by the pack ("Affidavit due Aug 1", "Book your evaluator", "Certification due June 30") or added by hand.
+
+### Records: three parts
+The Records tab (today's Portfolios) holds everything about the rules:
+- **Checklist:** each child's "what's left", in three states:
+  - **✓ Shown by your records:** worked out from the data
+  - **Parent confirms:** a checklist item, with an optional upload where it's safe (see [Privacy](#privacy-keep-the-minimum))
+  - **Missing:** each line goes straight to the fix ("Q2 science: 1 of 2 samples. Attach to a lesson")
+- **Portfolio:** the report builder (below).
+- **Your state:** the state's rules in plain words, with sources, the date they were last reviewed, and the state's official forms.
+
+**The rules are also explained where they matter:** a **Why?** link on each checklist line, setup step and calendar warning opens the matching part of "Your state". **Settings** holds only the choices (state, evaluator adjustments). **Public pages on the website**, one per state, explain the rules before sign-up. They help families who are searching, and they show what Curiculy does.
+
+### The portfolio builder
+- **Start from the state's preset** (Pennsylvania: log, reading list, samples, test results).
+- **Adjust it for the evaluator,** by subject and date range. For example: Math, work samples, **6**, September 1 – January 31. Evaluators decide how many samples they want, so there's no built-in number.
+- **Flags show what's short:** "Math has 4 of 6 samples for Sep 1 – Jan 31." The fix is **Add samples**, or **Change the filter or dates**.
+- **The family's adjustments are saved for next year.**
+- The output is today's portfolio presets and WeasyPrint PDFs, grown into templates for each state. A blank-slate custom-report designer comes later.
+
+### State forms: we fill what we know, you fill the rest
+- Curiculy makes the state's forms (Pennsylvania: the affidavit's parts, the objectives outline) as **fillable PDFs**. The parts Curiculy knows come filled in: the child's name, grade, school year, subjects and objectives.
+- **Private fields are flagged and left blank:** birth date, address, phone number, signatures, certifications, health records. Before printing or downloading, Curiculy lists any flagged field still empty ("3 fields to fill: birth date, address, signature").
+- **Three ways to fill them, none needing DocuSign:**
+  - **in Curiculy's page**, where the PDF is finished in the browser
+  - in **any PDF app** after downloading
+  - **in ink** after printing
+- **None of it is ever saved, or even sent, to Curiculy.** The filled-in PDF is made in the browser and isn't cached, stored or uploaded.
+- **Forms with private details aren't emailed through Curiculy.** Our mail service keeps copies of what it sends, so the parent sends the finished PDF from their own email (on phones, through the share sheet). Curiculy's own "Email to evaluator" sends only documents without private details, like the portfolio.
+- **Official forms are linked, not copied:** the state's sample affidavits, its diploma form, and so on. The form page shows which parts Curiculy fills.
+- **Standardized tests are "parent confirms", with structure:** the test (picked from the state's approved list), the date, who gave it (Pennsylvania: not a parent), and an optional upload of the score report. That report belongs in the portfolio anyway.
+
+## Progress you can see
+Progress is part of the core, not a report-only feature. Parents see it as lessons are done, and the portfolio shows the same picture, which is how Curiculy shows "sustained progress".
+- **Per course:** lessons done of the total, and on pace or not ("On pace", "3 behind", "Finishing May 28"). The view can be the year, a quarter or a month.
+- **Per subject and per child:** the same thing rolled up, including activities and minutes.
+- **Over time:** a simple line of lessons done against the planned pace, and work samples spread across the terms.
+- **In the app (Morning Light):** progress rings on each child in the stories row, slim bars on course cards, and one-glance "on pace" words. Calm and quiet, never a wall of numbers.
+- **In the portfolio:** a clean, professional page per child, printed black on white. It has a table per course of lessons done by quarter, small charts, the subjects covered and the reading list. It's the first thing an evaluator sees.
+- **Built on what exists:** today's per-book progress (`GET /api/students/{id}/courses`), grown to terms and subjects. Charts follow the design system and the data-visualization guidance.
+
+## Kept for a child's whole education
+**Every family's records are kept for the whole of each child's schooling,** kindergarten through graduation, and that's a selling point: "Your child's whole education, in one place."
+- **Compressed:** photos are already shrunk to 1600 px WebP. At three photos a school day, a child's K–12 is roughly 2 GB.
+- **Videos are the real cost.** Links are encouraged; uploads are capped and shrunk. Limits or plan tiers can come later if they're needed.
+- **A lifetime record:** each child's transcript, reading lists by year, portfolios by year, and work samples, viewable any time and downloadable as one archive. It stays the family's: they can export it, or delete it, whenever they like.
+
+## Privacy: keep the minimum
+Curiculy runs on a home server today, and children's data deserves care. The rule: **store only what the app needs to work, and never store sensitive records.**
+
+| Kept | Never stored |
+|---|---|
+| Each child's first name, grade and color | Birth dates, addresses, phone numbers (typed into form blanks only) |
+| Lessons, attendance, minutes, subjects, objectives | Immunization and medical records, exemption letters |
+| Work samples: photos, scans, videos or links | Criminal-history certifications, ID numbers |
+| Test names, dates and score reports the parent adds; the evaluator's letter | Copies of the filed affidavit (it holds all of the above) |
+| A yes/no "has an IEP" flag, only so the state's special-education rules apply | The IEP itself, or any diagnosis |
+| | Anything typed into a form's private fields (it never leaves the browser) |
+
+- **Sensitive items are a checkbox and a date,** with no upload ("Affidavit filed July 28"). The "Your state" page says where to get each record (immunizations from the child's doctor or the state's immunization registry, and so on) and reminds the parent to keep their own copies safe.
+- **Photos of children are the most sensitive thing Curiculy keeps.** They're private to the household, location data is stripped, size is capped, and they can be deleted at any time.
+
+## Grades 9–12 and special education (in scope)
+- **High school:** courses in grades 9–12 carry credits and a final grade. Curiculy keeps a running **transcript** and checks it against the state's graduation rules (Pennsylvania: 4 years of English, 3 of math, 3 of science, 3 of social studies, 2 of arts and humanities).
+- **Diplomas:** Pennsylvania lets the supervisor award a state-recognized diploma on the state's form (PDE-6008), signed by the 12th-grade evaluator. Curiculy runs the checklist and links the form.
+- **Special education:** with the IEP flag on, the state pack adds its rules. In Pennsylvania, the program must be approved by a certified special-education teacher or a licensed or certified school psychologist, with written notice of the approval filed with the affidavit. These become "parent confirms" items and Tasks.
 
 ### No square pegs
 When a requirement asks for something Curiculy doesn't have, we don't squeeze it into the nearest field. We stop, review it with the owner, and decide: a correct mapping, a new feature, or "handled outside Curiculy". Curiculy never shows a ✓ it can't actually check. The process and each state's worksheet are in [State requirements](state-requirements/README.md). **Pennsylvania is first** ([worksheet](state-requirements/pennsylvania.md)); New York is likely next (its yearly plan and quarterly reports can be generated from courses).
@@ -189,35 +307,41 @@ When a requirement asks for something Curiculy doesn't have, we don't squeeze it
 | Today | Becomes |
 |---|---|
 | `curricula` + `curriculum_editions` | **Curriculum** (title, publisher, edition, subject, grade) |
-| `curriculum_resources` | **Material** (kind; ISBN linked to `catalog.db` `book_editions`) |
+| `curriculum_resources` | **Material** (kind; ISBN linked to the shared `book_editions`) |
 | `curriculum_units`, `curriculum_page_mappings`, `curriculum_plans`, `curriculum_lessons` (two unconnected structures) | **Guide** + **guide lessons** (number, title, type, pages per material, minutes, optional reading-book link) |
 | none | **Reading book** (linked to a catalog work) and **reading-list entry** (child, status, started and finished dates, counts toward, optional schedule) |
-| `enrollments` | **Course** (child, curriculum, guide, school year, weekdays, start date, pauses) |
-| `assignments` | **Lesson**: adds its course, its place in the sequence, subject, minutes, and an optional reading-book link |
+| `enrollments` | **Course** (child, curriculum, guide, school year, weekdays, start date, pauses, default minutes; credits and final grade in grades 9–12) |
+| `assignments` | **Lesson** (renamed in code and API): adds its course, its place in the sequence, subject, minutes, and an optional reading-book link. A finished lesson's completion date is its calendar day. |
+| none | **Subject** per child (required, common or own; counts toward a state subject) and **objective** per subject per year |
+| none | **Activity** (children, subjects, date, minutes, note, attachments or links); repeating activities |
 | `attendance` | adds how it was set (suggested or confirmed) and minutes |
 | `school_years` | adds terms (quarters) |
 | `assignment_evidence`, `evidence_staging` | **Work sample** (child, subject, date, optional lesson, pages, caption); inbox items carry suggestions |
 | `subject_taxonomies`, `reporting_categories`, `curriculum_classifications` (empty or unused) | one fixed **subject** list; each state pack maps its subjects onto it |
 | `jurisdictions`, `compliance_packets` (placeholders) | **Requirement packs** (shared, versioned), the family's chosen pack with evaluator adjustments, and **Tasks** |
 | `household_settings` | adds a daily load limit and days-or-hours mode |
-| `students` | adds a birth date (Pennsylvania's affidavit asks for ages) |
-| shared `catalog.db` | adds community guides, curriculum programs (their materials' ISBNs) and chapter lists |
+| `households` | adds the **state**, with the date it applies from (a move adds a new one) |
+| `students` | grade from a fixed list, re-confirmed each July 1; a yes/no IEP flag. **No birth date**: ages go into form blanks only ([Privacy](#privacy-keep-the-minimum)). |
+| the shared book cache | adds community guides, curriculum programs (their materials' ISBNs) and chapter lists |
 
-**Decide the data tier first.** With no users, this is the cheapest moment to switch to Postgres if it wins, and shared guides need a shared database. See [Decisions](decisions.md).
+**Data tier: Postgres** ([decided 2026-10-11](decision-records/data-tier.md)), one database with each family walled off by row-level security, built before the spine.
 
 ## Order of work
 | When | Work |
 |---|---|
-| Oct–Dec 2026 | Data-tier decision; then the backend spine: subjects → Curriculum, Materials and Guide → Reading books and reading lists → Course → minutes and terms → attendance suggestions → move engine with previews and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API → inbox suggestions |
-| Jan–Mar 2027 | The loop's screens, built **directly in React**: Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings), Library (two Add flows), lesson sheet (Add work), Records, kid's My books. Community guides v1, seeded. Pennsylvania report template. |
-| Mar–May 2027 | Second wave of states, starting with New York; extension docs; launch work (Phase 8). Feature freeze mid-May. |
+| Oct–Dec 2026 | Data-tier decision; then the backend spine: state and grades → subjects and objectives → Curriculum, Materials and Guide → Reading books and reading lists → Course → Lesson rename, minutes and terms → activities → attendance suggestions → move engine with previews and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → transcript and credits → photo orientation fix and PDF metadata scrub |
+| Jan–Mar 2027 | The loop's screens, built **directly in React**: the **year-setup interview**, Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings), Library (two Add flows), lesson sheet (Add work), Log an activity, Records (Checklist, Portfolio, Your state), progress rings and course bars, kid's My books. Fillable state forms (filled in the browser). Community guides v1, seeded. Public state pages. |
+| Mar–May 2027 | Second wave of states: New York on its own, then a base pack for states with similar light laws; the lifetime archive download; extension docs; launch work (Phase 8). Feature freeze mid-May. |
 | Jun 2027 | Launch with an honest "N states supported" claim and a seeded guide catalog |
+
+**Scope check:** "everything in scope for a state's portfolio", including transcripts, diplomas and special education, is a lot for one developer by June. Pennsylvania must ship complete; other states join only once their worksheets are reviewed, and the launch claims only those.
 
 ## Parked until after launch
 Cheers from home and more kid extras; kids capturing their own work; the kid score-snap extension idea; a generic custom-report designer; the upload email address; Share to Curiculy; page-number matching.
 
 ## Open questions
 - **Attendance:** may a day with finished work count automatically, with no parent tap?
+- **Several states at once:** sign-up allows picking "state(s)". Beyond a move partway through the year, is there a case for two states at once (for example, a family split between homes)?
 - **Pricing:** a natural split is **free** (planner and community guides, to grow the catalog and compete with free options) and **paid** (requirements, Records and work-sample storage). Check competitors' prices before setting numbers.
 - **State funding (ESAs):** can Curiculy be an eligible expense, and are ESA record rules a kind of pack?
-- **Pennsylvania:** see the [worksheet's open questions](state-requirements/pennsylvania.md#open-questions-for-review).
+- **Pennsylvania:** a few wordings to [confirm against the statute](state-requirements/pennsylvania.md#still-to-confirm-against-the-statute).
