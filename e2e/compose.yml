@@ -5,10 +5,29 @@
 name: curiculy-e2e
 
 services:
+  # A throwaway Postgres for each run (in memory). Its first start creates the
+  # two roles, as in production.
+  curiculy-db:
+    image: postgres:18.4-trixie
+    environment:
+      POSTGRES_PASSWORD: e2e-only-superuser
+      CURICULY_OWNER_PASSWORD: e2e-only-owner
+      CURICULY_APP_PASSWORD: e2e-only-app
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off"]
+    tmpfs:
+      - /var/lib/postgresql
+    volumes:
+      - ../docker/postgres/10-curiculy-roles.sh:/docker-entrypoint-initdb.d/10-curiculy-roles.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "curiculy"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   # The service is not called "app": .app is an HSTS-preloaded top-level
   # domain, so Chromium upgrades http://app/ to https and the connection fails.
   #
-  # Every run starts from empty databases (tmpfs), signs tokens with a
+  # Every run starts from an empty database (tmpfs), signs tokens with a
   # test-only key, has no Ollama (port 9 refuses connections, so AI features
   # degrade as they do when the model is off), and seeds one invite key so the
   # suite can register a real household.
@@ -17,10 +36,12 @@ services:
       context: ..
       target: base
     image: curiculy-e2e-app:latest
+    depends_on:
+      curiculy-db:
+        condition: service_healthy
     environment:
-      CATALOG_DATABASE_URL: sqlite:////data/catalog.db
-      TENANT_DATABASE_URL: sqlite:////data/tenant.db
-      ADMIN_DATABASE_URL: sqlite:////data/admin.db
+      DATABASE_URL: postgresql+psycopg://curiculy_app:e2e-only-app@curiculy-db:5432/curiculy
+      DATABASE_OWNER_URL: postgresql+psycopg://curiculy_owner:e2e-only-owner@curiculy-db:5432/curiculy
       EVIDENCE_DIR: /data/evidence
       INDEX_HTML_PATH: /app/index.html
       STATIC_DIR: /app/static
@@ -38,11 +59,12 @@ services:
     entrypoint:
       - sh
       - -c
-      - python scripts/create_invite.py --key e2e-invite-key > /dev/null && exec ./entrypoint.sh
+      - python -m app.db_startup > /dev/null && python scripts/create_invite.py --key e2e-invite-key > /dev/null && exec ./entrypoint.sh
     tmpfs:
       - /data
     volumes:
       - ../app:/app/app
+      - ../migrations:/app/migrations
       - ../scripts:/app/scripts
       - ../static:/app/static
       - ../index.html:/app/index.html

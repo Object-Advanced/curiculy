@@ -1,9 +1,8 @@
 """Holding area for captures that are not yet filed against an assignment.
 
 Screenshots from the Chrome extension land here, on the tenant evidence volume,
-until a parent links them to a specific assignment. Each household already has
-its own SQLite file, so ``tenant_id`` is the JWT tenant UUID rather than a
-foreign key: there is no tenants table on this database.
+until a parent links them to a specific assignment. ``tenant_id`` (from
+``TenantBase``) is the family the capture token belongs to.
 """
 
 from datetime import datetime
@@ -22,7 +21,6 @@ class EvidenceStaging(TimestampMixin, TenantBase):
     __table_args__ = (Index("ix_evidence_staging_captured_at", "captured_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     file_path: Mapped[str] = mapped_column(String(1024), nullable=False)
     captured_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

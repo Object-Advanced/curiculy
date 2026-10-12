@@ -1,7 +1,7 @@
 # Monitoring
 
 ## Is it up?
-- **`https://curiculy.com/api/health`** returns `{"status":"ok","database":"ok",...}` when the app can reach `catalog.db` and `admin.db`.
+- **`https://curiculy.com/api/health`** returns `{"status":"ok","database":"ok",...}` when the app can reach Postgres. `docker ps` also shows `curiculy_db … (healthy)` (`pg_isready` every 5 seconds).
 - **`docker ps`** shows `curiculy_api … (healthy)`. Docker runs the same check every 30 seconds.
 
 ## Logs

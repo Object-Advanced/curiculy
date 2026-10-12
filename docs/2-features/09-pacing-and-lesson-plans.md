@@ -47,7 +47,7 @@ A "plan" is a Week/Day guide made of lessons, with optional time slots. It can c
 | POST | `/api/curriculum/import-paper` | parent | Photo of the sheet → plan (vision AI, runs in the background) |
 
 ### Data
-The household's own file holds `curriculum_plans` (status: processing, ready or failed) and `curriculum_lessons`, plus the assignments and enrollments they create.
+The family's own rows (walled off by row-level security) are in `curriculum_plans` (status: processing, ready or failed) and `curriculum_lessons`, plus the assignments and enrollments they create.
 
 ### Code
 - `app/routers/pacing.py`, `app/routers/curriculum_plans.py`

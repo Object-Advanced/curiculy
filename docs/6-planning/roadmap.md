@@ -7,7 +7,7 @@
 ## Core loop: order of work
 | When | Work |
 |---|---|
-| **Oct–Dec 2026** | **Data-tier decision first.** Then the backend spine, one piece at a time: state and grades → subjects and objectives → Curriculum, Materials and Guide (replacing the two curriculum structures) → Reading books and reading lists → Course → the Lesson rename, minutes and school-year terms → activities → attendance suggestions → move engine with previews and the plan checker → requirement packs and Tasks → **Pennsylvania pack** (its [worksheet](state-requirements/pennsylvania.md) is reviewed; Q12–Q14 still open) → Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → transcript and credits → photo orientation fix and PDF metadata scrub |
+| **Oct–Dec 2026** | **Move to Postgres first** ([decided](decision-records/data-tier.md)). Then the backend spine, one piece at a time: state and grades → subjects and objectives → Curriculum, Materials and Guide (replacing the two curriculum structures) → Reading books and reading lists → Course → the Lesson rename, minutes and school-year terms → activities → attendance suggestions → move engine with previews and the plan checker → requirement packs and Tasks → **Pennsylvania pack** (its [worksheet](state-requirements/pennsylvania.md) is reviewed; Q12–Q14 still open) → Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → transcript and credits → photo orientation fix and PDF metadata scrub |
 | **Jan–Mar 2027** | The loop's screens in React: the **year-setup interview**; **Today** ("School today?", Tasks, overdue banner, "sample wanted"), **Calendar** (drag and Move to…, previews, warnings), **Library** (Add curriculum · Add reading book), the lesson sheet with **Add work**, **Log an activity**, **Records** (Checklist · Portfolio · Your state), progress rings and course bars, the kid's **My books**. Fillable state forms, filled in the browser. Community guides v1, seeded with the most-used programs. Public state pages. Parent phone capture. |
 | **Mar–May 2027** | Second wave of states: New York on its own, then a base pack for states with similar light laws; the lifetime archive download; extension docs; launch work (Phase 8 below). **Feature freeze mid-May.** |
 | **Jun 2027** | Public sign-up opens, with an honest "N states supported" claim and a seeded guide catalog |
@@ -40,7 +40,7 @@ The phases from October 2026 still describe the engineering work; the core loop 
 
 ## Next up (in order)
 1. **Confirm the last Pennsylvania wordings** against the statute (see the [worksheet](state-requirements/pennsylvania.md)); Q1–Q14 are decided.
-2. **Data-tier decision record** (SQLite per family, or Postgres), now, before the spine is built.
+2. **Deploy the move to Postgres** ([built 2026-10-12](decision-records/data-tier.md)): the database, the cross-family guardrails and backup layers 2–3 are done and tested; then layer 1 (continuous archive) and the off-site copy.
 3. **Subjects**, then **Curriculum, Materials and Guide**: the first pieces of the backend spine.
 4. Ops tasks that still stand: an off-site backup copy, an uptime monitor, turning off the public `/docs`.
 

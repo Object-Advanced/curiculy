@@ -1,111 +1,156 @@
-"""Backups: consistent database snapshots, an evidence mirror, and a restore drill."""
+"""Backups: the verified whole-database dump, per-family copies, and restoring one family."""
 
-import json
+from __future__ import annotations
+
 import shutil
-import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
 
-from scripts.backup import main, prune_snapshots, run_backup
+from app.db import open_family_session, owner_engine
+from app.models import Assignment, Household, Student
+from app.services.family_data import (
+    advance_sequences,
+    delete_family_rows,
+    export_family,
+    read_export,
+    restore_family,
+    write_export,
+)
+from scripts import backup
+from scripts.restore_family import restore_from_file
 
-NOW = datetime(2026, 10, 9, 2, 30, tzinfo=timezone.utc)
+pytestmark = pytest.mark.usefixtures("committed_db")
 
 
-def _wal_database(path: Path, rows: int = 3) -> sqlite3.Connection:
-    """A WAL database whose newest rows are still only in the -wal file."""
-    conn = sqlite3.connect(path)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA wal_autocheckpoint=0")
-    conn.execute("CREATE TABLE lessons (id INTEGER PRIMARY KEY, title TEXT)")
-    conn.executemany(
-        "INSERT INTO lessons (title) VALUES (?)", [(f"Lesson {n}",) for n in range(rows)]
+def _family(tenant_id: str, child: str, lessons: int = 2) -> None:
+    session = open_family_session(tenant_id)
+    try:
+        household = Household(name=f"{child} family")
+        session.add(household)
+        session.flush()
+        student = Student(household_id=household.id, name=child)
+        session.add(student)
+        session.flush()
+        for day in range(1, lessons + 1):
+            session.add(
+                Assignment(student_id=student.id, title=f"{child} lesson {day}", scheduled_date=date(2026, 10, day))
+            )
+        session.commit()
+    finally:
+        session.close()
+
+
+def _export(tenant_id: str) -> dict:
+    session = open_family_session(tenant_id)
+    try:
+        return export_family(session)
+    finally:
+        session.close()
+
+
+def _names(tenant_id: str) -> list[str]:
+    session = open_family_session(tenant_id)
+    try:
+        return [row.title for row in session.query(Assignment).order_by(Assignment.id)]
+    finally:
+        session.close()
+
+
+class TestFamilyCopies:
+    def test_export_holds_only_that_family(self) -> None:
+        _family("family-a", "Ada")
+        _family("family-b", "Ben")
+        export = _export("family-a")
+        assert export["tenant_id"] == "family-a"
+        assert [row["name"] for row in export["tables"]["students"]] == ["Ada"]
+        assert all(
+            row["tenant_id"] == "family-a" for rows in export["tables"].values() for row in rows
+        )
+
+    def test_restore_brings_one_family_back_and_leaves_others_alone(self, tmp_path: Path) -> None:
+        _family("family-a", "Ada")
+        _family("family-b", "Ben")
+        path = tmp_path / "family-a.json.gz"
+        write_export(path, _export("family-a"))
+
+        session = open_family_session("family-a")
+        try:
+            delete_family_rows(session)
+            session.add(Household(name="Changed after the backup"))
+            session.commit()
+        finally:
+            session.close()
+
+        tenant_id, restored = restore_from_file(path)
+
+        assert (tenant_id, restored) == ("family-a", 4)
+        assert _names("family-a") == ["Ada lesson 1", "Ada lesson 2"]
+        assert _names("family-b") == ["Ben lesson 1", "Ben lesson 2"]
+        assert _export("family-a")["tables"] == read_export(path)["tables"]
+
+    def test_a_copy_cannot_be_restored_into_another_family(self) -> None:
+        _family("family-a", "Ada")
+        export = _export("family-a")
+        session = open_family_session("family-b")
+        try:
+            with pytest.raises(ValueError, match="different family"):
+                restore_family(session, export)
+        finally:
+            session.close()
+
+    def test_new_rows_after_a_restore_get_fresh_ids(self, tmp_path: Path) -> None:
+        _family("family-a", "Ada")
+        path = tmp_path / "a.json.gz"
+        write_export(path, _export("family-a"))
+        restore_from_file(path)
+        advance_sequences(owner_engine())
+        _family("family-b", "Ben", lessons=1)
+        assert _names("family-b") == ["Ben lesson 1"]
+
+
+def test_snapshots_keep_only_the_newest(tmp_path: Path) -> None:
+    for name in ("2026-10-01T000000Z", "2026-10-02T000000Z", "2026-10-03T000000Z", "notes"):
+        (tmp_path / name).mkdir()
+    assert backup.prune_snapshots(tmp_path, keep=2) == ["2026-10-01T000000Z"]
+    assert sorted(path.name for path in tmp_path.iterdir()) == [
+        "2026-10-02T000000Z",
+        "2026-10-03T000000Z",
+        "notes",
+    ]
+
+
+def test_evidence_mirror_copies_only_new_files(tmp_path: Path) -> None:
+    source = tmp_path / "evidence" / "family-a"
+    source.mkdir(parents=True)
+    (source / "one.webp").write_bytes(b"one")
+    mirror = tmp_path / "mirror"
+    assert backup.mirror_evidence(tmp_path / "evidence", mirror) == 1
+    (source / "two.webp").write_bytes(b"two")
+    assert backup.mirror_evidence(tmp_path / "evidence", mirror) == 1
+    assert (mirror / "family-a" / "two.webp").read_bytes() == b"two"
+
+
+@pytest.mark.skipif(shutil.which("pg_dump") is None, reason="needs the Postgres client tools")
+def test_nightly_backup_dumps_verifies_and_copies_each_family(tmp_path: Path) -> None:
+    _family("family-a", "Ada")
+    _family("family-b", "Ben")
+    _family("demo-0123456789abcdef", "Visitor")
+    evidence = tmp_path / "evidence"
+    (evidence / "family-a").mkdir(parents=True)
+    (evidence / "family-a" / "page.webp").write_bytes(b"photo")
+
+    manifest = backup.run_backup(
+        tmp_path / "backups",
+        evidence_dir=evidence,
+        now=datetime(2026, 10, 12, 2, 0, tzinfo=timezone.utc),
     )
-    conn.commit()
-    return conn  # left open so nothing checkpoints the WAL into the main file
 
-
-@pytest.fixture
-def data_dir(tmp_path: Path) -> Path:
-    path = tmp_path / "data"
-    path.mkdir()
-    return path
-
-
-def test_snapshot_includes_writes_still_in_the_wal(data_dir: Path, tmp_path: Path) -> None:
-    writer = _wal_database(data_dir / "tenant_family.db")
-    try:
-        manifest = run_backup(data_dir, tmp_path / "backups", now=NOW)
-    finally:
-        writer.close()
-
-    snapshot = tmp_path / "backups" / "2026-10-09T023000Z"
-    copy = sqlite3.connect(snapshot / "tenant_family.db")
-    try:
-        assert copy.execute("SELECT COUNT(*) FROM lessons").fetchone()[0] == 3
-    finally:
-        copy.close()
-    assert manifest["databases"] == [
-        {"name": "tenant_family.db", "bytes": (snapshot / "tenant_family.db").stat().st_size, "check": "ok"}
-    ]
-    assert json.loads((snapshot / "manifest.json").read_text())["created_at"] == "2026-10-09T023000Z"
-
-
-def test_evidence_is_mirrored_once(data_dir: Path, tmp_path: Path) -> None:
-    evidence = data_dir / "evidence" / "family"
-    evidence.mkdir(parents=True)
-    (evidence / "a.webp").write_bytes(b"photo-a")
-    dest = tmp_path / "backups"
-
-    first = run_backup(data_dir, dest, evidence_dir=data_dir / "evidence", now=NOW)
-    (evidence / "b.webp").write_bytes(b"photo-b")
-    second = run_backup(data_dir, dest, evidence_dir=data_dir / "evidence", now=NOW + timedelta(days=1))
-
-    assert first["evidence_files_copied"] == 1
-    assert second["evidence_files_copied"] == 1
-    assert (dest / "evidence" / "family" / "b.webp").read_bytes() == b"photo-b"
-
-
-def test_only_the_newest_snapshots_are_kept(data_dir: Path, tmp_path: Path) -> None:
-    dest = tmp_path / "backups"
-    for day in range(4):
-        run_backup(data_dir, dest, keep=10, now=NOW + timedelta(days=day))
-    (dest / "evidence").mkdir()
-
-    removed = prune_snapshots(dest, keep=2)
-
-    assert removed == ["2026-10-09T023000Z", "2026-10-10T023000Z"]
-    assert sorted(path.name for path in dest.iterdir()) == [
-        "2026-10-11T023000Z",
-        "2026-10-12T023000Z",
-        "evidence",
-    ]
-
-
-def test_restore_drill_brings_the_data_back(data_dir: Path, tmp_path: Path) -> None:
-    writer = _wal_database(data_dir / "tenant_family.db", rows=5)
-    writer.close()
-    run_backup(data_dir, tmp_path / "backups", now=NOW)
-
-    # Disaster: the live file is lost. Restore = copy the snapshot back.
-    (data_dir / "tenant_family.db").unlink()
-    shutil.copy2(tmp_path / "backups" / "2026-10-09T023000Z" / "tenant_family.db", data_dir)
-
-    restored = sqlite3.connect(data_dir / "tenant_family.db")
-    try:
-        assert restored.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-        assert restored.execute("SELECT COUNT(*) FROM lessons").fetchone()[0] == 5
-    finally:
-        restored.close()
-
-
-def test_a_damaged_database_fails_the_run(
-    data_dir: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    (data_dir / "tenant_family.db").write_bytes(b"this is not a database" * 100)
-
-    exit_code = main(["--data-dir", str(data_dir), "--dest", str(tmp_path / "backups")])
-
-    assert exit_code == 1
-    assert "tenant_family.db" in capsys.readouterr().err
+    snapshot = tmp_path / "backups" / "2026-10-12T020000Z"
+    assert (snapshot / "curiculy.dump").stat().st_size > 0
+    assert manifest["database"]["restored_rows"]["students"] == 3
+    assert [row["family"] for row in manifest["families"]] == ["family-a", "family-b"]
+    assert read_export(snapshot / "families" / "family-a.json.gz")["tenant_id"] == "family-a"
+    assert manifest["evidence_files_copied"] == 1
+    assert (snapshot / "manifest.json").is_file()

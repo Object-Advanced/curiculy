@@ -6,18 +6,14 @@ a day early every evening.
 """
 
 from datetime import date, datetime, timezone
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from app.config import ConfigurationError, Settings, settings, validate_runtime_configuration
-from app.db import TenantBase
 from app.enums import AssignmentStatus
 from app.models import Assignment, Household, Student
-from app.schema_patches import apply_tenant_schema, sqlite_table_columns
 from app.services import clock
 
 # 00:30 UTC on 9 October is still the evening of 8 October in California.
@@ -134,27 +130,3 @@ class TestEndpointsUseHouseholdToday:
         body = client.get(f"/api/students/{student.id}/assignments?period=day").json()
 
         assert body["start_date"] == body["end_date"] == "2026-10-08"
-
-
-class TestSchemaPatch:
-    def test_old_households_table_gains_timezone(self, tmp_path: Path) -> None:
-        engine = create_engine(f"sqlite:///{tmp_path / 'tenant_old.db'}")
-        try:
-            TenantBase.metadata.create_all(engine)
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE households DROP COLUMN timezone"))
-                conn.execute(
-                    text(
-                        "INSERT INTO households (id, name, created_at, updated_at) "
-                        "VALUES (1, 'Kept', datetime('now'), datetime('now'))"
-                    )
-                )
-
-            apply_tenant_schema(engine)
-            apply_tenant_schema(engine)
-
-            with engine.connect() as conn:
-                assert "timezone" in sqlite_table_columns(conn, "households")
-                assert conn.execute(text("SELECT name FROM households")).scalar() == "Kept"
-        finally:
-            engine.dispose()

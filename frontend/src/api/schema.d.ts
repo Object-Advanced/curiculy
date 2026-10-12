@@ -2575,8 +2575,6 @@ export interface components {
             icon?: string | null;
             /** Id */
             id: number;
-            /** Jurisdiction Id */
-            jurisdiction_id: number | null;
             /** Letter */
             readonly letter: string;
             /** Name */

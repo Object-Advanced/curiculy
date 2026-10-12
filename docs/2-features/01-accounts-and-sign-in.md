@@ -11,7 +11,7 @@ How parents and kids get into Curiculy, and how the app knows who they are.
 ## Scope
 
 ### What it does
-- **Invite-only registration.** A new parent needs an invite key. The owner makes keys from the command line (`scripts/create_invite.py`) or the admin panel in Settings. Registering creates the household and its own database file.
+- **Invite-only registration.** A new parent needs an invite key. The owner makes keys from the command line (`scripts/create_invite.py`) or the admin panel in Settings. Registering creates the family (a new `tenant_id`) and its household row.
 - **Parent sign-in** with email and password. The session lasts 24 hours.
 - **Kid sign-in on a shared device:**
   1. The child types the **family code** (8 characters shown as `ABCD-2345`, with look-alike letters left out). A parent finds it in Settings → Students and can rotate it.
@@ -49,7 +49,7 @@ The family-code lookup returns **first names only**. It used to reveal children'
 | POST / GET | `/api/admin/invite`, `/api/admin/invites` | admin parent | Make and list invite keys |
 
 ### Data
-`admin.db` holds:
+The shared sign-in tables hold:
 - `users`: parents, plus one row per child who has a PIN
 - `invite_keys`
 - `family_codes`

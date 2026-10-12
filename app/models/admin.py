@@ -1,7 +1,7 @@
 """Admin-database models: login accounts, invite keys, and capture tokens.
 
-These live on ``admin.db``, not on a tenant file. ``AdminBase`` is declared
-next to the catalog and tenant bases in ``app.db``.
+Shared tables with no family scope (no ``tenant_id``, no row-level policy).
+``AdminBase`` is declared next to the catalog and tenant bases in ``app.db``.
 """
 
 from datetime import datetime

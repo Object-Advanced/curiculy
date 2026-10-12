@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Household
@@ -7,17 +8,23 @@ DEFAULT_HOUSEHOLD_NAME = "Default household"
 
 
 def get_default_household(db: Session) -> Household:
-    """Return the one household for this tenant file, creating it if needed.
+    """Return this family's one household, creating it if needed.
 
-    New family databases start as ``DEFAULT_HOUSEHOLD_NAME``. The setup wizard
-    (and PATCH /household) rename that row; there is still one household per file.
+    New families start as ``DEFAULT_HOUSEHOLD_NAME``. The setup wizard (and
+    PATCH /household) rename that row. The database allows one household per
+    family; if two first requests race, the loser reads the winner's row.
     """
     household = db.query(Household).order_by(Household.id).first()
-    if household is None:
-        household = Household(name=DEFAULT_HOUSEHOLD_NAME)
-        db.add(household)
-        db.commit()
-        db.refresh(household)
+    if household is not None:
+        return household
+    try:
+        with db.begin_nested():
+            household = Household(name=DEFAULT_HOUSEHOLD_NAME)
+            db.add(household)
+    except IntegrityError:
+        return db.query(Household).order_by(Household.id).one()
+    db.commit()
+    db.refresh(household)
     return household
 
 

@@ -44,8 +44,8 @@ Photos, PDFs and screenshots of a child's work, attached to lessons so they appe
 ### Data
 - **Files** live on the evidence volume: `/data/evidence/<household id>/…`, which is `/datalake/projects/curiculy/evidence` on the server.
 - **Records:**
-  - the household's own file holds `assignment_evidence` and `evidence_staging`
-  - `admin.db` holds `capture_tokens`, so a stolen token can be revoked without changing the master secret
+  - the family's own rows are in `assignment_evidence` and `evidence_staging`
+  - the shared sign-in tables hold `capture_tokens`, so a stolen token can be revoked without changing the master secret
 
 ### Code
 - `app/evidence/__init__.py`: type check, size cap, resizing, safe paths
