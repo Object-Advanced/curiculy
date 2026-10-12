@@ -1,7 +1,29 @@
-# Secrets (JWT_SECRET, MAIL_USERNAME, MAIL_PASSWORD, GOOGLE_BOOKS_API_KEY)
-# come from the host environment or a gitignored .env file. Never put real
-# credentials in this file.
+# Secrets (JWT_SECRET, the three Postgres passwords, MAIL_USERNAME,
+# MAIL_PASSWORD, GOOGLE_BOOKS_API_KEY) come from the host environment or a
+# gitignored .env file. Never put real credentials in this file.
 services:
+  # Postgres: one database, each family's rows walled off by row-level
+  # security. Data on the NVMe drive. Not published to the host or the LAN;
+  # only the services below reach it. The first start creates the two roles
+  # (docker/postgres/10-curiculy-roles.sh).
+  # See docs/6-planning/decision-records/data-tier.md.
+  db:
+    image: postgres:18.4-trixie
+    container_name: curiculy_db
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      CURICULY_OWNER_PASSWORD: ${CURICULY_OWNER_PASSWORD:?set CURICULY_OWNER_PASSWORD in .env}
+      CURICULY_APP_PASSWORD: ${CURICULY_APP_PASSWORD:?set CURICULY_APP_PASSWORD in .env}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql # NVMe drive
+      - ./docker/postgres/10-curiculy-roles.sh:/docker-entrypoint-initdb.d/10-curiculy-roles.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "curiculy"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -9,10 +31,14 @@ services:
     container_name: curiculy_api
     ports:
       - "3040:80"
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      CATALOG_DATABASE_URL: sqlite:////data/catalog.db
-      TENANT_DATABASE_URL: sqlite:////data/tenant.db
-      ADMIN_DATABASE_URL: sqlite:////data/admin.db
+      # The app's role can't bypass row-level security; the owner role runs
+      # migrations and startup upkeep.
+      DATABASE_URL: postgresql+psycopg://curiculy_app:${CURICULY_APP_PASSWORD}@db:5432/curiculy
+      DATABASE_OWNER_URL: postgresql+psycopg://curiculy_owner:${CURICULY_OWNER_PASSWORD}@db:5432/curiculy
       EVIDENCE_DIR: /data/evidence
       INDEX_HTML_PATH: /app/index.html
       STATIC_DIR: /app/static
@@ -33,15 +59,15 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./data:/data # NVMe drive for SQLite databases
       - /datalake/projects/curiculy/evidence:/data/evidence # 30TB array for photos
       - ./app:/app/app
+      - ./migrations:/app/migrations
       - ./scripts:/app/scripts
       - ./static:/app/static
       - ./index.html:/app/index.html
       - ./sw.js:/app/sw.js
     # Shows as healthy/unhealthy in `docker ps` and to an uptime monitor.
-    # Checks the process and catalog/admin databases, not each household file.
+    # Checks the process and that it can reach Postgres.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1/api/health', timeout=3)"]
       interval: 30s
@@ -51,29 +77,52 @@ services:
     restart: unless-stopped
 
   # Nightly backups, off until enabled: docker compose --profile backup up -d backup
-  # Snapshots every database (checked) and mirrors new evidence files into
-  # BACKUP_HOST_DIR (default ./backups), keeping the newest 14.
-  # See docs/4-operations/backups-and-restore.md.
+  # A whole-database dump (restored into a scratch database and checked), one
+  # file per family, and new evidence files, into BACKUP_HOST_DIR (default
+  # ./backups), keeping the newest 14. See docs/4-operations/backups-and-restore.md.
   backup:
     build:
       context: .
-      target: base
+      target: backup
+    image: curiculy-backup:latest
     container_name: curiculy_backup
     profiles: ["backup"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://curiculy_app:${CURICULY_APP_PASSWORD}@db:5432/curiculy
+      DATABASE_OWNER_URL: postgresql+psycopg://curiculy_owner:${CURICULY_OWNER_PASSWORD}@db:5432/curiculy
     entrypoint:
       - sh
       - -c
       - >-
         while true;
-        do python scripts/backup.py --data-dir /data --evidence-dir /data/evidence --dest /backups --keep 14;
+        do python scripts/backup.py --evidence-dir /data/evidence --dest /backups --keep 14;
         sleep 86400;
         done
     volumes:
-      - ./data:/data
       - /datalake/projects/curiculy/evidence:/data/evidence:ro
       - ${BACKUP_HOST_DIR:-./backups}:/backups
+      - ./app:/app/app
       - ./scripts:/app/scripts
     restart: unless-stopped
+
+  # A throwaway Postgres for the test suite: in memory, fsync off. The tests
+  # create their own roles and a fresh database each run.
+  db-test:
+    image: postgres:18.4-trixie
+    profiles: ["dev"]
+    environment:
+      POSTGRES_PASSWORD: test-only-superuser
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
 
   tests:
     build:
@@ -81,8 +130,15 @@ services:
       target: dev
     image: curiculy-tests:latest
     profiles: ["dev"]
+    depends_on:
+      db-test:
+        condition: service_healthy
+    environment:
+      TEST_DATABASE_ADMIN_URL: postgresql://postgres:test-only-superuser@db-test:5432/postgres
     volumes:
       - ./app:/app/app
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
       - ./scripts:/app/scripts
       - ./tests:/app/tests
       - ./ruff.toml:/app/ruff.toml

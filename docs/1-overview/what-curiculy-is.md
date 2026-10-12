@@ -36,7 +36,7 @@
 2. **Calm for parents, playful for kids.** Parents get "Morning Light": airy, natural, social-app modern, with light whimsy. Kids get "Sticker Book": chunky, bright, collectible. One design system serves both (see [Design system](../3-design/design-system.md)).
 3. **The family's day comes first.** "Today" follows the family's own clock and time zone, and every scheduler respects school days and days off.
 4. **Parents see everything said to a child.** Nudges and AI questions are visible to the parent.
-5. **The family's records are safe.** Each family has its own database file, with nightly snapshots and integrity checks.
+5. **The family's records are safe.** Each family's rows are walled off by the database itself (row-level security, checked on every start and by tests), with nightly backups that are restored to prove they work.
 6. **Honest records, no square pegs.** When a state asks for something Curiculy can't check, it says so ("parent confirms") instead of forcing a fit. See [State requirements](../6-planning/state-requirements/README.md).
 7. **Keep the minimum.** No sensitive records (health, birth dates, addresses); state forms leave private details blank for the parent. See [Privacy](../6-planning/product-spine.md#privacy-keep-the-minimum).
 

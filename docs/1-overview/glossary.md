@@ -4,7 +4,7 @@ The words parents see, the words the code uses, and the words we're moving to. W
 
 | Use (plain word) | Shown in the app today | In the code | Meaning |
 |---|---|---|---|
-| **Household / family** | Household, "The Rivera family" | `Household`, "tenant" | One family; it has its own database file |
+| **Household / family** | Household, "The Rivera family" | `Household`, "tenant" (`tenant_id`) | One family; its rows carry its `tenant_id`, and the database shows each family only its own |
 | **Family code** | Family code | `family_codes` | 8 characters (`ABCD-2345`) a kid's device uses to find the family at sign-in |
 | **PIN** | PIN | a child row in `users` (role `child`) | A kid's 4–8 digit sign-in number |
 | **Lesson** | Assignment, lesson | `Assignment` | One dated piece of work for one child. Planned: renamed `Lesson` in the code and API too |

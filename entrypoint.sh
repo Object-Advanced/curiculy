@@ -2,7 +2,9 @@
 set -e
 mkdir -p /data/evidence
 python -c "from app.config import validate_runtime_configuration; validate_runtime_configuration()"
-python -c "from app.db import init_databases; init_databases()"
+# Wait for Postgres, apply migrations, refuse to start unless families are
+# walled off, then upkeep (interrupted imports, expired demos).
+python -m app.db_startup
 # Behind a proxy or tunnel, every request arrives from the proxy's address.
 # --proxy-headers takes the visitor's address from X-Forwarded-For, but only
 # when the request comes from FORWARDED_ALLOW_IPS, so a direct client cannot

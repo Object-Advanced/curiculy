@@ -1,5 +1,6 @@
 """Login, registration, demo tokens, student PIN logins, capture tokens, and user switching."""
 
+import logging
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -37,6 +38,7 @@ from app.schemas.auth import (
     Token,
     TokenUserRead,
 )
+from app.services.demo_households import purge_stale_demo_households_now_and_then
 from app.services.capture_tokens import (
     active_capture_token,
     issue_capture_token,
@@ -61,6 +63,7 @@ from app.services.family_codes import (
 )
 from app.services.households import get_default_household
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -193,6 +196,10 @@ def login_for_access_token(
     dependencies=[Depends(limit_by_client("demo", attempts=10, per_seconds=600))],
 )
 def demo_access_token() -> Token:
+    try:
+        purge_stale_demo_households_now_and_then()
+    except Exception:  # cleanup must never block a visitor's demo
+        logger.exception("Could not clear expired demo households")
     return demo_token()
 
 

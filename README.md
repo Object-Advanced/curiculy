@@ -15,8 +15,8 @@ A homeschool planner for families. Parents plan lessons from whatever curriculum
 ## Quick start
 Only Docker is needed.
 
-1. **Configure:** `cp .env.example .env`, then set a strong `JWT_SECRET`. The app refuses to start in production mode if it's missing, weak, or a placeholder. `MAIL_*` (portfolio email) and `OLLAMA_HOST` / `OLLAMA_MODEL` (AI features) are optional.
-2. **Start:** `docker compose up -d`. The app is at `http://localhost:3040`.
+1. **Configure:** `cp .env.example .env`, then set a strong `JWT_SECRET` and the three database passwords (`POSTGRES_PASSWORD`, `CURICULY_OWNER_PASSWORD`, `CURICULY_APP_PASSWORD`). The app refuses to start in production mode if the secret is missing, weak, or a placeholder. `MAIL_*` (portfolio email) and `OLLAMA_HOST` / `OLLAMA_MODEL` (AI features) are optional.
+2. **Start:** `docker compose up -d db api`. Postgres starts first; the app applies migrations and checks that every family is walled off before it serves. The app is at `http://localhost:3040`.
 3. **First account:** registration needs an invite key:
    ```
    docker compose exec api python scripts/create_invite.py --expires-days 1

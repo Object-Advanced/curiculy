@@ -3266,17 +3266,6 @@
             "title": "Id",
             "type": "integer"
           },
-          "jurisdiction_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jurisdiction Id"
-          },
           "letter": {
             "readOnly": true,
             "title": "Letter",
@@ -3301,7 +3290,6 @@
         "required": [
           "id",
           "name",
-          "jurisdiction_id",
           "letter"
         ],
         "title": "HouseholdRead",

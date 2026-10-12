@@ -55,7 +55,9 @@ def _assert_one_plan_notification(
 
 
 def _tracked_opener(engine: Engine, expected_tenant: str, expected_demo_key: str | None):
-    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    factory = sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, join_transaction_mode="create_savepoint"
+    )
     opened: list[Session] = []
     close_calls: list[int] = []
 
