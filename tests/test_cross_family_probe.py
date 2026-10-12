@@ -33,6 +33,7 @@ from app.models import (
     AssignmentGrade,
     Attendance,
     CalendarException,
+    Course,
     Curriculum,
     CurriculumLesson,
     CurriculumPlan,
@@ -42,7 +43,10 @@ from app.models import (
     Household,
     LibraryChapter,
     LibraryItem,
+    LibraryLesson,
     ParentNotification,
+    PlannedCurriculum,
+    PlannedCurriculumItem,
     SchoolYear,
     Student,
     StudentSubject,
@@ -65,10 +69,13 @@ ID_PARAMS = {
     "session_id": "session",
     "subject_id": "student_subject",
     "item_id": "library_item",
+    "planned_curriculum_id": "planned_curriculum",
+    "course_id": "course",
     "file_path": "file_path",
 }
-# Path parameters that aren't a family's record (shared book cache, static files).
-NOT_FAMILY_PARAMS = {"book_id", "isbn", "path", "state_code"}
+# Path parameters that aren't a family's record (shared book cache and
+# community catalog, static files).
+NOT_FAMILY_PARAMS = {"book_id", "isbn", "path", "state_code", "entry_id", "contribution_id"}
 
 # Request bodies for writes, so they get past validation to the ownership check.
 BODIES = {
@@ -82,6 +89,12 @@ BODIES = {
     ("POST", "/api/homework-help/sessions/{session_id}/messages"): {"content": "hi"},
     ("POST", "/api/homework-help/sessions/{session_id}/outcome"): {"outcome": "resolved"},
     ("POST", "/api/recalibrate/{student_id}/execute"): {"strategy": "extend"},
+    ("PATCH", "/api/planner/curricula/{planned_curriculum_id}"): {"name": "Hacked"},
+    ("POST", "/api/planner/curricula/{planned_curriculum_id}/items"): {"library_item_id": 1, "role": "reading"},
+    ("POST", "/api/planner/curricula/{planned_curriculum_id}/schedule/preview"): {
+        "student_ids": [1], "start_date": "2026-10-13"},
+    ("POST", "/api/planner/curricula/{planned_curriculum_id}/schedule"): {
+        "student_ids": [1], "start_date": "2026-10-13"},
 }
 
 
@@ -135,6 +148,25 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             kind="reading_book", title=f"{prefix} library book", author=f"{prefix} author", total_pages=99,
             chapters=[LibraryChapter(position=0, name=f"{prefix} chapter", start_page=1)],
         )
+        textbook = LibraryItem(
+            kind="textbook", title=f"{prefix} textbook", publisher=f"{prefix} press", edition="1",
+            subject_code="math", grade="4", total_pages=20,
+            lessons=[LibraryLesson(position=0, number=1, name=f"{prefix} first lesson", start_page=1, end_page=2)],
+        )
+        planned = PlannedCurriculum(name=f"{prefix} curriculum", subject_code="math", grade="4")
+        session.add_all([textbook, planned])
+        session.flush()
+        planned.items.append(PlannedCurriculumItem(library_item_id=textbook.id, role="textbook", position=0))
+        course = Course(
+            curriculum_id=planned.id, student_id=student.id, school_year_id=year.id,
+            start_date=date(2026, 10, 12), end_date=date(2026, 10, 12), weekdays="0,1,2,3,4",
+        )
+        session.add(course)
+        session.flush()
+        session.add(Assignment(
+            student_id=student.id, title=f"{prefix} course lesson", scheduled_date=date(2026, 10, 12),
+            course_id=course.id, library_item_id=textbook.id,
+        ))
         session.add_all(
             [
                 library_item,
@@ -173,6 +205,9 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             "staged": staged.id,
             "student_subject": student_subject.id,
             "library_item": library_item.id,
+            "textbook": textbook.id,
+            "planned_curriculum": planned.id,
+            "course": course.id,
             "file_path": file_path,
         }
     finally:
@@ -276,6 +311,14 @@ def test_ids_inside_request_bodies_refuse_another_familys_records(probe: dict) -
         ("POST", "/api/portfolios/preview", {"student_ids": [b["student"]]}),
         ("POST", "/api/portfolios/preview", {"student_id": b["student"]}),
         ("POST", "/api/auth/switch", {"student_id": b["student"]}),
+        ("POST", "/api/planner/curricula", {"textbook_id": b["textbook"]}),
+        ("POST", f"/api/planner/curricula/{a['planned_curriculum']}/items",
+         {"library_item_id": b["library_item"], "role": "reading"}),
+        ("POST", f"/api/planner/curricula/{a['planned_curriculum']}/schedule/preview",
+         {"student_ids": [b["student"]], "start_date": "2026-10-13"}),
+        ("POST", f"/api/planner/curricula/{a['planned_curriculum']}/schedule",
+         {"student_ids": [b["student"]], "start_date": "2026-10-13"}),
+        ("GET", f"/api/community/suggestions?library_item_id={b['textbook']}", None),
     ]
     for method, url, body in attempts:
         response = client.request(method, url, headers=headers, json=body)

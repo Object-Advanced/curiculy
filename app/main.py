@@ -26,6 +26,8 @@ from app.routers import (
     books,
     calendar,
     catalog,
+    community,
+    community_admin,
     curricula,
     curriculum_plans,
     dashboard,
@@ -38,6 +40,7 @@ from app.routers import (
     library,
     notifications,
     pacing,
+    planner,
     portfolios,
     recalibration,
     reports,
@@ -107,6 +110,9 @@ def create_app() -> FastAPI:
     application.include_router(subjects.reference_router, prefix="/api")
     application.include_router(subjects.router, prefix="/api")
     application.include_router(library.router, prefix="/api")
+    application.include_router(community.router, prefix="/api")
+    application.include_router(community_admin.router, prefix="/api")
+    application.include_router(planner.router, prefix="/api")
     application.include_router(curricula.router, prefix="/api")
     application.include_router(curriculum_plans.router, prefix="/api")
     application.include_router(catalog.router, prefix="/api")

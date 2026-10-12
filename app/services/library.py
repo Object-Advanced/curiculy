@@ -1,26 +1,20 @@
 """The family's Library: read, change and search books and programs.
 
 Every read carries ``readiness`` (``app.services.library_rules``): what's
-missing before the item can be scheduled, and why. Search looks in the
-family's own Library, the shared book cache, then Open Library and Google
-Books, and guesses each result's kind for the "What is this?" step.
+missing before the item can be scheduled, and why, and its place in the
+community catalog. Search looks in the family's own Library, the community
+catalog (ready to add, with chapters and lesson lists), the shared book cache,
+then Open Library and Google Books, and guesses each book's kind for the
+"What is this?" step.
 """
 
 from __future__ import annotations
 
 from fastapi import HTTPException
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, object_session, selectinload
 
-from app.models import (
-    BookEdition,
-    LibraryChapter,
-    LibraryItem,
-    LibraryLesson,
-    LibraryLessonPages,
-    LibraryMaterial,
-    Work,
-)
+from app.models import BookEdition, LibraryChapter, LibraryItem, LibraryLesson, PlannedCurriculumItem, Work
 from app.reference.subjects import subject_name
 from app.schemas.library import (
     ChapterWrite,
@@ -28,17 +22,17 @@ from app.schemas.library import (
     LessonWrite,
     LibraryItemRead,
     LibraryItemSummary,
-    MaterialWrite,
     MissingRead,
     ProblemRead,
     ReadinessRead,
     SearchResult,
     SearchResults,
 )
+from app.services import community
 from app.services.library_rules import (
-    CURRICULUM,
     KINDS,
     READING_BOOK,
+    TEXTBOOK,
     WORKBOOK,
     Readiness,
     readiness,
@@ -50,17 +44,13 @@ from app.services.resolver import (
     InvalidISBNError,
     ProvidersUnavailableError,
 )
-from app.utils.isbn import is_valid_isbn, normalize_isbn
+from app.utils.isbn import is_valid_isbn, normalize_isbn, to_isbn13
 
 COVER_PENDING = "pending"
 
 
 def _options():
-    return (
-        selectinload(LibraryItem.chapters),
-        selectinload(LibraryItem.materials),
-        selectinload(LibraryItem.lessons).selectinload(LibraryLesson.pages),
-    )
+    return (selectinload(LibraryItem.chapters), selectinload(LibraryItem.lessons))
 
 
 def get_item(db: Session, item_id: int) -> LibraryItem:
@@ -80,6 +70,8 @@ def list_items(db: Session, kind: str | None = None) -> list[LibraryItem]:
 def cover_of(item: LibraryItem) -> CoverRead:
     if item.cover_path:
         return CoverRead(url=f"/api/library/{item.id}/cover", source="upload", review=item.cover_review)
+    if item.cover_url and item.cover_url.startswith(community.COMMUNITY_COVER_PREFIX):
+        return CoverRead(url=item.cover_url, source="community")
     if item.cover_url:
         return CoverRead(url=item.cover_url, source="lookup")
     return CoverRead(url=None, source=None)
@@ -121,16 +113,21 @@ def item_read(item: LibraryItem) -> LibraryItemRead:
     result = readiness(item)
     fields = (
         "publisher series edition isbn reading_kind total_pages answer_key_start_page lesson_count "
-        "measure minutes_per_session days_per_week usual_pages_per_day consumable website_url "
+        "measure minutes_per_session days_per_week usual_pages_per_day consumable for_parent website_url "
         "login_note notes"
     ).split()
     return LibraryItemRead(
         **_summary_fields(item, result),
         **{name: getattr(item, name) for name in fields},
         chapters=item.chapters,
-        materials=item.materials,
         lessons=item.lessons,
         readiness=_readiness_read(result),
+        curriculum_ids=sorted(
+            {link.curriculum_id for link in object_session(item).scalars(
+                select(PlannedCurriculumItem).where(PlannedCurriculumItem.library_item_id == item.id)
+            )}
+        ),
+        community=community.link_status(item, result.ready),
     )
 
 
@@ -156,39 +153,8 @@ def replace_chapters(db: Session, item: LibraryItem, chapters: list[ChapterWrite
     db.commit()
 
 
-def replace_materials(db: Session, item: LibraryItem, materials: list[MaterialWrite]) -> None:
-    _require_kind(item, {CURRICULUM}, "materials")
-    existing = {material.id: material for material in item.materials}
-    unknown = [m.id for m in materials if m.id is not None and m.id not in existing]
-    if unknown:
-        raise HTTPException(status_code=422, detail=f"Material {unknown[0]} isn't part of this curriculum.")
-    keep = {m.id for m in materials if m.id is not None}
-    for material_id, material in existing.items():
-        if material_id not in keep:
-            item.materials.remove(material)
-    for position, payload in enumerate(materials):
-        row = existing.get(payload.id) if payload.id is not None else None
-        if row is None:
-            row = LibraryMaterial()
-            item.materials.append(row)
-        row.position = position
-        row.kind = payload.kind
-        row.title = " ".join(payload.title.split())
-        row.isbn = payload.isbn
-        row.pages = payload.pages
-        row.audience = payload.audience
-    db.commit()
-
-
 def replace_lessons(db: Session, item: LibraryItem, lessons: list[LessonWrite]) -> None:
-    _require_kind(item, {CURRICULUM}, "a lesson list")
-    material_ids = {material.id for material in item.materials}
-    for lesson in lessons:
-        for pages in lesson.pages:
-            if pages.material_id not in material_ids:
-                raise HTTPException(
-                    status_code=422, detail=f"Material {pages.material_id} isn't part of this curriculum."
-                )
+    _require_kind(item, {TEXTBOOK}, "a lesson list")
     item.lessons.clear()
     db.flush()
     for position, payload in enumerate(lessons):
@@ -200,10 +166,8 @@ def replace_lessons(db: Session, item: LibraryItem, lessons: list[LessonWrite]) 
                 type=payload.type,
                 unit=payload.unit,
                 minutes=payload.minutes,
-                pages=[
-                    LibraryLessonPages(material_id=p.material_id, start_page=p.start_page, end_page=p.end_page)
-                    for p in payload.pages
-                ],
+                start_page=payload.start_page,
+                end_page=payload.end_page,
             )
         )
     db.commit()
@@ -211,7 +175,7 @@ def replace_lessons(db: Session, item: LibraryItem, lessons: list[LessonWrite]) 
 
 def generate_lessons(db: Session, item: LibraryItem, count: int, first_number: int | None, lesson_type: str) -> None:
     """Append numbered lessons to fill in later ("make lessons 1-170")."""
-    _require_kind(item, {CURRICULUM}, "a lesson list")
+    _require_kind(item, {TEXTBOOK}, "a lesson list")
     numbers = [lesson.number for lesson in item.lessons if lesson.number is not None]
     start = first_number or (max(numbers) + 1 if numbers else 1)
     position = len(item.lessons)
@@ -242,7 +206,7 @@ def guess_kind(title: str, subtitle: str | None = None, publisher: str | None = 
     text = f"{title} {subtitle or ''}".lower()
     owner = (publisher or "").lower()
     if any(word in text for word in _CURRICULUM_WORDS) or any(name in owner for name in _CURRICULUM_PUBLISHERS):
-        return CURRICULUM
+        return TEXTBOOK
     if any(word in text for word in _WORKBOOK_WORDS) or any(name in owner for name in _WORKBOOK_PUBLISHERS):
         return WORKBOOK
     return READING_BOOK
@@ -253,7 +217,7 @@ def _result(source: str, **fields) -> SearchResult:
     return SearchResult(source=source, guessed_kind=kind, guessed_kind_label=KINDS[kind], **fields)
 
 
-def _from_edition(edition: BookEdition, source: str = "catalog") -> SearchResult:
+def _from_edition(edition: BookEdition, source: str = "book_cache") -> SearchResult:
     publisher = edition.publisher or edition.work.publisher
     return _result(
         source,
@@ -298,6 +262,19 @@ async def search(
             )
         )
 
+    for entry in community.search_entries(catalog_db, text, to_isbn13(isbn) if isbn else None):
+        results.append(
+            SearchResult(
+                source="community", title=entry.title, authors=[entry.author] if entry.author else [],
+                publisher=entry.publisher, isbn=entry.isbn, total_pages=entry.total_pages,
+                cover_url=community.entry_cover_url(entry), guessed_kind=entry.kind,
+                guessed_kind_label=KINDS[entry.kind], catalog_entry_id=entry.id,
+                families_count=entry.families_count, detail=community.entry_detail_line(entry),
+            )
+        )
+    if isbn and any(result.source == "community" for result in results):
+        return SearchResults(query=text, results=_unique(results, limit))
+
     if isbn:
         resolver = BookResolver(catalog_db, providers=providers)
         try:
@@ -306,7 +283,7 @@ async def search(
             notice = "No book with that ISBN was found. You can add it yourself."
         except ProvidersUnavailableError:
             notice = "The book lookup services aren't answering right now. You can add it yourself, or try again later."
-        return SearchResults(query=text, results=results, notice=notice)
+        return SearchResults(query=text, results=_unique(results, limit), notice=notice)
 
     editions = catalog_db.scalars(
         select(BookEdition).join(Work).where(Work.title.ilike(f"%{text}%")).limit(5)
@@ -338,12 +315,20 @@ async def search(
         if not results:
             notice = "Nothing matched. You can add it yourself."
 
+    return SearchResults(query=text, results=_unique(results, limit), notice=notice)
+
+
+def _unique(results: list[SearchResult], limit: int) -> list[SearchResult]:
+    """One result per book. The family's own copy comes first, then the catalog's,
+    so the same book found by a lookup is hidden."""
     seen: set[tuple] = set()
     unique: list[SearchResult] = []
     for result in results:
-        key = (result.isbn,) if result.isbn else (result.title.lower(), tuple(a.lower() for a in result.authors))
+        key = (to_isbn13(result.isbn) or result.isbn,) if result.isbn else (
+            result.title.lower(), tuple(a.lower() for a in result.authors)
+        )
         if key in seen:
             continue
         seen.add(key)
         unique.append(result)
-    return SearchResults(query=text, results=unique[:limit], notice=notice)
+    return unique[:limit]

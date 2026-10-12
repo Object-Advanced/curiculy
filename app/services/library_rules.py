@@ -17,25 +17,21 @@ from dataclasses import dataclass, field
 from app.models import LibraryItem
 from app.services.text_checks import keyboard_mash_reason
 
-READING_BOOK, WORKBOOK, CURRICULUM, ONLINE_PROGRAM = "reading_book", "workbook", "curriculum", "online_program"
+READING_BOOK, TEXTBOOK, WORKBOOK, ONLINE_PROGRAM = "reading_book", "textbook", "workbook", "online_program"
 KINDS = {
-    READING_BOOK: "Reading book",
+    READING_BOOK: "Book",
+    TEXTBOOK: "Textbook",
     WORKBOOK: "Workbook",
-    CURRICULUM: "Curriculum",
-    ONLINE_PROGRAM: "Online program",
+    ONLINE_PROGRAM: "Online site",
+}
+# One line under each choice in "What is this?"
+KIND_HINTS = {
+    READING_BOOK: "A book to read: a novel, biography, poetry or a read-aloud.",
+    TEXTBOOK: "The main book you teach a subject from, with numbered lessons (Saxon Math 5/4, BJU Reading 4).",
+    WORKBOOK: "A book your child writes in, page by page, often split into chapters (Spectrum Math, Explode the Code).",
+    ONLINE_PROGRAM: "Lessons done on a website or app (IXL, Khan Academy, Teaching Textbooks).",
 }
 READING_KINDS = ("novel", "biography", "poetry", "picture_book", "read_aloud", "other")
-MATERIAL_KINDS = {
-    "student_text": "Student text",
-    "worktext": "Worktext or workbook",
-    "teachers_edition": "Teacher's edition",
-    "answer_key": "Answer key",
-    "tests": "Tests and quizzes",
-    "reader": "Reader",
-    "activity_book": "Activity book",
-    "video_online": "Video or online",
-    "other": "Other",
-}
 LESSON_TYPES = ("lesson", "test", "quiz", "review", "project")
 MEASURES = ("lessons", "minutes")
 
@@ -52,13 +48,13 @@ WHY = {
     "publisher": "The publisher and edition make sure the lesson list matches the books you own.",
     "edition": "The publisher and edition make sure the lesson list matches the books you own.",
     "days_per_week": "The calendar paces lessons to the days a week the program is designed for.",
-    "student_materials": "Kid screens point to the student's books, with their pages.",
     "lessons": (
         "The calendar places each lesson in order, keeps tests on their own day, and can only "
         "catch up properly after a missed day when every lesson is listed."
     ),
+    "teacher_lessons": "A teacher's edition is for you, so it doesn't need lessons of its own.",
     "lesson_names": "Lesson names tell your child what to do each day.",
-    "lesson_pages": "Each lesson's pages (including quizzes and tests) are what your child opens to.",
+    "lesson_pages": "Each lesson's pages (including quizzes and tests) are what your child opens to each day.",
     "website_url": "The link opens the program from the calendar and your child's trail.",
     "measure": "Online work is scheduled by lessons or by minutes.",
     "lesson_count": "Curiculy needs the number of lessons to spread them across the year.",
@@ -129,9 +125,8 @@ def _chapter_problems(item: LibraryItem, readiness: Readiness) -> None:
 
 
 def _lesson_problems(item: LibraryItem, readiness: Readiness) -> None:
-    materials = {material.id: material for material in item.materials}
     seen: set[int] = set()
-    last_page: dict[int, int] = {}
+    last_start = 0
     for lesson in item.lessons:
         label = f"Lesson {lesson.number}" if lesson.number is not None else "A lesson"
         if lesson.number is None:
@@ -141,22 +136,23 @@ def _lesson_problems(item: LibraryItem, readiness: Readiness) -> None:
         else:
             seen.add(lesson.number)
         _text_problems(readiness, label, lesson.name)
-        for pages in lesson.pages:
-            material = materials.get(pages.material_id)
-            name = material.title if material else "a material"
-            if pages.start_page < 1 or pages.end_page < pages.start_page:
-                readiness.problems.append(
-                    Problem("fix", label, f"Pages {pages.start_page}–{pages.end_page} in {name} run backwards.")
-                )
-            if material and material.pages and pages.end_page > material.pages:
-                readiness.problems.append(
-                    Problem("fix", label, f"Ends on p. {pages.end_page}, past {name}'s {material.pages} pages.")
-                )
-            if pages.material_id in last_page and pages.start_page < last_page[pages.material_id]:
-                readiness.problems.append(
-                    Problem("check", label, f"Goes back to p. {pages.start_page} in {name}, before the lesson before it.")
-                )
-            last_page[pages.material_id] = max(last_page.get(pages.material_id, 0), pages.start_page)
+        start, end = lesson.start_page, lesson.end_page
+        if start is None and end is None:
+            continue
+        if start is None or end is None:
+            readiness.problems.append(Problem("fix", label, "Give both the first and the last page."))
+            continue
+        if start < 1 or end < start:
+            readiness.problems.append(Problem("fix", label, f"Pages {start}–{end} run backwards."))
+        if item.total_pages and end > item.total_pages:
+            readiness.problems.append(
+                Problem("fix", label, f"Ends on p. {end}, past the book's {item.total_pages} pages.")
+            )
+        if start < last_start:
+            readiness.problems.append(
+                Problem("check", label, f"Goes back to p. {start}, before the lesson before it.")
+            )
+        last_start = max(last_start, start)
     if seen:
         gaps = sorted(set(range(1, max(seen) + 1)) - seen)
         if gaps:
@@ -195,33 +191,27 @@ def readiness(item: LibraryItem) -> Readiness:
         _need(result, "total_pages", "Total pages", bool(item.total_pages))
         _need(result, "chapters", "Chapters and their start pages", bool(item.chapters))
         _chapter_problems(item, result)
-    elif item.kind == CURRICULUM:
+    elif item.kind == TEXTBOOK:
         for name, label in (("publisher", "Publisher"), ("edition", "Edition or year"),
-                            ("subject_code", "Subject"), ("grade", "Grade"),
-                            ("days_per_week", "Days a week it's designed for")):
-            _need(result, name, label, bool(getattr(item, name)))
-        student_materials = [m for m in item.materials if m.audience == "student"]
-        _need(result, "student_materials", "The student's materials", bool(student_materials))
-        student_ids = {m.id for m in student_materials}
+                            ("subject_code", "Subject"), ("grade", "Grade"), ("total_pages", "Total pages")):
+            _need(result, name, label, bool(getattr(item, name)),
+                  WHY.get(name) if name != "total_pages" else "Curiculy checks every lesson's pages fit inside the book.")
         result.lessons_total = len(item.lessons)
         result.lessons_with_names = sum(1 for lesson in item.lessons if lesson.name)
         result.lessons_with_pages = sum(
-            1 for lesson in item.lessons if any(p.material_id in student_ids for p in lesson.pages)
+            1 for lesson in item.lessons if lesson.start_page is not None and lesson.end_page is not None
         )
-        _need(result, "lessons", "The lesson list", bool(item.lessons))
-        if item.lessons:
-            unnamed = result.lessons_total - result.lessons_with_names
-            if unnamed:
-                result.missing.append(
-                    Missing("lesson_names", f"{unnamed} of {result.lessons_total} lessons need a name", WHY["lesson_names"])
-                )
-            no_pages = result.lessons_total - result.lessons_with_pages
-            if no_pages:
-                result.missing.append(
-                    Missing("lesson_pages", f"{no_pages} of {result.lessons_total} lessons need pages", WHY["lesson_pages"])
-                )
-        for material in item.materials:
-            _text_problems(result, f'Material "{material.title}"', material.title)
+        if not item.for_parent:
+            _need(result, "lessons", "The lesson list", bool(item.lessons))
+            if item.lessons:
+                unnamed = result.lessons_total - result.lessons_with_names
+                if unnamed:
+                    result.missing.append(Missing(
+                        "lesson_names", f"{unnamed} of {result.lessons_total} lessons need a name", WHY["lesson_names"]))
+                no_pages = result.lessons_total - result.lessons_with_pages
+                if no_pages:
+                    result.missing.append(Missing(
+                        "lesson_pages", f"{no_pages} of {result.lessons_total} lessons need pages", WHY["lesson_pages"]))
         _lesson_problems(item, result)
     elif item.kind == ONLINE_PROGRAM:
         _need(result, "website_url", "Website link", bool(item.website_url))

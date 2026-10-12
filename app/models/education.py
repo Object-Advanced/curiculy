@@ -180,6 +180,17 @@ class Assignment(TimestampMixin, TenantBase):
         nullable=False,
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Lessons scheduled from the Curriculum planner remember where they came
+    # from, so a course can be re-planned or removed as a whole.
+    course_id: Mapped[int | None] = mapped_column(
+        ForeignKey("courses.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    library_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("library_items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    library_lesson_id: Mapped[int | None] = mapped_column(
+        ForeignKey("library_lessons.id", ondelete="SET NULL"), nullable=True
+    )
     shared_group_uuid: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,

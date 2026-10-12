@@ -54,27 +54,61 @@ See [Product spine: Subjects](../6-planning/product-spine.md#subjects-what-every
 
 | Method | Path | Who | Handler |
 |---|---|---|---|
-| GET | `/api/reference` | public | States, grades and subjects |
+| GET | `/api/reference` | public | States, grades, subjects, the Library's four kinds and the curriculum roles (each with a one-line hint), and the community catalog notice |
 | GET | `/api/state-requirements/{state_code}/subjects` | public | A state's required subjects for a grade |
 | GET | `/api/students/{student_id}/subjects` | parent | A child's subjects for a school year (required ones added automatically) |
 | POST | `/api/students/{student_id}/subjects` | parent | Add a listed subject or the family's own |
 | PATCH | `/api/student-subjects/{subject_id}` | parent | On or off this year, objective, rename (own) |
 | DELETE | `/api/student-subjects/{subject_id}` | parent | Remove a common or own subject |
 
-## Library (four kinds of book)
-See the Library section of the [Product spine](../6-planning/product-spine.md). Built alongside the older `/api/curricula` routes, which stay until the new screens replace them.
+## Library (books, textbooks, workbooks, online sites)
+See the Library section of the [Product spine](../6-planning/product-spine.md#library-one-shelf-four-kinds-of-book). Built alongside the older `/api/curricula` routes, which stay until the new screens replace them. **Every change also updates the item's community catalog contribution** (automatic, once it's ready to schedule).
 
 | Method | Path | Who | Handler |
 |---|---|---|---|
-| GET | `/api/library` | parent | List, with readiness (`?kind=` filter) |
+| GET | `/api/library` | parent | List, with readiness (`?kind=` filter: `reading_book`, `textbook`, `workbook`, `online_program`) |
 | POST | `/api/library` | parent | Add (kind first) |
-| GET | `/api/library/search` | parent | Search your library, the book cache, Open Library and Google Books; each result's guessed kind |
-| GET / PATCH / DELETE | `/api/library/{item_id}` | parent | Read (with readiness: what's missing and why), edit, delete |
-| PUT | `/api/library/{item_id}/chapters` | parent | Replace chapters (reading books, workbooks) |
-| PUT | `/api/library/{item_id}/materials` | parent | Replace a curriculum's materials |
-| PUT | `/api/library/{item_id}/lessons` | parent | Replace a curriculum's lesson list |
+| POST | `/api/library/from-community` | parent | Add a community catalog entry (details, chapters, lesson list copied in); returns your copy if you already have it |
+| GET | `/api/library/search` | parent | Search your library, the community catalog, the book cache, Open Library and Google Books; each result's kind (or guessed kind) |
+| GET / PATCH / DELETE | `/api/library/{item_id}` | parent | Read (with readiness: what's missing and why; its curricula; its place in the community catalog), edit, delete |
+| PUT | `/api/library/{item_id}/chapters` | parent | Replace chapters (books, workbooks) |
+| PUT | `/api/library/{item_id}/lessons` | parent | Replace a textbook's lesson list |
 | POST | `/api/library/{item_id}/lessons/generate` | parent | Add numbered lessons to fill in |
 | POST / GET / DELETE | `/api/library/{item_id}/cover` | parent | Upload, view or remove an uploaded cover image |
+
+## Curriculum planner
+See [Product spine: Curriculum planner](../6-planning/product-spine.md#curriculum-planner-a-textbook-and-what-goes-with-it). Changes to a curriculum also update its community catalog contribution (once it's fully built).
+
+| Method | Path | Who | Handler |
+|---|---|---|---|
+| GET / POST | `/api/planner/curricula` | parent | List; start one (usually from a textbook: `textbook_id`) |
+| POST | `/api/planner/curricula/from-community` | parent | Start from a curriculum other families built (`entry_ids` leaves pieces out) |
+| GET / PATCH / DELETE | `/api/planner/curricula/{planned_curriculum_id}` | parent | Read (items, readiness, courses), edit, delete (only when unscheduled) |
+| POST | `/api/planner/curricula/{planned_curriculum_id}/items` | parent | Add a library item in a role: textbook, workbook, online, reading, teacher |
+| DELETE | `/api/planner/curricula/{planned_curriculum_id}/items/{item_id}` | parent | Take a library item out (it stays in the library) |
+| POST | `/api/planner/curricula/{planned_curriculum_id}/schedule/preview` | parent | What scheduling would do, per child; saves nothing |
+| POST | `/api/planner/curricula/{planned_curriculum_id}/schedule` | parent | A course and dated lessons for each child |
+| DELETE | `/api/planner/courses/{course_id}` | parent | Unschedule (finished lessons stay) |
+
+## Community catalog
+See [Product spine: Community catalog](../6-planning/product-spine.md#community-catalog-built-by-every-family). Shared data: nothing about any family.
+
+| Method | Path | Who | Handler |
+|---|---|---|---|
+| GET | `/api/community/entries/{entry_id}` | parent | An entry's details, chapters and lesson list, before adding it |
+| GET | `/api/community/entries/{entry_id}/cover` | parent | An approved uploaded cover |
+| GET | `/api/community/suggestions?library_item_id=` | parent | "Other families built a similar curriculum": the curricula built around this textbook, and what's often used with it |
+| GET | `/api/admin/community/contributions` | admin parent | The review queue (`?status=open` by default, `all`, or one status; `?kind=item` or `curriculum`) |
+| GET | `/api/admin/community/contributions/{contribution_id}` | admin parent | One contribution: its flags, the entry it changes or repeats, what changed, the book lookup |
+| GET | `/api/admin/community/contributions/{contribution_id}/cover` | admin parent | Its uploaded cover |
+| POST | `/api/admin/community/contributions/{contribution_id}/approve` | admin parent | Approve, or approve with edits (`include_cover: false` keeps the cover out) |
+| POST | `/api/admin/community/contributions/{contribution_id}/merge` | admin parent | Count it toward an existing entry (`replace_details` takes its details as a new version) |
+| POST | `/api/admin/community/contributions/{contribution_id}/reject` | admin parent | Reject with a reason (the family is told) |
+| POST | `/api/admin/community/contributions/{contribution_id}/ask` | admin parent | Ask the family; their next edit brings it back |
+| GET | `/api/admin/community/entries` | admin parent | Catalog entries (`?q=`, `?status=`) |
+| GET | `/api/admin/community/entries/{entry_id}` | admin parent | An entry with its versions |
+| POST | `/api/admin/community/entries/{entry_id}/rollback` | admin parent | Back to an older version (added as a new version) |
+| POST | `/api/admin/community/entries/{entry_id}/retire` / `publish` | admin parent | Hide from search, or show again |
 
 ## Home
 Feature page: [Home](../2-features/03-home.md)

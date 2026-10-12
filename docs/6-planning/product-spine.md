@@ -1,6 +1,6 @@
 # Product spine
 
-How Curiculy's pieces fit together: the words, the core loop, and what each feature is *for*. Agreed with the owner on **2026-10-11**. **Nothing on this page is built yet** unless it says "today". Feature pages in `2-features/` describe what exists now; this page is where they're heading.
+How Curiculy's pieces fit together: the words, the core loop, and what each feature is *for*. Agreed with the owner on **2026-10-11**. **Nothing on this page is built yet** unless it says "today" or **Built**. Feature pages in `2-features/` describe what exists now; this page is where they're heading.
 
 ## Why this page exists
 Curiculy had many good parts that didn't obviously fit: a pacing engine, lesson-plan imports, evidence capture, portfolios, attendance, a kid trail. The roadmap was spending its time on the edges (the React port, kid extras), while the things that make Curiculy different were marked "out of scope" or "Later". This page puts the core first and gives every part a job.
@@ -31,13 +31,15 @@ The model is tax software: it asks plain questions, explains each rule at the mo
 ```mermaid
 flowchart LR
   subgraph Library
-    C[Curricula · Workbooks<br/>Online programs]
-    R[Reading books]
+    C[Textbooks · Workbooks<br/>Online sites]
+    R[Books]
   end
   ST[State + grades] --> SU[Subjects<br/>required · common · own]
-  SU --> C
+  SU --> PL[Curriculum planner<br/>a textbook + what goes with it]
+  C --> PL
+  R --> PL
   SU --> AC[Activities<br/>notes · photos · minutes]
-  C --> CO[Courses<br/>child · item · year]
+  PL --> CO[Courses<br/>child · curriculum · year]
   AC --> CAL
   R --> RL[Reading lists<br/>track or schedule]
   CO --> CAL[Calendar<br/>dated lessons]
@@ -60,15 +62,15 @@ Parents see: **Today · Calendar · Library · Records · Tasks.**
 
 | Word | Means | Example |
 |---|---|---|
-| **Library** | Everything the family teaches or reads from, on one bookshelf with filter chips (All · Curricula · Workbooks · Reading books · Online) | |
-| **Curriculum** | A program you teach from: its materials plus its full lesson list. Fills one or more subject slots. One meaning only. | BJU Math 5 (4th ed.); Saxon 5/4 |
-| **Workbook** | A single consumable book worked through page by page, with chapters | Spectrum Math Grade 3; Explode the Code 2 |
-| **Online program** | Lessons done on a website, measured in lessons or minutes; its link opens from the lesson | IXL; Teaching Textbooks; Khan Academy |
-| **Material** | One physical item in a curriculum; each can have an ISBN | Student text, worktext, teacher's edition, answer key, test pack |
-| **Guide** | A curriculum's lesson list, each lesson pointing at pages in its materials. Part of the community catalog. | "Lesson 42: Text pp. 212–215, Worktext p. 88" |
-| **Reading book** | A book to *read*: total pages required, chapters optional | The Lord of the Rings, a biography, a read-aloud |
+| **Library** | Everything the family teaches or reads from, on one bookshelf with filter chips (All · Books · Textbooks · Workbooks · Online sites). **Replaces the "Curriculum catalog".** | |
+| **Textbook** | The main book you teach a subject from, with its **full lesson list** (each lesson's number, name, type and pages). A teacher's edition is a textbook marked **for the parent**: it needs no lessons and never goes on a child's calendar. | Saxon Math 5/4; BJU Reading 4 |
+| **Workbook** | A consumable book worked through page by page, with chapters | Spectrum Math Grade 3; BJU Reading 4 Worktext |
+| **Online site** | Lessons done on a website, measured in lessons or minutes; its link opens from the lesson | IXL; Teaching Textbooks; Khan Academy |
+| **Book** | A book to *read*: total pages required, chapters optional | The Lord of the Rings, a biography, a read-aloud |
+| **Curriculum** | A subject's plan, built in the **Curriculum planner** around one textbook: the textbook (its lessons set the pace) plus the workbooks, online sites and books that go with it. Fills one or more subject slots. Not tied to a child until it's scheduled. One meaning only. | BJU Reading 4: the textbook, its worktext, IXL and four novels |
+| **Lesson list** | A textbook's lessons, each with its pages, quizzes and tests included. Part of the community catalog. | "Lesson 42: The Lost Dog, pp. 212–215" |
 | **Reading list** | One child's reading books, with started and finished dates and the subject each counts toward | |
-| **Course** | One child + one curriculum, workbook or online program + one school year, with weekdays and a start date. A child's courses *are* "their curriculum this year." | Ada · Math · BJU Math 5 · 2026–27 |
+| **Course** | One child + one curriculum + one school year, with weekdays and a start date; made when a curriculum is scheduled. A child's courses *are* "their curriculum this year." | Ada · Reading · BJU Reading 4 · 2026–27 |
 | **Subject** | What a child studies, of three kinds: **required** by the state for the child's grade, a **common** preset, or the family's **own**. Curricula and activities belong to subjects. | Math; Safety education; Bible |
 | **Objective** | One line per subject, per child, per year, written in setup. Together they make the state's "objectives by subject" outline. | "Finish BJU Math 5: fractions, decimals, early geometry" |
 | **Lesson** | One dated item on the calendar: from a course, a scheduled reading book, or a one-off. **Replaces "assignment" everywhere, including the code and API** (cheap now, with no users). | |
@@ -79,9 +81,9 @@ Parents see: **Today · Calendar · Library · Records · Tasks.**
 | **Records** | The dashboard that checks the requirements, and the reports it prints | |
 | **Task** | A **parent** to-do with a due date, mostly made by the state pack | "Affidavit due Aug 1"; "Book your evaluator" |
 | **Catch-up sheet** | The choices offered when work is missed: push back, use a day off, double up, stretch, skip | "How should Saxon 5/4 catch up?" |
-| **Community catalog** | Every book, workbook, curriculum and online program families have entered (structure only), reviewed before others see it | |
+| **Community catalog** | Every book, textbook, workbook and online site families have entered (structure only), and the curricula they built, reviewed before other families see them | "Other families built a similar curriculum" |
 
-**Words we stop using:** "Assignment" (it's a **lesson**); "Curriculum" for a single book or for a child's whole year; "Lesson plan" (it's a **guide**); "Auto-schedule a book" and "Apply" (both become **Schedule**); "Curriculum catalog" (it's the **Library**); "Enrollment" (it's a **course**).
+**Words we stop using:** "Assignment" (it's a **lesson**); "Curriculum" for a single book or for a child's whole year; "Lesson plan" and "Guide" (it's the textbook's **lesson list**); "Material" (each book is its own library item, joined up in the Curriculum planner); "Reading book" and "Online program" in the interface (**Book**, **Online site**); "Auto-schedule a book" and "Apply" (both become **Schedule**); "Curriculum catalog" (it's the **Library**); "Enrollment" (it's a **course**).
 
 ## Subjects: what everything hangs on
 - **The state is picked at sign-up** and can be changed in Settings when a family moves. A move takes effect from a date, so each part of the year is checked against the right state.
@@ -97,23 +99,25 @@ Parents see: **Today · Calendar · Library · Records · Tasks.**
   - The checklist tracks coverage across the grade band, plus anything the state wants every year (Pennsylvania: fire-safety instruction, "regular and continuous").
 
 ## Library: one shelf, four kinds of book
-One **Library** for everything the family teaches or reads from, with filter chips: **All · Curricula · Workbooks · Reading books · Online**. It looks like a real bookshelf: covers standing on shelves (see [Covers](#covers-a-library-that-looks-like-a-library)). It replaces the "Curriculum catalog".
+One **Library** for everything the family teaches or reads from, with filter chips: **All · Books · Textbooks · Workbooks · Online sites**. It looks like a real bookshelf: covers standing on shelves (see [Covers](#covers-a-library-that-looks-like-a-library)). It replaces the "Curriculum catalog" (decided 2026-10-12: that name hid what the page holds). **Backend built** (October 2026); the new screen is next.
 
-### Adding something
-1. **One search box:** ISBN (typed or scanned), title, author or series. Results come in three groups:
-   - **In the Curiculy catalog:** "BJU Math 5 (4th ed.): curriculum, 4 materials, full lesson list." Pick it and it's nearly done.
-   - **Book matches** from Open Library or Google Books, with cover, author and page count. Our lookup already returns title, authors, publisher, year, pages, description and cover.
+### Adding something: a walkthrough, one step at a time
+Adding happens in a pop-up walkthrough, not one long form. Each step explains itself in plain words, for parents who aren't technical.
+1. **Find it.** One search box: ISBN (typed or scanned), title, author or series. Results come in groups:
+   - **In the Curiculy catalog:** "BJU Reading 4 (4th ed.): textbook, 170 lessons, entered by 4 families." Pick it and it's done: the details, chapters and lesson list are copied in, ready to schedule.
+   - **Book matches** from Open Library or Google Books, with cover, author and page count, to start from.
+   - **Already in your library.**
    - **Can't find it? Add it yourself.**
-2. **"What is this?"** comes next, with four choices: **Reading book · Workbook · Curriculum · Online program**.
-   - **Asked first on a manual entry,** so every question after it makes sense.
-   - **After a match, one is pre-selected as a guess,** and the parent confirms it. If the ISBN belongs to part of a known curriculum: "This is the Worktext for BJU Math 5. Set up the whole curriculum?"
-3. **The questions for that type,** pre-filled from the lookup where possible.
-4. **Add to library,** or **add and schedule**: who, start date, pace.
+2. **The basics:** title, author or publisher, cover. Pre-filled from a match.
+3. **"What is this?"** **Book · Textbook · Workbook · Online site**, each with one line under it saying what it means. After a match, one is pre-selected as a guess, and the parent confirms it.
+4. **The questions for that kind** appear next, each with why it's needed (below).
+5. **The structure:** chapters (books, workbooks) or the lesson list (textbooks), typed, pasted, or made with "make lessons 1–170" and filled in.
+6. **Done**, or, after a textbook, **"Plan a curriculum with this textbook"**, which opens the [Curriculum planner](#curriculum-planner-a-textbook-and-what-goes-with-it). The first textbook a family adds starts the planner's short explanation of how curricula work.
 
-### What each type asks for
+### What each kind asks for
 **Anything can be saved to the library unfinished. Nothing can be scheduled until the calendar formula has what it needs** (the "Required" fields). The library card shows what's missing: "38 of 170 lessons still need pages." Every required field says *why* it's needed, in plain words ("Curiculy uses each chapter's start page to keep assignments inside a chapter, and to re-plan when you miss a day"). The parent understands the trade instead of meeting a wall.
 
-#### Reading book (about 30 seconds)
+#### Book (about 30 seconds)
 | Field | Required |
 |---|---|
 | Title, author | Yes |
@@ -133,13 +137,16 @@ One **Library** for everything the family teaches or reads from, with filter chi
 | Numbered lessons (how many) | Yes, if it has them |
 | Publisher or series, one per child (consumable), usual pace, minutes | Optional |
 
-#### Curriculum (10–20 minutes the first time; seconds for every family after, from the catalog)
+#### Textbook (10–20 minutes the first time; seconds for every family after, from the catalog)
 | Field | Required |
 |---|---|
-| Program name, publisher, edition or year, subject, grade, days a week it's designed for (4 or 5) | Yes |
-| **Materials:** kind (student text, worktext, teacher's edition, answer key, tests, reader, video or online), title, pages, **student or parent only** | Yes, at least the student's materials |
-| **The full lesson list:** every lesson's **number**, **name**, **type** (lesson, test, quiz, review, project), and its **pages in the student materials**, including quiz and test pages | **Yes** |
-| Units or chapters the lessons belong to; teacher's-edition pages; minutes; objectives; grading weights | Optional |
+| Title, publisher, edition or year, subject, grade, **total pages** | Yes |
+| Days a week it's designed for (4 or 5) | Optional; it sets the curriculum's pace |
+| **The full lesson list:** every lesson's **number**, **name**, **type** (lesson, test, quiz, review, project), and its **first and last page**, quizzes and tests included | **Yes** |
+| Units; minutes | Optional |
+| **For the parent** (a teacher's edition or answer key) | A switch: a teacher's edition needs no lesson list and never goes on a child's calendar |
+
+**The lesson list lives on the textbook** (decided 2026-10-12). Workbooks, readers and teacher's editions are their own library items, joined to the textbook in the Curriculum planner, instead of "materials" inside one big record.
 
 **Without the full lesson list the calendar has nothing to place,** and can't catch up properly after a missed day. Scheduling stays locked until every lesson is in. Ways in, easiest first:
 1. the catalog's version
@@ -150,7 +157,7 @@ One **Library** for everything the family teaches or reads from, with filter chi
 
 A live preview shows the result as lessons go in: "170 lessons, 5 a week = 34 weeks, finishes May 21."
 
-#### Online program (about 1 minute)
+#### Online site (about 1 minute)
 | Field | Required |
 |---|---|
 | Name, **website link**, subject, grade | Yes |
@@ -160,18 +167,15 @@ A live preview shows the result as lessons go in: "170 lessons, 5 a week = 34 we
 
 **The link opens from wherever the work shows up:** the lesson on the calendar, the parent's Today and Tasks, and an **Open IXL** button on the kid's trail stop. A screenshot of the score (the Chrome extension) becomes the work sample.
 
-### Scheduling, by type
-**"Auto-schedule a book" goes away.** The calendar gets **Schedule from library** (the library, with a type badge on each item), and every library item has its own **Schedule** button. The step fits the type:
-- **Reading book:** pages, minutes or chapters a day, or a finish-by date
+### Scheduling, by kind
+**"Auto-schedule a book" goes away.** A textbook is scheduled through its **curriculum** (below), with whatever goes with it. A book, workbook or online site on its own gets a **Schedule** button too (later: **Schedule from library** on the calendar):
+- **Book:** pages, minutes or chapters a day, or a finish-by date
 - **Workbook:** pages a day inside chapter boundaries; never the answer key
-- **Curriculum:** follows the lesson list, one lesson a day (or as designed); tests keep their own day; a 4-day program on a 5-day week keeps a **flex day**
-- **Online program:** lessons or minutes a day, with the link
-
-Workbooks, curricula and online programs become **courses** (child + item + year). Reading books go on **reading lists**.
+- **Online site:** lessons or minutes, on its days a week, with the link
 
 ### Where they meet
-- **A curriculum's lesson can name a reading book** ("Read ch. 1–3 of Charlotte's Web"). The book is linked and lands on the child's reading list.
-- **Kid side:** lessons point to the student's materials ("Get your BJU Math 5 Worktext, p. 88"). **My books** shows the child's reading list with the same covers.
+- **A curriculum joins them:** a textbook plus its workbook, an online site and the novels read alongside it.
+- **Kid side:** lessons point to the right book and pages ("BJU Reading 4 Worktext, pp. 18–34"). **My books** shows the child's reading list with the same covers.
 
 ### Covers: a library that looks like a library
 - **Automatic covers** come from Open Library or Google Books for most ISBNs.
@@ -179,6 +183,40 @@ Workbooks, curricula and online programs become **courses** (child + item + year
 - **No cover at all:** a generated cover in the subject's color, with the title. The shelf never has a blank.
 - **Before launch,** we add cover images for the most-used programs ourselves.
 - **The look:** covers standing on shelves, in Morning Light for parents; the kid's **My books** uses Sticker Book.
+
+## Curriculum planner: a textbook and what goes with it
+A separate page from the Library (decided 2026-10-12). **Backend built** (October 2026); the screens are next.
+
+**What a curriculum is:** one subject's plan, built around **one textbook**. The textbook's lessons set the pace: one lesson each course day. Alongside it go:
+| Role | What happens to it when scheduled |
+|---|---|
+| **Textbook** | One lesson each course day, in order; quizzes and tests keep their place |
+| **Workbook** | Its pages spread over the same days, a chapter at a time (a day never straddles two chapters when there are enough days); front matter and the answer key are left out |
+| **Online site** | Sessions on its own number of days a week (the first days of each school week), by lessons or by minutes, with the link |
+| **Book to read** | Read one after another across the course, each over a share of the days in proportion to its length, by pages (and chapters, when entered) |
+| **For the parent** | A teacher's edition or answer key: kept with the curriculum, never on a child's calendar |
+
+**The walkthrough** (each step explains itself in plain words):
+1. **How curricula work.** Shown the first time a family adds a textbook: a curriculum is a textbook plus what goes with it; the child is picked when you schedule, so one curriculum can serve two children or be reused next year.
+2. **Subject.** From the child's subject slots.
+3. **Textbook.** From the library, or add one.
+4. **What goes with it:** workbooks, online sites, books to read, the teacher's edition. **"Other families built a similar curriculum using these…"** appears here when the community catalog has one (below).
+5. **Days a week.** From the textbook; a 4-day program on a 5-day week leaves a **flex day**.
+6. **Ready?** A checklist: anything not ready to schedule is named, with what it's missing and a link to finish it in the Library.
+7. **Schedule:** which children, the start date, and a **preview** before anything is saved: each book's count and dates, the finish date, and a warning if it ends after the school year ("Start sooner, add a school day each week, or extend the year").
+8. **To the calendar,** with a short walkthrough of the scheduling side: moving a lesson, a sick day, the catch-up sheet.
+
+**Days off are skipped** (the family's, and each child's own). **Unscheduling** takes a course's lessons off the calendar; finished lessons stay on the day they were done. A curriculum on someone's calendar can't be deleted until it's unscheduled.
+
+**The child is attached when scheduling** (decided 2026-10-12), which makes a **Course** per child.
+
+### Curricula other families built
+A fully built curriculum is contributed to the community catalog automatically, like books (no toggle). When the next family picks the same textbook, the planner shows **"Other families built a similar curriculum using these textbooks, workbooks, novels and websites"**:
+- each combination families used, most-used first, with how many families used it, and which books are already in this family's library
+- **"Often used with this textbook":** every workbook, site and book used alongside it, with counts, for swapping pieces
+- **Start from theirs:** the books are added to the family's library (their own copies are reused), and the parent can change anything after. **Adjust it:** leave out what you'll swap (BJU Reading 4 with the same textbook and worktext, but different novels). **Or build it yourself.**
+
+A family who starts from a suggestion and changes it contributes a new combination; one who keeps it unchanged just adds to its count.
 
 ## Activities: subjects without a curriculum
 Many required subjects (PE, music, art, health, safety education) rarely have a curriculum. They're recorded as **activities**.
@@ -198,7 +236,7 @@ Today: one record per child per day (present, absent, sick, vacation), marked wi
 - **Days off fill themselves in.** A lesson done on a non-school day asks "Count Saturday as a school day for Ada?"
 - **Per child, always:** siblings can differ. On the calendar, each day shows one small dot per child instead of radios.
 - **A sick day connects to the calendar:** marking a child Sick offers "Move Ada's lessons from today?"
-- **Counts on Today and Records:** "Ada: 92 of 180 days; on track for 181 by June 5." In **hours mode**, a present day adds up its lesson minutes (estimated from the guide or course, and editable).
+- **Counts on Today and Records:** "Ada: 92 of 180 days; on track for 181 by June 5." In **hours mode**, a present day adds up its lesson minutes (estimated from the lesson list or course, and editable).
 
 ## Lesson minutes
 States that count hours need minutes. Kept simple:
@@ -383,11 +421,16 @@ Curiculy runs on a home server today, and children's data deserves care. The rul
 When a requirement asks for something Curiculy doesn't have, we don't squeeze it into the nearest field. We stop, review it with the owner, and decide: a correct mapping, a new feature, or "handled outside Curiculy". Curiculy never shows a ✓ it can't actually check. The process and each state's worksheet are in [State requirements](state-requirements/README.md). **Pennsylvania is first** ([worksheet](state-requirements/pennsylvania.md)); New York is likely next (its yearly plan and quarterly reports can be generated from courses).
 
 ## Community catalog: built by every family
-The catalog of books, workbooks, curricula and online programs is what makes Curiculy fast to set up, so **every family's entries build it.**
+The catalog of books, textbooks, workbooks, online sites and curricula is what makes Curiculy fast to set up, so **every family's entries build it.**
+
+**Backend built** (October 2026): automatic contributions, the checks, the review queue's API, versions and rollback, catalog results in Library search, "add from the catalog", and curriculum suggestions. **Not built yet:** the admin review screen and the Library screens (next, in React); face detection on covers; publishing trusted contributors' clean entries without review; catch-up feedback in the queue (with the catch-up sheet); founding-family discounts (with billing, Phase 8); the lawyer's read of the notice wording.
 
 ### How contributions work
-- **No share toggle.** When a family adds a reading book, workbook, curriculum or online program by hand, its **structure** goes to the catalog automatically, after review: title, author, publisher, edition, ISBN, total pages, chapters and their start pages, materials, the lesson list (numbers, names, types, pages), and the cover image.
-- **Never shared:** anything about the family or a child, schedules, progress, notes, work samples, and which family contributed (kept only for review).
+- **No share toggle.** When a family adds a book, textbook, workbook or online site by hand, its **structure** goes to the catalog automatically, after review: title, author, publisher, edition, ISBN, total pages, chapters and their start pages, the lesson list (numbers, names, types, pages), and an uploaded cover image. A fully built **curriculum** goes too: which textbook, workbooks, sites and books, in which roles.
+- **Only once it's ready to schedule** (decided 2026-10-12). Half-entered books would only fill the queue; the family's own inline checks ("fix before saving") have already passed. Later edits refresh the same contribution; an item that becomes unfinished again is withdrawn.
+- **An item added from the catalog isn't contributed again** unless the family changes it; then the change is a **proposed correction** to that entry.
+- **A contribution never slows the family down.** If the catalog can't be reached, the family's own save still works, and the next save tries again.
+- **Never shared:** anything about the family or a child, schedules, progress, notes, login hints, the family's usual pace, work samples, and which family contributed (kept only for review; admins see a stable label like "Family 3f9a2c", not the family). Demo visitors never contribute.
 - **A plain notice says so** where books are added, and in the terms: "The book details you enter (never anything about your family) help every family using the same book." That wording, and sharing cover images, go on the lawyer's list before launch.
 - **Founding families get major discounts** for their first couple of years, for building the catalog, the way community databases reward early contributors.
 - **Families aren't forced to use catalog versions.** A family can always enter or edit its own copy; its edits are contributions in turn.
@@ -398,13 +441,13 @@ Each check is a small rule that raises a flag with a plain-words reason. Structu
 
 | Group | Flags |
 |---|---|
-| **Structure** (would break scheduling) | Chapter start pages out of order, overlapping, or past the total pages; lesson numbers missing or repeated; lesson pages out of order or past the material's pages; "170 lessons" with 12 entered; answer key inside the lesson range; impossible values (9 days a week, a 600-minute lesson) |
+| **Structure** (would break scheduling) | Chapter start pages out of order, overlapping, or past the total pages; lesson numbers missing or repeated; lesson pages out of order or past the book's pages; "170 lessons" with 12 entered; answer key inside the lesson range; impossible values (9 days a week, a 600-minute lesson) |
 | **Identity** | ISBN fails its checksum, or Open Library says it's a different title or author; total pages more than ~10% off the published count; edition year doesn't match the ISBN; a duplicate of a catalog entry (becomes a **merge candidate**); publisher name variants normalized |
 | **Privacy** | Text containing **the family's own children's names** (Curiculy knows them); email addresses, phone numbers, street addresses; a face in an uploaded cover image |
 | **Spam and junk** | **Keyboard mashing** ("gbnuicnrnkfnsknduscn"): long consonant runs, letter pairs that don't occur in real words, few recognizable words, repeated characters; numbers and titles like "Saxon 5/4" are fine. Also profanity, links in text fields, all-caps |
 | **Copying** | Long blocks of text in lesson names (could be teacher's-guide text, a copyright risk) |
 | **Covers** | **Every uploaded cover is reviewed.** Also flagged: too small, mostly blank, wrong shape, the same image reused |
-| **Online links** | Not `https`, link shorteners, domains not on a known list of education sites |
+| **Online links** | Not `https`, link shorteners, domains not on a known list of education sites, and links that look like the family's own (a sign-in page, a class, a join code) |
 | **Behavior** (context, not a verdict) | First-time contributor; 170 lessons entered in 30 seconds; many entries in an hour; earlier rejections |
 | **Agreement over time** | Several families' versions of the same ISBN that match raise confidence; one far from the rest is flagged; a published entry many families change the same way ("30% changed Lesson 42's pages") is flagged for a correction |
 
@@ -418,11 +461,13 @@ Each check is a small rule that raises a flag with a plain-words reason. Structu
 The family's own copy works either way. Only the catalog waits for review.
 
 ### The admin review queue
-In Settings → Admin, next to invites:
+In Settings → Admin, next to invites. **The API is built** (`/api/admin/community/…`); the screen comes with the React pages.
 - **Each contribution** shows its flags with reasons, a side-by-side comparison with the catalog entry or the ISBN data, and the cover.
 - **Actions:** Approve · Approve with edits · Merge into existing · Reject with a reason · Ask the contributor.
 - **At launch everything is reviewed;** later, clean contributions from trusted contributors can publish on their own, and only flagged ones wait.
-- **Every catalog entry is versioned,** with who approved each version, and can be rolled back. Families who already use an entry keep their copy and are **offered** a correction, never forced.
+- **Every catalog entry is versioned,** with who approved each version, and can be rolled back (a rollback is itself a new version, so nothing is lost). An entry can be **retired** (hidden from search). Families who already use an entry keep their copy and are **offered** a correction, never forced.
+- **The family hears back** in their notifications: thanks when it's added, the reason when it isn't ("your own copy works just as before"), or the admin's question. Editing the item answers the question and puts it back in the queue.
+- **Approving a curriculum** needs its books approved first; anything never contributed is left out, and the textbook is required. The same combination from another family counts up instead of repeating.
 - **Catch-up feedback** ("None of these fit?") arrives in the same queue.
 - **Under the hood,** contributions and flags live in shared tables, like the book cache: deliberately outside any one family's walled-off data, with the contributor recorded for review only.
 
@@ -431,13 +476,14 @@ In Settings → Admin, next to invites:
 
 | Today | Becomes |
 |---|---|
-| `curricula` + `curriculum_editions` | **Library item** with a **kind**: reading book, workbook, curriculum or online program (title, author, publisher, edition, subject, grade, total pages, website link, how it's measured, cover) |
-| `curriculum_units`, `curriculum_page_mappings` | **Chapters** (name, start page, optional subject) for reading books and workbooks |
-| `curriculum_resources` | **Material** of a curriculum (kind; ISBN linked to the shared `book_editions`; pages; student or parent) |
-| `curriculum_plans`, `curriculum_lessons` (unconnected to books) | **Guide** + **guide lessons** for a curriculum (number, name, type, pages per material, unit, minutes, optional reading-book link) |
+| `curricula` + `curriculum_editions` | **Built:** `library_items` with a **kind**: book, textbook, workbook or online site (title, author, publisher, edition, subject, grade, total pages, website link, how it's measured, cover, "for the parent", its catalog entry) |
+| `curriculum_units`, `curriculum_page_mappings` | **Built:** `library_chapters` (name, start page, optional subject) for books and workbooks |
+| `curriculum_resources` | **Dropped:** each book is its own library item, joined to others in a curriculum. (Materials were built first, then replaced, 2026-10-12.) |
+| `curriculum_plans`, `curriculum_lessons` (unconnected to books) | **Built:** the textbook's lesson list, `library_lessons` (number, name, type, unit, minutes, first and last page) |
+| none | **Built:** `planned_curricula` + `planned_curriculum_items`: a subject's textbook plus its workbooks, sites, books and teacher's edition, each in a role |
 | none | **Reading-list entry** (child, reading book, status, started and finished dates, counts toward, optional schedule) |
-| `enrollments` | **Course** (child, library item, school year, weekdays, start date, pauses, default minutes, **catch-up default**; credits and final grade in grades 9–12) |
-| `assignments` | **Lesson** (renamed in code and API): adds its course, its place in the sequence, subject, minutes, and an optional reading-book link. A finished lesson's completion date is its calendar day. |
+| `enrollments` | **Course**, **built** as `courses` (child, curriculum, school year, start and end dates, weekdays). Still to add: pauses, default minutes, the **catch-up default**; credits and final grade in grades 9–12 |
+| `assignments` | **Lesson** (renamed in code and API): **built:** its course, library item and textbook lesson. Still to add: the rename, subject and minutes. A finished lesson's completion date is its calendar day. |
 | none | **Subject** per child (required, common or own; counts toward a state subject) and **objective** per subject per year |
 | none | **Activity** (children, subjects, date, minutes, note, attachments or links); repeating activities |
 | `attendance` | adds how it was set (suggested or confirmed) and minutes |
@@ -448,8 +494,8 @@ In Settings → Admin, next to invites:
 | `household_settings` | adds a daily load limit and days-or-hours mode |
 | `households` | adds the **state**, with the date it applies from (a move adds a new one) |
 | `students` | grade from a fixed list, re-confirmed each July 1; a yes/no IEP flag. **No birth date**: ages go into form blanks only ([Privacy](#privacy-keep-the-minimum)). |
-| the shared book cache | becomes the **community catalog**: catalog entries (versioned) for all four kinds, their chapters, materials and lesson lists, and cover images |
-| none | **Contributions** and their **flags** (shared tables, outside any family's data; contributor kept for review only), the admin review queue, and catch-up feedback |
+| the shared book cache (kept, for ISBN lookups) | **Built:** the **community catalog**: `catalog_entries` with their versions (`catalog_entry_versions`: details, chapters and lesson list) for all four kinds, and approved cover images |
+| none | **Built:** `catalog_contributions` and their `catalog_flags` (shared tables, outside any family's data; contributor kept for review only), and `community_curricula` + `community_curriculum_items`. Still to add: catch-up feedback |
 | `household_settings` (again) | the family-wide catch-up default and "allow weekends" |
 
 **Data tier: Postgres** ([decided 2026-10-11](decision-records/data-tier.md)), one database with each family walled off by row-level security, built before the spine.
@@ -457,10 +503,10 @@ In Settings → Admin, next to invites:
 ## Order of work
 | When | Work |
 |---|---|
-| Oct–Dec 2026 | Data-tier decision; then the backend spine: state and grades → subjects and objectives → the Library's four kinds (chapters, materials, lesson lists, required-field rules, search-first adding, covers) → reading lists → Course → Lesson rename, minutes and terms → activities → attendance suggestions → move engine with previews, the **catch-up formulas** and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → community catalog checks and the admin review queue → transcript and credits → photo orientation fix and PDF metadata scrub |
-| Jan–Mar 2027 | The loop's screens, built **directly in React**: the **year-setup interview**, Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings, **Schedule from library**), the **catch-up sheet**, the **Library bookshelf** (search-first adding, four kinds, covers), the **admin review queue**, lesson sheet (Add work), Log an activity, Records (Checklist, Portfolio, Your state), progress rings and course bars, kid's My books. Fillable state forms (filled in the browser). The community catalog, seeded with the most-used programs and their covers. Public state pages. |
+| Oct–Dec 2026 | Data-tier decision; then the backend spine: ~~state and grades~~ → ~~subjects and objectives~~ → ~~the Library's four kinds (chapters, lesson lists, required-field rules, search-first adding, covers)~~ → ~~the Curriculum planner and Course~~ → ~~community catalog checks, the admin review queue's API and curriculum suggestions~~ (moved up, 2026-10-12) → reading lists → Lesson rename, minutes and terms → activities → attendance suggestions → move engine with previews, the **catch-up formulas** and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → transcript and credits → photo orientation fix and PDF metadata scrub |
+| Jan–Mar 2027 | The loop's screens, built **directly in React**: the **year-setup interview**, Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings, **Schedule from library**), the **catch-up sheet**, the **Library bookshelf** (search-first adding, four kinds, covers), the **Curriculum planner** and its calendar walkthrough, the **admin review queue**, lesson sheet (Add work), Log an activity, Records (Checklist, Portfolio, Your state), progress rings and course bars, kid's My books. Fillable state forms (filled in the browser). The community catalog, seeded with the most-used programs and their covers. Public state pages. |
 | Mar–May 2027 | Second wave of states: New York on its own, then a base pack for states with similar light laws; the lifetime archive download; extension docs; launch work (Phase 8). Feature freeze mid-May. |
-| Jun 2027 | Launch with an honest "N states supported" claim and a seeded guide catalog |
+| Jun 2027 | Launch with an honest "N states supported" claim and a seeded community catalog |
 
 **Scope check:** "everything in scope for a state's portfolio", including transcripts, diplomas and special education, is a lot for one developer by June. Pennsylvania must ship complete; other states join only once their worksheets are reviewed, and the launch claims only those.
 

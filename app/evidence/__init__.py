@@ -121,6 +121,21 @@ def store_cover(source: BinaryIO, *, tenant_uuid: str) -> str:
     return f"{tenant_uuid}/{filename}"
 
 
+# Covers an admin approved for the community catalog, shared by every family.
+# Not a family folder: family folders are named by family id, never this.
+COMMUNITY_COVERS = "community-covers"
+
+
+def publish_cover(family_cover_path: str, *, family: str) -> str | None:
+    """Copy a family's uploaded cover into the community folder; return its relative path."""
+    source = resolve_evidence_file(family_cover_path, tenant_uuid=family)
+    if source is None:
+        return None
+    filename = f"cover-{uuid4()}.webp"
+    (_tenant_dir(COMMUNITY_COVERS) / filename).write_bytes(source.read_bytes())
+    return f"{COMMUNITY_COVERS}/{filename}"
+
+
 def stored_relative_path(file_path: str | None) -> str | None:
     """Turn a DB file_path into ``tenant/filename`` under the evidence volume.
 

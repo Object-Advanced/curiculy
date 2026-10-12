@@ -1,4 +1,4 @@
-"""The Library: four kinds of book, what each needs before scheduling, search and covers."""
+"""The Library: books, textbooks, workbooks and online sites; what each needs before scheduling; search; covers."""
 
 from __future__ import annotations
 
@@ -48,8 +48,8 @@ class TestKeyboardMash:
 
 class TestGuessKind:
     def test_guesses(self) -> None:
-        assert guess_kind("Math 5 Student Text", publisher="BJU Press") == "curriculum"
-        assert guess_kind("Saxon Math 5/4", publisher="Saxon Publishers") == "curriculum"
+        assert guess_kind("Math 5 Student Text", publisher="BJU Press") == "textbook"
+        assert guess_kind("Saxon Math 5/4", publisher="Saxon Publishers") == "textbook"
         assert guess_kind("Spectrum Math Workbook Grade 3") == "workbook"
         assert guess_kind("The Lord of the Rings", publisher="Houghton Mifflin") == "reading_book"
 
@@ -96,20 +96,16 @@ class TestWorkbook:
         assert any(p["level"] == "check" and "answer key" in p["message"] for p in body["readiness"]["problems"])
 
 
-class TestCurriculum:
-    def _curriculum(self, client: TestClient) -> dict:
-        return _create(client, kind="curriculum", title="Saxon Math 5/4", publisher="Saxon", edition="3rd",
-                       subject_code="math", grade="4", days_per_week=5)
+class TestTextbook:
+    def _textbook(self, client: TestClient, **fields) -> dict:
+        details = {"title": "Saxon Math 5/4", "publisher": "Saxon", "edition": "3rd", "subject_code": "math",
+                   "grade": "4", "total_pages": 600, "days_per_week": 5}
+        return _create(client, kind="textbook", **{**details, **fields})
 
-    def test_it_needs_materials_and_the_full_lesson_list(self, client: TestClient) -> None:
-        item = self._curriculum(client)
-        assert _missing(item) == {"student_materials", "lessons"}
-        with_materials = client.put(
-            f"/api/library/{item['id']}/materials",
-            json=[{"kind": "student_text", "title": "Student Edition", "pages": 600},
-                  {"kind": "teachers_edition", "title": "Teacher's Manual", "audience": "parent"}],
-        ).json()
-        text_id = with_materials["materials"][0]["id"]
+    def test_it_needs_the_full_lesson_list_with_pages(self, client: TestClient) -> None:
+        item = self._textbook(client)
+        assert _missing(item) == {"lessons"}
+        assert "catch up" in item["readiness"]["missing"][0]["reason"]
         generated = client.post(f"/api/library/{item['id']}/lessons/generate", json={"count": 3}).json()
         assert [lesson["number"] for lesson in generated["lessons"]] == [1, 2, 3]
         labels = {m["field"]: m["label"] for m in generated["readiness"]["missing"]}
@@ -118,57 +114,50 @@ class TestCurriculum:
         done = client.put(
             f"/api/library/{item['id']}/lessons",
             json=[
-                {"number": 1, "name": "Adding", "pages": [{"material_id": text_id, "start_page": 1, "end_page": 4}]},
-                {"number": 2, "name": "Subtracting", "pages": [{"material_id": text_id, "start_page": 5, "end_page": 8}]},
-                {"number": 3, "name": "Test 1", "type": "test", "pages": [{"material_id": text_id, "start_page": 9, "end_page": 10}]},
+                {"number": 1, "name": "Adding", "start_page": 1, "end_page": 4},
+                {"number": 2, "name": "Subtracting", "start_page": 5, "end_page": 8},
+                {"number": 3, "name": "Test 1", "type": "test", "start_page": 9, "end_page": 10},
             ],
         ).json()
         assert done["ready"] is True
         assert (done["readiness"]["lessons_total"], done["readiness"]["lessons_with_pages"]) == (3, 3)
         assert done["lessons"][2]["type"] == "test"
+        assert (done["lessons"][0]["start_page"], done["lessons"][0]["end_page"]) == (1, 4)
+
+    def test_other_details_are_required_too(self, client: TestClient) -> None:
+        item = _create(client, kind="textbook", title="Math 5 Student Text")
+        assert _missing(item) == {"publisher", "edition", "subject_code", "grade", "total_pages", "lessons"}
 
     def test_lesson_mistakes_are_caught(self, client: TestClient) -> None:
-        item = self._curriculum(client)
-        text_id = client.put(
-            f"/api/library/{item['id']}/materials", json=[{"kind": "student_text", "title": "Text", "pages": 20}]
-        ).json()["materials"][0]["id"]
+        item = self._textbook(client, total_pages=20)
         body = client.put(
             f"/api/library/{item['id']}/lessons",
             json=[
-                {"number": 1, "name": "One", "pages": [{"material_id": text_id, "start_page": 1, "end_page": 4}]},
-                {"number": 1, "name": "Again", "pages": [{"material_id": text_id, "start_page": 18, "end_page": 25}]},
-                {"number": 4, "name": "gbnuicnrnkfnsknduscn", "pages": [{"material_id": text_id, "start_page": 6, "end_page": 5}]},
+                {"number": 1, "name": "One", "start_page": 1, "end_page": 4},
+                {"number": 1, "name": "Again", "start_page": 18, "end_page": 25},
+                {"number": 4, "name": "gbnuicnrnkfnsknduscn", "start_page": 6, "end_page": 5},
+                {"number": 5, "name": "Half", "start_page": 7},
             ],
         ).json()
         fixes = " ".join(_fixes(body))
-        assert "listed twice" in fixes and "past Text's 20 pages" in fixes
+        assert "listed twice" in fixes and "past the book's 20 pages" in fixes
         assert "run backwards" in fixes and "doesn't look like real words" in fixes
+        assert "Give both the first and the last page" in fixes
         assert any("No lesson numbered 2, 3" in p["message"] for p in body["readiness"]["problems"])
         assert body["ready"] is False
 
-    def test_lessons_can_only_use_this_curriculums_materials(self, client: TestClient) -> None:
-        item = self._curriculum(client)
-        response = client.put(
-            f"/api/library/{item['id']}/lessons",
-            json=[{"number": 1, "name": "One", "pages": [{"material_id": 9999, "start_page": 1, "end_page": 2}]}],
-        )
-        assert response.status_code == 422
+    def test_a_teachers_edition_needs_no_lessons(self, client: TestClient) -> None:
+        item = self._textbook(client, title="Saxon Math 5/4 Teacher's Edition", for_parent=True)
+        assert item["ready"] is True and item["for_parent"] is True
 
-    def test_keeping_a_material_by_id(self, client: TestClient) -> None:
-        item = self._curriculum(client)
-        first = client.put(f"/api/library/{item['id']}/materials", json=[{"kind": "student_text", "title": "Text"}]).json()
-        kept_id = first["materials"][0]["id"]
-        second = client.put(
-            f"/api/library/{item['id']}/materials",
-            json=[{"id": kept_id, "kind": "student_text", "title": "Student Text", "pages": 300},
-                  {"kind": "tests", "title": "Tests"}],
-        ).json()
-        assert [m["id"] for m in second["materials"]][0] == kept_id
-        assert second["materials"][0]["title"] == "Student Text"
-
-    def test_chapters_belong_to_books_not_curricula(self, client: TestClient) -> None:
-        item = self._curriculum(client)
+    def test_chapters_belong_to_books_and_workbooks(self, client: TestClient) -> None:
+        item = self._textbook(client)
         assert client.put(f"/api/library/{item['id']}/chapters", json=[{"name": "One", "start_page": 1}]).status_code == 409
+
+    def test_lesson_lists_belong_to_textbooks(self, client: TestClient) -> None:
+        workbook = _create(client, kind="workbook", title="Spectrum Math")
+        response = client.put(f"/api/library/{workbook['id']}/lessons", json=[{"number": 1, "name": "One"}])
+        assert response.status_code == 409
 
 
 class TestOnlineProgram:
@@ -197,7 +186,7 @@ class TestLibraryList:
         _create(client, kind="workbook", title="Spectrum Math")
         everything = client.get("/api/library").json()
         assert [(i["title"], i["kind_label"], i["ready"]) for i in everything] == [
-            ("Charlotte's Web", "Reading book", True), ("Spectrum Math", "Workbook", False)
+            ("Charlotte's Web", "Book", True), ("Spectrum Math", "Workbook", False)
         ]
         assert [i["title"] for i in client.get("/api/library", params={"kind": "workbook"}).json()] == ["Spectrum Math"]
         assert client.get("/api/library", params={"kind": "magazine"}).status_code == 422
@@ -286,7 +275,7 @@ class TestSearch:
         ])
         body = self._client_with(client, provider).get("/api/library/search", params={"q": "math"}).json()
         assert [(r["title"], r["guessed_kind"]) for r in body["results"]] == [
-            ("Math 5 Student Text", "curriculum"), ("Spectrum Math Workbook", "workbook"), ("Math Curse", "reading_book"),
+            ("Math 5 Student Text", "textbook"), ("Spectrum Math Workbook", "workbook"), ("Math Curse", "reading_book"),
         ]
         assert body["results"][2]["total_pages"] == 32 and body["results"][2]["year"] == 2004
 

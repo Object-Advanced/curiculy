@@ -9,10 +9,12 @@ The words parents see, the words the code uses, and the words we're moving to. W
 | **PIN** | PIN | a child row in `users` (role `child`) | A kid's 4–8 digit sign-in number |
 | **Lesson** | Assignment, lesson | `Assignment` | One dated piece of work for one child. Planned: renamed `Lesson` in the code and API too |
 | **Shared lesson** | (none) | `shared_group_uuid` | One lesson done by several kids; checking it off as a parent checks every copy |
-| **Curriculum**, **Workbook**, **Reading book** or **Online program** | Curriculum | `Curriculum` (`/api/curricula`) | Today one table holds everything. Planned: four kinds of library item, each with its own setup and required fields |
-| **Guide** | Lesson plan, pacing guide, curriculum plan | `CurriculumPlan` (`/api/curriculum/plans`) | A curriculum's lesson list, from CSV, PDF, a paper photo, or typed in. Planned: one guide model (replacing plans and units) that families can share |
+| **Book**, **Textbook**, **Workbook** or **Online site** | Curriculum | `LibraryItem` (`kind`: `reading_book`, `textbook`, `workbook`, `online_program`; `/api/library`) | The four kinds of library item, each with its own required fields. The older screens still use `Curriculum` (`/api/curricula`) until the new Library screen replaces them |
+| **Lesson list** | Lesson plan, pacing guide, curriculum plan | `LibraryLesson` on a textbook; older: `CurriculumPlan` (`/api/curriculum/plans`) | A textbook's lessons, each with its pages, from CSV, PDF, a paper photo, or typed in. Shared through the community catalog |
+| **Curriculum** | (none yet) | `PlannedCurriculum` (`/api/planner`) | A subject's plan, built in the Curriculum planner: one textbook plus the workbooks, online sites, books and teacher's edition that go with it |
 | **Schedule** | "Auto-schedule" (books), "Apply" (plans) | pacing commit; plan apply | Put a book or plan onto a child's calendar as dated lessons |
-| **Course** | Enrollment | `Enrollment` | One child + one curriculum + one school year (mostly automatic now). Planned: weekdays, a start date and the subject |
+| **Course** | Enrollment | `Course`; older: `Enrollment` | One child + one curriculum + one school year, with a start date and weekdays; made when a curriculum is scheduled |
+| **Community catalog** | (none yet) | `CatalogEntry`, `CatalogContribution`, `CommunityCurriculum` (`/api/community`, `/api/admin/community`) | Every book, textbook, workbook, online site and curriculum families have entered (structure only), reviewed by an admin before other families see it |
 | **School days** | Class days, weekdays | `HouseholdSettings.weekdays` | Which weekdays are school days |
 | **Days off** | Calendar exceptions | `CalendarException` | Holidays, vacations, sick days and appointments; for the household or one child |
 | **School year** | School year | `SchoolYear` (the "operational" year is the latest) | Start and end dates |
@@ -35,12 +37,9 @@ Not in the app yet. See [Product spine](../6-planning/product-spine.md).
 
 | Word | Meaning |
 |---|---|
-| **Library** | One bookshelf of everything the family teaches or reads from, with filters: All · Curricula · Workbooks · Reading books · Online |
-| **Workbook** | One consumable book worked page by page; total pages and chapters with start pages are required |
-| **Online program** | Lessons on a website, measured in lessons or minutes; the link opens from the lesson |
+| **Library** | One bookshelf of everything the family teaches or reads from, with filters: All · Books · Textbooks · Workbooks · Online sites (the API is built; the screen is next) |
+| **Curriculum planner** | The page where a curriculum is built around a textbook and scheduled for children (the API is built; the screen is next) |
 | **Catch-up sheet** | The choices offered when work is missed: push back, use a day off, double up, stretch, skip |
-| **Community catalog** | Every book and program families have entered (structure only), reviewed by an admin before others see it |
-| **Material** | One item in a curriculum: student text, workbook, teacher's edition, answer key, tests |
 | **Reading list** | One child's reading books, with started and finished dates and the subject each counts toward |
 | **Subject** | What a child studies: required by the state for their grade, a common preset, or the family's own. Shown as slots on the dashboard. |
 | **Objective** | One line per subject, per child, per year; together they make the state's "objectives by subject" outline |
@@ -57,7 +56,8 @@ Not in the app yet. See [Product spine](../6-planning/product-spine.md).
 - "Tenant", "enrollment", "exception", "staging", "manifest", "spark": these are internal names.
 - "Homework help": it's **Stuck?** now. Curiculy doesn't teach.
 - "Adventures" on parent pages: kid-voice words belong on the kid's own screens.
-- "Curriculum" for a single novel or for a child's whole year: it means a program you teach from.
+- "Curriculum" for a single novel or for a child's whole year: it means a subject's plan, built around a textbook.
+- "Curriculum catalog": it's the **Library**. "Material" and "guide": each book is its own library item, and a textbook has a **lesson list**.
 - "Lesson plan", "Auto-schedule a book" and "Apply": it's a **guide**, and the verb is **Schedule**.
 - "Curriculum catalog": it's the **Library**.
 - "Assignment": it's a **lesson**.

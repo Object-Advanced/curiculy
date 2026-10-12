@@ -37,11 +37,18 @@ Both are created on the database container's first start by `docker/postgres/10-
 | `capture_tokens` | Chrome extension credentials (revocable) |
 | `idempotency_records` | Recent write keys, so retries apply once (kept 2 days) |
 
-### Book cache (`CatalogBase`, shared by all families)
+### Book cache and community catalog (`CatalogBase`, shared by all families)
 | Table | Holds |
 |---|---|
 | `book_editions`, `works`, `authors`, `work_authors`, `publishers` | Book details looked up by ISBN (Open Library or Google Books) |
+| `catalog_entries` | The **community catalog**: published books, textbooks, workbooks and online sites, with how many families entered or added each, and an approved cover (`community-covers/` on the evidence volume). `status` is `published` or `retired`. |
+| `catalog_entry_versions` | Every version of an entry's details, chapters and lesson list (JSON), who approved it, and from which contribution. A rollback adds a version. |
+| `catalog_contributions` | What families entered, waiting for review (`pending`, `asked`) or reviewed (`approved`, `merged`, `rejected`, `withdrawn`). `contributor` is the family's id, **for review only**: it's deliberately not called `tenant_id`, because this is shared data, and the API shows admins a label ("Family 3f9a2c"), never the id. One open contribution per family item or curriculum. |
+| `catalog_flags` | The automatic checks' flags on a contribution: group, level (`review` or `note`), where, and the reason in words |
+| `community_curricula`, `community_curriculum_items` | Curricula families built (a textbook plus its workbooks, sites and books, in roles), each combination once, with how many families used it |
 | `subject_taxonomies`, `reporting_categories` | Subject lists (defined but **nothing writes to them yet**) |
+
+**Family tables may point at the catalog** (`library_items.catalog_entry_id`, `planned_curricula.community_curriculum_id`; `ON DELETE SET NULL`). The safety check only requires family-to-family references to match on `tenant_id`; a shared row holds nothing private. Catalog entries are retired, never deleted.
 
 ## Family tables (`TenantBase`: `tenant_id`, row-level security)
 ```mermaid
@@ -51,7 +58,14 @@ erDiagram
   households ||--|| household_settings : has
   households ||--o{ calendar_exceptions : "days off"
   students ||--o{ assignments : "lessons"
-  students ||--o{ enrollments : "courses"
+  students ||--o{ enrollments : "older courses"
+  library_items ||--o{ library_chapters : ""
+  library_items ||--o{ library_lessons : "textbooks"
+  planned_curricula ||--o{ planned_curriculum_items : "roles"
+  library_items ||--o{ planned_curriculum_items : ""
+  planned_curricula ||--o{ courses : "scheduled"
+  students ||--o{ courses : ""
+  courses ||--o{ assignments : "lessons"
   students ||--o{ attendance : "daily"
   curricula ||--o{ curriculum_editions : ""
   curriculum_editions ||--o{ curriculum_units : ""
@@ -70,19 +84,21 @@ erDiagram
 | `household_states` | The state the family homeschools in, from a date (`starts_on`); a move adds a row |
 | `students` | Each child: name, **grade** (a code from the fixed list: `PreK`, `K`, `1`–`12`), `grade_confirmed_on` (re-asked after each July 1), `has_iep` (a yes/no only), color |
 | `student_subjects` | A child's subjects for a school year: `required` (from the state's rules for the grade), `common` or `own`; what it counts toward; on or off this year; one objective |
-| `library_items` | The Library: a reading book, workbook, curriculum or online program (`kind`), with its details, cover and website link |
-| `library_chapters` | Chapters with start pages (reading books, workbooks) |
-| `library_materials`, `library_lessons`, `library_lesson_pages` | A curriculum's materials, its full lesson list, and each lesson's pages in each material |
+| `library_items` | The Library: a book, textbook, workbook or online site (`kind`), with its details, cover, website link, `for_parent` (a teacher's edition), and the catalog entry and version it matches |
+| `library_chapters` | Chapters with start pages (books, workbooks) |
+| `library_lessons` | A textbook's full lesson list: number, name, type, unit, minutes, first and last page |
+| `planned_curricula`, `planned_curriculum_items` | The Curriculum planner: a subject's curriculum (name, subject, grade, days a week, the community curriculum it started from) and its library items, each in a role (`textbook`, `workbook`, `online`, `reading`, `teacher`) |
+| `courses` | A curriculum scheduled for one child: school year, start and end dates, weekdays |
 | `school_years` | Name, start and end dates (the latest is "operational") |
 | `household_settings` | School weekdays; colors for days off |
 | `calendar_exceptions` | Days off (kind, title, dates, optional single child) |
-| `assignments` | **Lessons:** child, title, `scheduled_date`, `completion_date`, `status`, `notes`, book, unit and resource links, `shared_group_uuid` |
+| `assignments` | **Lessons:** child, title, `scheduled_date`, `completion_date`, `status`, `notes`, `shared_group_uuid`; the older book, unit and resource links; and, for planner lessons, `course_id`, `library_item_id` and `library_lesson_id` |
 | `assignment_grades`, `assignment_evidence` | A grade; work-sample file paths |
 | `evidence_staging` | The unsorted inbox (captures not yet filed) |
 | `attendance` | One row per child per day |
-| `curricula`, `curriculum_editions`, `curriculum_units`, `curriculum_resources`, `curriculum_page_mappings` | The family's books and programs and their structure |
+| `curricula`, `curriculum_editions`, `curriculum_units`, `curriculum_resources`, `curriculum_page_mappings` | The older "Curriculum catalog": books and programs and their structure (replaced by the Library and the Curriculum planner as the new screens arrive) |
 | `curriculum_plans`, `curriculum_lessons` | Lesson plans (Week/Day guides) and their lessons |
-| `enrollments` | Child + book + school year ("course") |
+| `enrollments` | The older child + book + school year link (replaced by `courses`) |
 | `homework_help_sessions`, `homework_help_messages` | Stuck? nudges |
 | `parent_notifications` | The bell's messages |
 | `curriculum_classifications` | Links books to subjects (rarely used) |
@@ -92,13 +108,13 @@ erDiagram
 The placeholder tables `jurisdictions` and `compliance_packets` were removed in the move to Postgres; state requirements get a real design in the [Product spine](../6-planning/product-spine.md).
 
 ## Planned redesign (core loop, 2026-10-11)
-There are no real users yet, so the tables for curricula, lesson plans, enrollments, work samples and subjects are being **redesigned cleanly**, not patched. The two curriculum structures become one Curriculum + Materials + Guide model, plus Reading books, Courses, Requirement packs and Tasks. See [Product spine: data model changes](../6-planning/product-spine.md#data-model-changes).
+There are no real users yet, so the tables for curricula, lesson plans, enrollments, work samples and subjects are being **redesigned cleanly**, not patched. Built so far: subjects, the Library (books, textbooks with their lesson lists, workbooks, online sites), the Curriculum planner and courses, and the community catalog. Still to come: reading lists, requirement packs and Tasks. See [Product spine: data model changes](../6-planning/product-spine.md#data-model-changes).
 
 ## How the schema changes
 - **Alembic migrations** in `migrations/versions/`, run as the owner role at startup (`python -m app.db_startup`, called by `entrypoint.sh`). Each migration runs in one transaction: it applies fully or not at all.
 - **A new family table also needs, in its migration,** `tenancy.protect_family_table("<table>")` and `tenancy.add_family_reference(...)` for each reference to another family table (`migrations/tenancy.py`). The safety check refuses to start if either is missing.
 - **To write one:** change the models, run `alembic revision --autogenerate -m "…"`, read what it wrote, then add the tenancy steps. `tests/test_database.py` fails if the migrations and models disagree.
-- The baseline is `0001` (October 2026), the first Postgres schema.
+- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`).
 
 ## Known data gaps
 - **Lessons aren't tied to a school year,** so reports use date ranges.

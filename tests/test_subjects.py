@@ -33,6 +33,10 @@ class TestReference:
         assert len(body["states"]) == 51
         assert [grade["code"] for grade in body["grades"]][:3] == ["PreK", "K", "1"]
         assert {"english", "math", "safety", "bible"} <= {subject["code"] for subject in body["subjects"]}
+        assert [kind["label"] for kind in body["library_kinds"]] == ["Book", "Textbook", "Workbook", "Online site"]
+        assert all(kind["hint"] for kind in body["library_kinds"])
+        assert [role["code"] for role in body["curriculum_roles"]] == ["textbook", "workbook", "online", "reading", "teacher"]
+        assert "never anything about your family" in body["community_notice"]
 
     def test_pennsylvania_elementary(self, client: TestClient) -> None:
         body = client.get("/api/state-requirements/pa/subjects", params={"grade": "3rd"}).json()
