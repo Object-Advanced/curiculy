@@ -107,7 +107,7 @@ All families in one database. Every family table carries `household_id`. **Row-l
 ## How B is done safely
 - **The app connects as its own role,** which doesn't own the tables and can't bypass row-level security. Every family table gets a policy (`household_id = current_setting('app.household_id')`) and **`FORCE ROW LEVEL SECURITY`**, so even the owner is held to it.
 - **Each request sets its household in its transaction** (`SET LOCAL`), so it can't leak into the next request on a pooled connection. A session with no household set sees **nothing**.
-- **Shared tables** (guides, programs, packs, the book catalog) have no household policy. They're read by everyone and written only through deliberate paths, like "Share this guide".
+- **Shared tables** (guides, programs, packs, the book catalog) have no household policy. They're read by everyone and written only through deliberate paths, like a catalog contribution.
 - **Admin and background jobs** use a separate role, kept to scripts and jobs, never request handlers.
 - **Tests prove isolation:**
   - Family A can't read, change or delete Family B's rows through any route.
@@ -131,7 +131,7 @@ This is the most important risk of a shared database, and the owner's main conce
 | A view or function quietly skips the rules | Can't happen | **Stopped by a test:** views must use `security_invoker`, and no `SECURITY DEFINER` functions on family tables (both are known Postgres traps) |
 | A "unique" rule reveals that another family has something | Can't happen | **Design rule:** uniqueness on family tables always includes `household_id` |
 | Background jobs or admin scripts | Open any file they're given | Use a separate account, kept out of request handlers; they name the family explicitly |
-| Private details copied into shared data (like a shared guide) | Possible on the write-to-catalog path | Possible on the "Share this guide" path; in both, the share path copies structure only, and tests check it |
+| Private details copied into shared data (like a catalog entry) | Possible on the write-to-catalog path | Possible on the catalog contribution path; in both, it copies structure only, the privacy checks flag children's names and contact details, and an admin reviews it before anyone else sees it |
 
 **The leak both designs share is the most likely one in practice:** tying a request to the wrong family. That's guarded by sign-in and its tests either way. For everything else, B needs **several independent safeguards to fail at once** before anything shows.
 

@@ -4,7 +4,7 @@
 
 ## Why it exists: four pillars
 1. **A cheaper hub for families who mix programs** instead of using one all-in-one curriculum.
-2. **Community guides:** one family enters a program's lessons, and every family after them plans a year in minutes.
+2. **A community catalog:** one family enters a book or program (its structure, never anything about the family, goes to the catalog after review), and every family after them plans a year in minutes.
 3. **State requirements, met and not just explained:** each state's law becomes a checklist Curiculy fills from the family's records.
 4. **Records that build themselves:** work is attached to lessons as it happens, and reports show what's missing and print as PDFs.
 
