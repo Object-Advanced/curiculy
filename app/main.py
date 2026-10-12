@@ -35,6 +35,7 @@ from app.routers import (
     health,
     household,
     homework_help,
+    library,
     notifications,
     pacing,
     portfolios,
@@ -105,6 +106,7 @@ def create_app() -> FastAPI:
     application.include_router(students.router, prefix="/api")
     application.include_router(subjects.reference_router, prefix="/api")
     application.include_router(subjects.router, prefix="/api")
+    application.include_router(library.router, prefix="/api")
     application.include_router(curricula.router, prefix="/api")
     application.include_router(curriculum_plans.router, prefix="/api")
     application.include_router(catalog.router, prefix="/api")

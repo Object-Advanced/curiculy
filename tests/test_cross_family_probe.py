@@ -40,6 +40,8 @@ from app.models import (
     EvidenceStaging,
     HomeworkHelpSession,
     Household,
+    LibraryChapter,
+    LibraryItem,
     ParentNotification,
     SchoolYear,
     Student,
@@ -62,6 +64,7 @@ ID_PARAMS = {
     "notification_id": "notification",
     "session_id": "session",
     "subject_id": "student_subject",
+    "item_id": "library_item",
     "file_path": "file_path",
 }
 # Path parameters that aren't a family's record (shared book cache, static files).
@@ -128,8 +131,13 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             kind="own",
             objective=f"{prefix} objective",
         )
+        library_item = LibraryItem(
+            kind="reading_book", title=f"{prefix} library book", author=f"{prefix} author", total_pages=99,
+            chapters=[LibraryChapter(position=0, name=f"{prefix} chapter", start_page=1)],
+        )
         session.add_all(
             [
+                library_item,
                 student_subject,
                 enrollment,
                 help_session,
@@ -164,6 +172,7 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             "session": help_session.id,
             "staged": staged.id,
             "student_subject": student_subject.id,
+            "library_item": library_item.id,
             "file_path": file_path,
         }
     finally:

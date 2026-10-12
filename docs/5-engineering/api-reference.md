@@ -33,6 +33,8 @@ Feature page: [Household, students and settings](../2-features/02-household-setu
 | GET | `/api/enrollments/{enrollment_id}` | parent | Get enrollment |
 | GET | `/api/household` | parent | Read household |
 | PATCH | `/api/household` | parent | Update household route |
+| POST | `/api/household/state` | parent | Set the family's state from a date (a move adds a period) |
+| PUT | `/api/household/states` | parent | Replace the state history |
 | GET | `/api/settings/exception-colors` | parent | Get exception colors |
 | PUT | `/api/settings/exception-colors` | parent | Put exception colors |
 | GET | `/api/settings/school-year` | parent | Get school year |
@@ -45,6 +47,34 @@ Feature page: [Household, students and settings](../2-features/02-household-setu
 | DELETE | `/api/students/{student_id}/pin` | parent | Clear student pin |
 | POST | `/api/students/{student_id}/pin` | parent | Set student pin |
 | GET | `/api/students/{student_id}/spark` | parent | Get student spark |
+| POST | `/api/students/{student_id}/confirm-grade` | parent | Confirm the grade for the new school year |
+
+## Reference lists and subjects
+See [Product spine: Subjects](../6-planning/product-spine.md#subjects-what-everything-hangs-on)
+
+| Method | Path | Who | Handler |
+|---|---|---|---|
+| GET | `/api/reference` | public | States, grades and subjects |
+| GET | `/api/state-requirements/{state_code}/subjects` | public | A state's required subjects for a grade |
+| GET | `/api/students/{student_id}/subjects` | parent | A child's subjects for a school year (required ones added automatically) |
+| POST | `/api/students/{student_id}/subjects` | parent | Add a listed subject or the family's own |
+| PATCH | `/api/student-subjects/{subject_id}` | parent | On or off this year, objective, rename (own) |
+| DELETE | `/api/student-subjects/{subject_id}` | parent | Remove a common or own subject |
+
+## Library (four kinds of book)
+See the Library section of the [Product spine](../6-planning/product-spine.md). Built alongside the older `/api/curricula` routes, which stay until the new screens replace them.
+
+| Method | Path | Who | Handler |
+|---|---|---|---|
+| GET | `/api/library` | parent | List, with readiness (`?kind=` filter) |
+| POST | `/api/library` | parent | Add (kind first) |
+| GET | `/api/library/search` | parent | Search your library, the book cache, Open Library and Google Books; each result's guessed kind |
+| GET / PATCH / DELETE | `/api/library/{item_id}` | parent | Read (with readiness: what's missing and why), edit, delete |
+| PUT | `/api/library/{item_id}/chapters` | parent | Replace chapters (reading books, workbooks) |
+| PUT | `/api/library/{item_id}/materials` | parent | Replace a curriculum's materials |
+| PUT | `/api/library/{item_id}/lessons` | parent | Replace a curriculum's lesson list |
+| POST | `/api/library/{item_id}/lessons/generate` | parent | Add numbered lessons to fill in |
+| POST / GET / DELETE | `/api/library/{item_id}/cover` | parent | Upload, view or remove an uploaded cover image |
 
 ## Home
 Feature page: [Home](../2-features/03-home.md)

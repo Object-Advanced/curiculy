@@ -1126,6 +1126,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Library */
+        get: operations["list_library_api_library_get"];
+        put?: never;
+        /** Create Item */
+        post: operations["create_item_api_library_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Library
+         * @description Your library, the shared book cache, then Open Library and Google Books; each with a guessed kind.
+         */
+        get: operations["search_library_api_library_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Item */
+        get: operations["read_item_api_library__item_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Item */
+        delete: operations["delete_item_api_library__item_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Item */
+        patch: operations["update_item_api_library__item_id__patch"];
+        trace?: never;
+    };
+    "/api/library/{item_id}/chapters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Chapters
+         * @description Replace the chapters (reading books and workbooks), in order.
+         */
+        put: operations["put_chapters_api_library__item_id__chapters_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Cover */
+        get: operations["read_cover_api_library__item_id__cover_get"];
+        put?: never;
+        /**
+         * Upload Cover
+         * @description A real cover image (not a photo of the book). Shown to this family now; reviewed before others see it.
+         */
+        post: operations["upload_cover_api_library__item_id__cover_post"];
+        /** Delete Cover */
+        delete: operations["delete_cover_api_library__item_id__cover_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/lessons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Lessons
+         * @description Replace a curriculum's whole lesson list, in order.
+         */
+        put: operations["put_lessons_api_library__item_id__lessons_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/lessons/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Generate Lessons
+         * @description Add numbered lessons to fill in ("make lessons 1-170").
+         */
+        post: operations["post_generate_lessons_api_library__item_id__lessons_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Materials
+         * @description Replace a curriculum's materials; keep a material by sending its ``id``.
+         */
+        put: operations["put_materials_api_library__item_id__materials_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notifications": {
         parameters: {
             query?: never;
@@ -1996,6 +2155,14 @@ export interface components {
              */
             file: string;
         };
+        /** Body_upload_cover_api_library__item_id__cover_post */
+        Body_upload_cover_api_library__item_id__cover_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /** BookEditionRead */
         BookEditionRead: {
             /** Barcode */
@@ -2145,11 +2312,40 @@ export interface components {
             /** Expires At */
             expires_at?: string | null;
         };
+        /** ChapterRead */
+        ChapterRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Start Page */
+            start_page: number;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
+        /** ChapterWrite */
+        ChapterWrite: {
+            /** Name */
+            name: string;
+            /** Start Page */
+            start_page: number;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
         /**
          * ContributorRole
          * @enum {string}
          */
         ContributorRole: "author" | "co_author" | "editor" | "illustrator" | "translator" | "contributor";
+        /** CoverRead */
+        CoverRead: {
+            /** Review */
+            review?: string | null;
+            /** Source */
+            source: string | null;
+            /** Url */
+            url: string | null;
+        };
         /** CurriculumCreate */
         CurriculumCreate: {
             /** Description */
@@ -2892,10 +3088,311 @@ export interface components {
             key: string;
         };
         /**
+         * LessonGenerate
+         * @description 'Make lessons 1-170': numbered lessons to fill in.
+         */
+        LessonGenerate: {
+            /** Count */
+            count: number;
+            /** First Number */
+            first_number?: number | null;
+            /**
+             * Type
+             * @default lesson
+             */
+            type: string;
+        };
+        /** LessonPagesRead */
+        LessonPagesRead: {
+            /** End Page */
+            end_page: number;
+            /** Material Id */
+            material_id: number;
+            /** Start Page */
+            start_page: number;
+        };
+        /** LessonPagesWrite */
+        LessonPagesWrite: {
+            /** End Page */
+            end_page: number;
+            /** Material Id */
+            material_id: number;
+            /** Start Page */
+            start_page: number;
+        };
+        /** LessonRead */
+        LessonRead: {
+            /** Id */
+            id: number;
+            /** Minutes */
+            minutes: number | null;
+            /** Name */
+            name: string | null;
+            /** Number */
+            number: number | null;
+            /** Pages */
+            pages: components["schemas"]["LessonPagesRead"][];
+            /** Type */
+            type: string;
+            /** Unit */
+            unit: string | null;
+        };
+        /** LessonWrite */
+        LessonWrite: {
+            /** Minutes */
+            minutes?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Number */
+            number?: number | null;
+            /** Pages */
+            pages?: components["schemas"]["LessonPagesWrite"][];
+            /**
+             * Type
+             * @default lesson
+             */
+            type: string;
+            /** Unit */
+            unit?: string | null;
+        };
+        /**
+         * LibraryItemCreate
+         * @description ``kind`` is asked first, so every question after it makes sense.
+         */
+        LibraryItemCreate: {
+            /** Answer Key Start Page */
+            answer_key_start_page?: number | null;
+            /** Author */
+            author?: string | null;
+            /** Consumable */
+            consumable?: boolean | null;
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Edition */
+            edition?: string | null;
+            /** Grade */
+            grade?: string | null;
+            /** Isbn */
+            isbn?: string | null;
+            /** Kind */
+            kind: string;
+            /** Lesson Count */
+            lesson_count?: number | null;
+            /** Login Note */
+            login_note?: string | null;
+            /** Measure */
+            measure?: string | null;
+            /** Minutes Per Session */
+            minutes_per_session?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Reading Kind */
+            reading_kind?: string | null;
+            /** Series */
+            series?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages?: number | null;
+            /** Usual Pages Per Day */
+            usual_pages_per_day?: number | null;
+            /** Website Url */
+            website_url?: string | null;
+        };
+        /** LibraryItemRead */
+        LibraryItemRead: {
+            /** Answer Key Start Page */
+            answer_key_start_page: number | null;
+            /** Author */
+            author: string | null;
+            /** Chapters */
+            chapters: components["schemas"]["ChapterRead"][];
+            /** Consumable */
+            consumable: boolean;
+            cover: components["schemas"]["CoverRead"];
+            /** Days Per Week */
+            days_per_week: number | null;
+            /** Edition */
+            edition: string | null;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Isbn */
+            isbn: string | null;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Lesson Count */
+            lesson_count: number | null;
+            /** Lessons */
+            lessons: components["schemas"]["LessonRead"][];
+            /** Login Note */
+            login_note: string | null;
+            /** Materials */
+            materials: components["schemas"]["MaterialRead"][];
+            /** Measure */
+            measure: string | null;
+            /** Minutes Per Session */
+            minutes_per_session: number | null;
+            /** Missing Count */
+            missing_count: number;
+            /** Notes */
+            notes: string | null;
+            /** Problems Count */
+            problems_count: number;
+            /** Publisher */
+            publisher: string | null;
+            readiness: components["schemas"]["ReadinessRead"];
+            /** Reading Kind */
+            reading_kind: string | null;
+            /** Ready */
+            ready: boolean;
+            /** Series */
+            series: string | null;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages: number | null;
+            /** Usual Pages Per Day */
+            usual_pages_per_day: number | null;
+            /** Website Url */
+            website_url: string | null;
+        };
+        /** LibraryItemSummary */
+        LibraryItemSummary: {
+            /** Author */
+            author: string | null;
+            cover: components["schemas"]["CoverRead"];
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Missing Count */
+            missing_count: number;
+            /** Problems Count */
+            problems_count: number;
+            /** Ready */
+            ready: boolean;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+        };
+        /** LibraryItemUpdate */
+        LibraryItemUpdate: {
+            /** Answer Key Start Page */
+            answer_key_start_page?: number | null;
+            /** Author */
+            author?: string | null;
+            /** Consumable */
+            consumable?: boolean | null;
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Edition */
+            edition?: string | null;
+            /** Grade */
+            grade?: string | null;
+            /** Isbn */
+            isbn?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Lesson Count */
+            lesson_count?: number | null;
+            /** Login Note */
+            login_note?: string | null;
+            /** Measure */
+            measure?: string | null;
+            /** Minutes Per Session */
+            minutes_per_session?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Reading Kind */
+            reading_kind?: string | null;
+            /** Series */
+            series?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Total Pages */
+            total_pages?: number | null;
+            /** Usual Pages Per Day */
+            usual_pages_per_day?: number | null;
+            /** Website Url */
+            website_url?: string | null;
+        };
+        /**
          * MappingSource
          * @enum {string}
          */
         MappingSource: "manual" | "imported" | "ai_parsed";
+        /** MaterialRead */
+        MaterialRead: {
+            /** Audience */
+            audience: string;
+            /** Id */
+            id: number;
+            /** Isbn */
+            isbn: string | null;
+            /** Kind */
+            kind: string;
+            /** Pages */
+            pages: number | null;
+            /** Title */
+            title: string;
+        };
+        /**
+         * MaterialWrite
+         * @description Leave out ``id`` to add a material; include it to keep or edit one.
+         */
+        MaterialWrite: {
+            /**
+             * Audience
+             * @default student
+             */
+            audience: string;
+            /** Id */
+            id?: number | null;
+            /** Isbn */
+            isbn?: string | null;
+            /** Kind */
+            kind: string;
+            /** Pages */
+            pages?: number | null;
+            /** Title */
+            title: string;
+        };
+        /** MissingRead */
+        MissingRead: {
+            /** Field */
+            field: string;
+            /** Label */
+            label: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * PacingCalculation
          * @description The arithmetic behind a preview, so the caller can show its reasoning.
@@ -3378,6 +3875,15 @@ export interface components {
             notes?: components["schemas"]["AssignmentDetailRead"][];
             student: components["schemas"]["StudentRead"];
         };
+        /** ProblemRead */
+        ProblemRead: {
+            /** Level */
+            level: string;
+            /** Message */
+            message: string;
+            /** Where */
+            where: string;
+        };
         /** PublisherRead */
         PublisherRead: {
             /** Id */
@@ -3386,6 +3892,33 @@ export interface components {
             name: string;
             /** Website */
             website?: string | null;
+        };
+        /**
+         * ReadinessRead
+         * @description ``ready`` means it can be scheduled; otherwise what's missing, and why.
+         */
+        ReadinessRead: {
+            /**
+             * Lessons Total
+             * @default 0
+             */
+            lessons_total: number;
+            /**
+             * Lessons With Names
+             * @default 0
+             */
+            lessons_with_names: number;
+            /**
+             * Lessons With Pages
+             * @default 0
+             */
+            lessons_with_pages: number;
+            /** Missing */
+            missing: components["schemas"]["MissingRead"][];
+            /** Problems */
+            problems: components["schemas"]["ProblemRead"][];
+            /** Ready */
+            ready: boolean;
         };
         /** RecalibrateExecuteRead */
         RecalibrateExecuteRead: {
@@ -3577,6 +4110,42 @@ export interface components {
          * @enum {string}
          */
         ScoreType: "percentage" | "letter" | "points" | "pass_fail" | "complete_incomplete" | "custom";
+        /** SearchResult */
+        SearchResult: {
+            /** Authors */
+            authors?: string[];
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Guessed Kind */
+            guessed_kind: string;
+            /** Guessed Kind Label */
+            guessed_kind_label: string;
+            /** Isbn */
+            isbn?: string | null;
+            /** Library Item Id */
+            library_item_id?: number | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Source */
+            source: string;
+            /** Subtitle */
+            subtitle?: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages?: number | null;
+            /** Year */
+            year?: number | null;
+        };
+        /** SearchResults */
+        SearchResults: {
+            /** Notice */
+            notice?: string | null;
+            /** Query */
+            query: string;
+            /** Results */
+            results: components["schemas"]["SearchResult"][];
+        };
         /** StateOption */
         StateOption: {
             /** Code */
@@ -6160,6 +6729,435 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HouseholdRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_library_api_library_get: {
+        parameters: {
+            query?: {
+                /** @description reading_book, workbook, curriculum or online_program */
+                kind?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_item_api_library_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_library_api_library_search_get: {
+        parameters: {
+            query: {
+                /** @description An ISBN, title, author or series */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResults"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_item_api_library__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_item_api_library__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_item_api_library__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_chapters_api_library__item_id__chapters_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChapterWrite"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_cover_api_library__item_id__cover_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_cover_api_library__item_id__cover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_cover_api_library__item_id__cover_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_cover_api_library__item_id__cover_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_lessons_api_library__item_id__lessons_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonWrite"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_generate_lessons_api_library__item_id__lessons_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonGenerate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_materials_api_library__item_id__materials_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterialWrite"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
                 };
             };
             /** @description Validation Error */

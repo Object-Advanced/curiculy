@@ -67,7 +67,12 @@ erDiagram
 | Table | Holds |
 |---|---|
 | `households` | The family: name and **time zone**. **Exactly one per family** (unique `tenant_id`). |
-| `students` | Each child: name, grade, color |
+| `household_states` | The state the family homeschools in, from a date (`starts_on`); a move adds a row |
+| `students` | Each child: name, **grade** (a code from the fixed list: `PreK`, `K`, `1`–`12`), `grade_confirmed_on` (re-asked after each July 1), `has_iep` (a yes/no only), color |
+| `student_subjects` | A child's subjects for a school year: `required` (from the state's rules for the grade), `common` or `own`; what it counts toward; on or off this year; one objective |
+| `library_items` | The Library: a reading book, workbook, curriculum or online program (`kind`), with its details, cover and website link |
+| `library_chapters` | Chapters with start pages (reading books, workbooks) |
+| `library_materials`, `library_lessons`, `library_lesson_pages` | A curriculum's materials, its full lesson list, and each lesson's pages in each material |
 | `school_years` | Name, start and end dates (the latest is "operational") |
 | `household_settings` | School weekdays; colors for days off |
 | `calendar_exceptions` | Days off (kind, title, dates, optional single child) |
@@ -81,6 +86,8 @@ erDiagram
 | `homework_help_sessions`, `homework_help_messages` | Stuck? nudges |
 | `parent_notifications` | The bell's messages |
 | `curriculum_classifications` | Links books to subjects (rarely used) |
+
+**Reference lists live in code,** not tables: states, grades, subjects, and each reviewed state's required subjects (`app/reference/`). They change only with a release.
 
 The placeholder tables `jurisdictions` and `compliance_packets` were removed in the move to Postgres; state requirements get a real design in the [Product spine](../6-planning/product-spine.md).
 

@@ -5,7 +5,7 @@ Four layers of checks run on every push and pull request (GitHub Actions, `.gith
 | Layer | What | Command | Count (Oct 2026) |
 |---|---|---|---|
 | **Lint** | Python syntax errors and unused or undefined names (ruff 0.16.9, E9 + F rules) | `docker compose --profile dev run --build --rm tests ruff check app scripts tests migrations` | — |
-| **Backend** | pytest against a throwaway Postgres (`db-test`) with the real migrations and roles; never touches production, the AI or mail | `docker compose --profile dev run --rm tests pytest -q --tb=line` | 952 tests in 52 files |
+| **Backend** | pytest against a throwaway Postgres (`db-test`) with the real migrations and roles; never touches production, the AI or mail | `docker compose --profile dev run --rm tests pytest -q --tb=line` | 1,033 tests in 55 files |
 | **Frontend** | React app: TypeScript (strict), Vitest + Testing Library + MSW, a production build, and a check that the typed API client matches `frontend/openapi.json` | `cd frontend && npm run typecheck && npm test && npm run build` | 43 tests |
 | **Browser** | Playwright 1.63 against a throwaway app in its own Compose project (`curiculy-e2e`); `e2e/run.sh` rebuilds the app image first so the React build is current | `e2e/run.sh` | 39 tests across 6 projects |
 
