@@ -13,7 +13,7 @@ The gaps between the app and its purpose, found on 2026-10-11. Each is planned i
 | C1 | **No requirement layer.** Reports print whatever exists; nothing knows what *should* exist or what's missing. | Requirement packs, Records, Tasks; Pennsylvania first |
 | C2 | **Subject isn't real** ("Subject: Unfiled"); no lesson minutes; no terms on the school year | Subjects, minutes, terms |
 | C3 | **Two unconnected curriculum structures** (library units and lesson plans); the same book can exist twice | One Curriculum + Materials + Guide model |
-| C4 | **Books and programs share one setup** | Two shelves: Add curriculum · Add reading book |
+| C4 | **Books and programs share one setup** (one form, no type, no author, no structure) | One Library, search-first adding, four kinds with their own required fields |
 | C5 | **Work samples are slow to add, and captures don't know who or what** | Add work on the lesson, ask at check-off, snap the stack, inbox suggestions |
 | C6 | **Attendance isn't suggested,** and there's no "everyone present" | "School today?" card and weekly sweep |
 | C7 | **The calendar can't move one lesson, preview a change, or check it against any rules** | Move engine with previews and the plan checker |
@@ -23,7 +23,7 @@ The gaps between the app and its purpose, found on 2026-10-11. Each is planned i
 | C12 | **No guided setup:** a new family has to find Library, Settings and Calendar on their own | The year-setup interview |
 | C13 | **Phone photos can be stored sideways:** uploads drop the EXIF rotate tag without applying it (found while confirming GPS is stripped) | `ImageOps.exif_transpose` before re-saving, plus tests |
 | C14 | **PDF work samples keep their metadata** | Scrub with PyMuPDF on upload |
-| C9 | **No shared guides between families** | Community guides v1 |
+| C9 | **No shared catalog between families** | The community catalog: automatic contribution of structure, checks, admin review |
 
 ## Now
 | # | Issue | Where | Fix |

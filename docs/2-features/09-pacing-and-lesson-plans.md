@@ -8,7 +8,7 @@ Turning a book or a pacing guide into dated lessons on a child's calendar. There
 | **Where** | "Auto-schedule a book" (Catalog and Calendar); the **Lesson plans** list in the Catalog (import, builder, Apply) |
 | **Health** | **Works and well tested.** The PDF and photo imports depend on the local AI and are the least predictable part. |
 
-> **Planned (core loop, 2026-10-11):** lesson plans and book structures become one **Guide** model that families can share, and "Auto-schedule" and "Apply" become one verb, **Schedule**. See [Product spine](../6-planning/product-spine.md#words).
+> **Planned (core loop, 2026-10-12):** scheduling follows each kind of book's structure: a curriculum's full lesson list, a workbook's chapters and total pages, a reading book's pages, minutes or chapters. "Auto-schedule" and "Apply" become one verb, **Schedule**. See [Library](../6-planning/product-spine.md#library-one-shelf-four-kinds-of-book).
 
 ## Scope
 
@@ -30,7 +30,7 @@ A "plan" is a Week/Day guide made of lessons, with optional time slots. It can c
 
 ### Out of scope today
 - Editing the AI's PDF output side by side with the original.
-- A shared library of guides between families (planned: community guides).
+- A shared library of lesson lists between families (planned: the community catalog).
 
 ### API
 | Method | Path | Who | Purpose |

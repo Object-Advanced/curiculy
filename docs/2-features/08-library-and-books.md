@@ -8,7 +8,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 | **Where** | `#/curricula` ("Curriculum catalog") |
 | **Health** | **Works, needs a simpler list-first layout** |
 
-> **Planned (core loop, 2026-10-11):** the Library splits into two shelves, **Curricula** and **Reading books**, each with its own Add flow, and families can share guides. See [Library: two shelves, two setups](../6-planning/product-spine.md#library-two-shelves-two-setups).
+> **Planned (core loop, 2026-10-12):** one **Library** that looks like a bookshelf, with filters (All · Curricula · Workbooks · Reading books · Online); search-first adding by ISBN, title, author or series; four kinds of book, each with its own required fields; real cover images; and a community catalog built from every family's entries, reviewed by admins. See [Library: one shelf, four kinds of book](../6-planning/product-spine.md#library-one-shelf-four-kinds-of-book) and [Community catalog](../6-planning/product-spine.md#community-catalog-built-by-every-family).
 
 ## Scope
 
@@ -22,7 +22,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 
 ### Out of scope today
 - Scanning a barcode with the phone camera (Phase 6, nice-to-have).
-- Sharing guides between families (planned: community guides).
+- Sharing book structures between families (planned: the community catalog).
 
 ### API
 | Method | Path | Who | Purpose |
@@ -69,7 +69,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 ### Recommendations
 | Priority | What | When |
 |---|---|---|
-| High | Two shelves with separate Add flows: **Add curriculum** (materials, guide, course) and **Add reading book** (who's reading it, track or schedule). One verb, **Schedule**. | Core loop |
+| High | One Library bookshelf with filters; search-first adding; four kinds (reading book, workbook, curriculum, online program) with their own required fields; real cover images; the community catalog with admin review. One verb, **Schedule**. | Core loop |
 | Medium | Rename `/curricula` → `/library` and `/curriculum` → `/guides`, keeping the old names for one release; put the ISBN entry points under `/catalog` | Phase 5 |
 | Medium | Move the router's queries into services | Phase 5 |
 | Low | Camera barcode scan | Phase 6, nice-to-have |

@@ -8,7 +8,7 @@ When a family falls behind, move the unfinished lessons forward without dragging
 | **Where** | **Recalibrate Schedule** on the Calendar and on a child's Kids page |
 | **Health** | **Solid** |
 
-> **Planned (core loop, 2026-10-11):** catching up becomes one of several calendar moves, all with a preview, reached from an overdue banner on Today. See [Calendar: move things](../6-planning/product-spine.md#calendar-move-things-stay-within-the-guidelines).
+> **Planned (core loop, 2026-10-12):** Recalibrate becomes the [catch-up sheet](../6-planning/product-spine.md#the-catch-up-sheet): push everything back, push back a week, use a day off, double up, stretch the pages, or skip, each with its result in plain words, plus "keep test days" and a per-course default. Its two current strategies are reused.
 
 ## Scope
 
@@ -54,5 +54,5 @@ When a family falls behind, move the unfinished lessons forward without dragging
 | Priority | What | When |
 |---|---|---|
 | High | An **overdue banner** on Home and Today ("Sam has 1 lesson from Tuesday") that leads to Recalibrate | Core loop |
-| High | Preview the moved lessons before applying | Core loop |
+| High | The catch-up sheet: several options with their results, a recommended one, a per-course default, and a preview before applying | Core loop |
 | Medium | Recalibrate several children together | Core loop |

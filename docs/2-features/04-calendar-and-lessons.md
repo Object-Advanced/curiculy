@@ -8,7 +8,7 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 | **Where** | `#/assignments` ("Calendar") and the lesson details dialog |
 | **Health** | **Works, needs a redesign for phones and for "All Students"** |
 
-> **Planned (core loop, 2026-10-11):** move one lesson or a whole day with a preview, checks against the family's and the state's guidelines, and an agenda list on phones. See [Calendar: move things, stay within the guidelines](../6-planning/product-spine.md#calendar-move-things-stay-within-the-guidelines).
+> **Planned (core loop):** move one lesson or a whole day with a preview, checks against the family's and the state's guidelines, the [catch-up sheet](../6-planning/product-spine.md#the-catch-up-sheet) when work is missed, **Schedule from library** in place of "Auto-schedule a book", and an agenda list on phones. See [Calendar: move things, stay within the guidelines](../6-planning/product-spine.md#calendar-move-things-stay-within-the-guidelines).
 
 ## Scope
 

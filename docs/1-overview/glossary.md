@@ -9,7 +9,7 @@ The words parents see, the words the code uses, and the words we're moving to. W
 | **PIN** | PIN | a child row in `users` (role `child`) | A kid's 4–8 digit sign-in number |
 | **Lesson** | Assignment, lesson | `Assignment` | One dated piece of work for one child. Planned: renamed `Lesson` in the code and API too |
 | **Shared lesson** | (none) | `shared_group_uuid` | One lesson done by several kids; checking it off as a parent checks every copy |
-| **Curriculum** or **Reading book** | Curriculum | `Curriculum` (`/api/curricula`) | Today one table holds both. Planned: a **curriculum** is a program you teach from (its materials plus a guide); a **reading book** is a book to read, with its own lighter setup |
+| **Curriculum**, **Workbook**, **Reading book** or **Online program** | Curriculum | `Curriculum` (`/api/curricula`) | Today one table holds everything. Planned: four kinds of library item, each with its own setup and required fields |
 | **Guide** | Lesson plan, pacing guide, curriculum plan | `CurriculumPlan` (`/api/curriculum/plans`) | A curriculum's lesson list, from CSV, PDF, a paper photo, or typed in. Planned: one guide model (replacing plans and units) that families can share |
 | **Schedule** | "Auto-schedule" (books), "Apply" (plans) | pacing commit; plan apply | Put a book or plan onto a child's calendar as dated lessons |
 | **Course** | Enrollment | `Enrollment` | One child + one curriculum + one school year (mostly automatic now). Planned: weekdays, a start date and the subject |
@@ -35,7 +35,11 @@ Not in the app yet. See [Product spine](../6-planning/product-spine.md).
 
 | Word | Meaning |
 |---|---|
-| **Library** | The family's shelf, in two sections: **Curricula** and **Reading books**, each with its own Add flow |
+| **Library** | One bookshelf of everything the family teaches or reads from, with filters: All · Curricula · Workbooks · Reading books · Online |
+| **Workbook** | One consumable book worked page by page; total pages and chapters with start pages are required |
+| **Online program** | Lessons on a website, measured in lessons or minutes; the link opens from the lesson |
+| **Catch-up sheet** | The choices offered when work is missed: push back, use a day off, double up, stretch, skip |
+| **Community catalog** | Every book and program families have entered (structure only), reviewed by an admin before others see it |
 | **Material** | One item in a curriculum: student text, workbook, teacher's edition, answer key, tests |
 | **Reading list** | One child's reading books, with started and finished dates and the subject each counts toward |
 | **Subject** | What a child studies: required by the state for their grade, a common preset, or the family's own. Shown as slots on the dashboard. |
@@ -54,5 +58,6 @@ Not in the app yet. See [Product spine](../6-planning/product-spine.md).
 - "Homework help": it's **Stuck?** now. Curiculy doesn't teach.
 - "Adventures" on parent pages: kid-voice words belong on the kid's own screens.
 - "Curriculum" for a single novel or for a child's whole year: it means a program you teach from.
-- "Lesson plan", "Auto-schedule" and "Apply": it's a **guide**, and the verb is **Schedule**.
+- "Lesson plan", "Auto-schedule a book" and "Apply": it's a **guide**, and the verb is **Schedule**.
+- "Curriculum catalog": it's the **Library**.
 - "Assignment": it's a **lesson**.
