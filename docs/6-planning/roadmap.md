@@ -40,8 +40,9 @@ The phases from October 2026 still describe the engineering work; the core loop 
 
 ## Next up (in order)
 1. **Confirm the last Pennsylvania wordings** against the statute (see the [worksheet](state-requirements/pennsylvania.md)); Q1–Q14 are decided.
-2. **Deploy the move to Postgres** ([built 2026-10-12](decision-records/data-tier.md)): the database, the cross-family guardrails and backup layers 2–3 are done and tested; then layer 1 (continuous archive) and the off-site copy.
-3. **Subjects**, then **Curriculum, Materials and Guide**: the first pieces of the backend spine.
-4. Ops tasks that still stand: an off-site backup copy, an uptime monitor, turning off the public `/docs`.
+2. **Done and deployed 2026-10-12:** the move to Postgres ([decision](decision-records/data-tier.md)) and backend spine part 1: state and grades, subjects and objectives (Pennsylvania's required subjects), and the Library's four kinds of book with readiness rules, search-first adding and covers (APIs; the screens come next).
+3. **Next:** the screens for those pieces (the year-setup interview, the Library bookshelf), and the next backend pieces: Course, the Lesson rename, minutes and terms, then the catch-up formulas.
+4. **Backups:** layer 1 (continuous archive) and the encrypted off-site copy (needs a cloud storage account).
+5. Ops tasks that still stand: an uptime monitor, turning off the public `/docs`.
 
 See [Open issues](open-issues.md) for every known problem, by priority.

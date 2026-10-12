@@ -455,6 +455,8 @@ In Settings → Admin, next to invites:
 **Data tier: Postgres** ([decided 2026-10-11](decision-records/data-tier.md)), one database with each family walled off by row-level security, built before the spine.
 
 ## Order of work
+**Built and deployed 2026-10-12:** the move to Postgres; state and grades; subjects and objectives (with Pennsylvania's required subjects); the Library's four kinds of book with readiness rules, search-first adding and covers. These are APIs; their screens come with the React work below.
+
 | When | Work |
 |---|---|
 | Oct–Dec 2026 | Data-tier decision; then the backend spine: state and grades → subjects and objectives → the Library's four kinds (chapters, materials, lesson lists, required-field rules, search-first adding, covers) → reading lists → Course → Lesson rename, minutes and terms → activities → attendance suggestions → move engine with previews, the **catch-up formulas** and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → community catalog checks and the admin review queue → transcript and credits → photo orientation fix and PDF metadata scrub |

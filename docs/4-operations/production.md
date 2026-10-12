@@ -62,6 +62,9 @@ docker compose up -d --no-build --wait api
 
 | Last deploys | Commit | Rollback tag |
 |---|---|---|
+| Backend spine part 1: state and grades, subjects, Library (2026-10-12; migrations 0002–0004) | `55cbb0f` | `pre-spine1` (api and backup) → commit `4654da8` |
+| The move to Postgres (2026-10-12; fresh database) | `4654da8` | `pre-postgres` (api and backup) → commit `1367cf1`, the last SQLite version |
+| Sticker journal (2026-10-11) | `1367cf1` | `pre-journal` → commit `c460c43` |
 | Greeting fix (2026-10-10) | `51cce3b` | `pre-greeting` → commit `55a9654` |
 | Phase 2 (2026-10-10) | `55a9654` | `pre-phase2` → commit `63f716e` |
 | Phase 1 (2026-10-09) | `63f716e` | `pre-phase1` |
