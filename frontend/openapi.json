@@ -3085,6 +3085,24 @@
         "title": "GradeConfirm",
         "type": "object"
       },
+      "GradeOption": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "GradeOption",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -5042,6 +5060,39 @@
         "title": "RecalibrateStrategyRead",
         "type": "object"
       },
+      "ReferenceRead": {
+        "description": "The fixed lists every screen picks from.",
+        "properties": {
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/GradeOption"
+            },
+            "title": "Grades",
+            "type": "array"
+          },
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/StateOption"
+            },
+            "title": "States",
+            "type": "array"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectOption"
+            },
+            "title": "Subjects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "states",
+          "grades",
+          "subjects"
+        ],
+        "title": "ReferenceRead",
+        "type": "object"
+      },
       "RegisterRequest": {
         "properties": {
           "email": {
@@ -5069,6 +5120,34 @@
           "invite_key"
         ],
         "title": "RegisterRequest",
+        "type": "object"
+      },
+      "RequiredSubject": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "every_year": {
+            "default": false,
+            "title": "Every Year",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "state_label": {
+            "title": "State Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "state_label"
+        ],
+        "title": "RequiredSubject",
         "type": "object"
       },
       "ResourceKind": {
@@ -5272,6 +5351,96 @@
         ],
         "title": "ScoreType",
         "type": "string"
+      },
+      "StateOption": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "StateOption",
+        "type": "object"
+      },
+      "StateSubjectsRead": {
+        "description": "What a state requires for a grade. ``supported`` is False until a state's rules are reviewed.",
+        "properties": {
+          "band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state_code": {
+            "title": "State Code",
+            "type": "string"
+          },
+          "state_name": {
+            "title": "State Name",
+            "type": "string"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/RequiredSubject"
+            },
+            "title": "Subjects",
+            "type": "array"
+          },
+          "supported": {
+            "title": "Supported",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "state_code",
+          "state_name",
+          "grade",
+          "supported"
+        ],
+        "title": "StateSubjectsRead",
+        "type": "object"
       },
       "StudentCourseRead": {
         "description": "One active course on a student dashboard, with lesson completion counts.",
@@ -5561,6 +5730,289 @@
         "title": "StudentSparkRead",
         "type": "object"
       },
+      "StudentSubjectCreate": {
+        "description": "Add a listed subject (``subject_code``) or the family's own (``name``, counting toward one or none).",
+        "properties": {
+          "counts_toward": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts Toward"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "school_year_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Year Id"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          }
+        },
+        "title": "StudentSubjectCreate",
+        "type": "object"
+      },
+      "StudentSubjectRead": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "counts_toward": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts Toward"
+          },
+          "counts_toward_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts Toward Name"
+          },
+          "covered_before": {
+            "default": false,
+            "title": "Covered Before",
+            "type": "boolean"
+          },
+          "every_year": {
+            "default": false,
+            "title": "Every Year",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "state_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Label"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warning"
+          }
+        },
+        "required": [
+          "id",
+          "subject_code",
+          "name",
+          "kind",
+          "counts_toward",
+          "counts_toward_name",
+          "active",
+          "objective"
+        ],
+        "title": "StudentSubjectRead",
+        "type": "object"
+      },
+      "StudentSubjectUpdate": {
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "clear_counts_toward": {
+            "default": false,
+            "title": "Clear Counts Toward",
+            "type": "boolean"
+          },
+          "counts_toward": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts Toward"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          }
+        },
+        "title": "StudentSubjectUpdate",
+        "type": "object"
+      },
+      "StudentSubjectsRead": {
+        "properties": {
+          "band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          },
+          "school_year_id": {
+            "title": "School Year Id",
+            "type": "integer"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/StudentSubjectRead"
+            },
+            "title": "Subjects",
+            "type": "array"
+          },
+          "supported": {
+            "title": "Supported",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "student_id",
+          "school_year_id",
+          "state_code",
+          "supported",
+          "subjects"
+        ],
+        "title": "StudentSubjectsRead",
+        "type": "object"
+      },
       "StudentTodayProgress": {
         "description": "One student's assignments scheduled today, and how many are complete.",
         "properties": {
@@ -5652,6 +6104,34 @@
           "completed"
         ],
         "title": "StudentWeeklyTrend",
+        "type": "object"
+      },
+      "SubjectOption": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "covers": {
+            "default": "",
+            "title": "Covers",
+            "type": "string"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "group"
+        ],
+        "title": "SubjectOption",
         "type": "object"
       },
       "SubjectTaxonomyRead": {
@@ -9842,6 +10322,28 @@
         ]
       }
     },
+    "/api/reference": {
+      "get": {
+        "description": "The fixed lists: states, grades and subjects. Public: nothing private in it.",
+        "operationId": "reference_api_reference_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferenceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reference",
+        "tags": [
+          "reference"
+        ]
+      }
+    },
     "/api/reports/weekly-manifest": {
       "get": {
         "operationId": "weekly_manifest_api_reports_weekly_manifest_get",
@@ -10221,6 +10723,161 @@
         "summary": "Put School Year",
         "tags": [
           "settings"
+        ]
+      }
+    },
+    "/api/state-requirements/{state_code}/subjects": {
+      "get": {
+        "description": "What a state requires for a grade (public, like the state pages on the website).",
+        "operationId": "required_subjects_api_state_requirements__state_code__subjects_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "state_code",
+            "required": true,
+            "schema": {
+              "title": "State Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "grade",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grade"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateSubjectsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Required Subjects",
+        "tags": [
+          "reference"
+        ]
+      }
+    },
+    "/api/student-subjects/{subject_id}": {
+      "delete": {
+        "operationId": "delete_subject_api_student_subjects__subject_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Subject",
+        "tags": [
+          "subjects"
+        ]
+      },
+      "patch": {
+        "description": "Turn a subject on or off for this year, write its objective, or rename your own.",
+        "operationId": "update_subject_api_student_subjects__subject_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentSubjectUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentSubjectRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Subject",
+        "tags": [
+          "subjects"
         ]
       }
     },
@@ -10799,6 +11456,125 @@
         "summary": "Get Student Spark",
         "tags": [
           "students"
+        ]
+      }
+    },
+    "/api/students/{student_id}/subjects": {
+      "get": {
+        "description": "The child's subjects this school year; the state's required ones are added automatically.",
+        "operationId": "list_subjects_api_students__student_id__subjects_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "title": "Student Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "school_year_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "School Year Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentSubjectsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Subjects",
+        "tags": [
+          "subjects"
+        ]
+      },
+      "post": {
+        "operationId": "create_subject_api_students__student_id__subjects_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "title": "Student Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentSubjectCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentSubjectsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Subject",
+        "tags": [
+          "subjects"
         ]
       }
     }

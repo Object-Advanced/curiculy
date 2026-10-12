@@ -1,6 +1,19 @@
 from datetime import date
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, false
+from sqlalchemy import (
+    Boolean,
+    Date,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    text,
+    true,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import TenantBase
@@ -145,6 +158,45 @@ class Student(TimestampMixin, TenantBase):
     )
 
 
+class StudentSubject(TimestampMixin, TenantBase):
+    """One subject slot for one child in one school year.
+
+    ``kind``: ``required`` (the family's state requires it for the child's
+    grade), ``common`` (a preset from the subject list) or ``own`` (named by
+    the family, counting toward a listed subject or nothing). ``active`` is
+    whether it's taught this year; ``objective`` is the one line that prints
+    in the state's "objectives by subject" outline.
+    """
+
+    __tablename__ = "student_subjects"
+    __table_args__ = (
+        Index(
+            "uq_student_subjects_listed",
+            "student_id",
+            "school_year_id",
+            "subject_code",
+            unique=True,
+            postgresql_where=text("subject_code IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    school_year_id: Mapped[int] = mapped_column(
+        ForeignKey("school_years.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # A code from app.reference.subjects; NULL for the family's own subjects.
+    subject_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    counts_toward: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true(), nullable=False)
+    objective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    position: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+
+
 class SchoolYear(TimestampMixin, TenantBase):
     __tablename__ = "school_years"
 
@@ -258,6 +310,7 @@ __all__ = [
     "ReportingCategory",
     "SchoolYear",
     "Student",
+    "StudentSubject",
     "SubjectTaxonomy",
     "Work",
     "WorkAuthor",

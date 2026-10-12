@@ -1325,6 +1325,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reference
+         * @description The fixed lists: states, grades and subjects. Public: nothing private in it.
+         */
+        get: operations["reference_api_reference_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/weekly-manifest": {
         parameters: {
             query?: never;
@@ -1412,6 +1432,47 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/state-requirements/{state_code}/subjects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Required Subjects
+         * @description What a state requires for a grade (public, like the state pages on the website).
+         */
+        get: operations["required_subjects_api_state_requirements__state_code__subjects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student-subjects/{subject_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Subject */
+        delete: operations["delete_subject_api_student_subjects__subject_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Subject
+         * @description Turn a subject on or off for this year, write its objective, or rename your own.
+         */
+        patch: operations["update_subject_api_student_subjects__subject_id__patch"];
         trace?: never;
     };
     "/api/students": {
@@ -1543,6 +1604,27 @@ export interface paths {
         get: operations["get_student_spark_api_students__student_id__spark_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/students/{student_id}/subjects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Subjects
+         * @description The child's subjects this school year; the state's required ones are added automatically.
+         */
+        get: operations["list_subjects_api_students__student_id__subjects_get"];
+        put?: never;
+        /** Create Subject */
+        post: operations["create_subject_api_students__student_id__subjects_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2552,6 +2634,13 @@ export interface components {
             /** Grade */
             grade: string;
         };
+        /** GradeOption */
+        GradeOption: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3367,6 +3456,18 @@ export interface components {
              */
             saturdays_used: number;
         };
+        /**
+         * ReferenceRead
+         * @description The fixed lists every screen picks from.
+         */
+        ReferenceRead: {
+            /** Grades */
+            grades: components["schemas"]["GradeOption"][];
+            /** States */
+            states: components["schemas"]["StateOption"][];
+            /** Subjects */
+            subjects: components["schemas"]["SubjectOption"][];
+        };
         /** RegisterRequest */
         RegisterRequest: {
             /** Email */
@@ -3375,6 +3476,20 @@ export interface components {
             invite_key: string;
             /** Password */
             password: string;
+        };
+        /** RequiredSubject */
+        RequiredSubject: {
+            /** Code */
+            code: string;
+            /**
+             * Every Year
+             * @default false
+             */
+            every_year: boolean;
+            /** Name */
+            name: string;
+            /** State Label */
+            state_label: string;
         };
         /**
          * ResourceKind
@@ -3462,6 +3577,35 @@ export interface components {
          * @enum {string}
          */
         ScoreType: "percentage" | "letter" | "points" | "pass_fail" | "complete_incomplete" | "custom";
+        /** StateOption */
+        StateOption: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * StateSubjectsRead
+         * @description What a state requires for a grade. ``supported`` is False until a state's rules are reviewed.
+         */
+        StateSubjectsRead: {
+            /** Band */
+            band?: string | null;
+            /** Grade */
+            grade: string | null;
+            /** Rule */
+            rule?: string | null;
+            /** Sources */
+            sources?: string[];
+            /** State Code */
+            state_code: string;
+            /** State Name */
+            state_name: string;
+            /** Subjects */
+            subjects?: components["schemas"]["RequiredSubject"][];
+            /** Supported */
+            supported: boolean;
+        };
         /**
          * StudentCourseRead
          * @description One active course on a student dashboard, with lesson completion counts.
@@ -3563,6 +3707,86 @@ export interface components {
             student_id: number;
         };
         /**
+         * StudentSubjectCreate
+         * @description Add a listed subject (``subject_code``) or the family's own (``name``, counting toward one or none).
+         */
+        StudentSubjectCreate: {
+            /** Counts Toward */
+            counts_toward?: string | null;
+            /** Name */
+            name?: string | null;
+            /** School Year Id */
+            school_year_id?: number | null;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
+        /** StudentSubjectRead */
+        StudentSubjectRead: {
+            /** Active */
+            active: boolean;
+            /** Counts Toward */
+            counts_toward: string | null;
+            /** Counts Toward Name */
+            counts_toward_name: string | null;
+            /**
+             * Covered Before
+             * @default false
+             */
+            covered_before: boolean;
+            /**
+             * Every Year
+             * @default false
+             */
+            every_year: boolean;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Objective */
+            objective: string | null;
+            /** State Label */
+            state_label?: string | null;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Warning */
+            warning?: string | null;
+        };
+        /** StudentSubjectUpdate */
+        StudentSubjectUpdate: {
+            /** Active */
+            active?: boolean | null;
+            /**
+             * Clear Counts Toward
+             * @default false
+             */
+            clear_counts_toward: boolean;
+            /** Counts Toward */
+            counts_toward?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Objective */
+            objective?: string | null;
+        };
+        /** StudentSubjectsRead */
+        StudentSubjectsRead: {
+            /** Band */
+            band?: string | null;
+            /** Rule */
+            rule?: string | null;
+            /** School Year Id */
+            school_year_id: number;
+            /** State Code */
+            state_code: string | null;
+            /** Student Id */
+            student_id: number;
+            /** Subjects */
+            subjects: components["schemas"]["StudentSubjectRead"][];
+            /** Supported */
+            supported: boolean;
+        };
+        /**
          * StudentTodayProgress
          * @description One student's assignments scheduled today, and how many are complete.
          */
@@ -3600,6 +3824,20 @@ export interface components {
             name: string;
             /** Student Id */
             student_id: number;
+        };
+        /** SubjectOption */
+        SubjectOption: {
+            /** Code */
+            code: string;
+            /**
+             * Covers
+             * @default
+             */
+            covers: string;
+            /** Group */
+            group: string;
+            /** Name */
+            name: string;
         };
         /** SubjectTaxonomyRead */
         SubjectTaxonomyRead: {
@@ -6270,6 +6508,26 @@ export interface operations {
             };
         };
     };
+    reference_api_reference_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenceRead"];
+                };
+            };
+        };
+    };
     weekly_manifest_api_reports_weekly_manifest_get: {
         parameters: {
             query: {
@@ -6516,6 +6774,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SchoolYearSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    required_subjects_api_state_requirements__state_code__subjects_get: {
+        parameters: {
+            query?: {
+                grade?: string | null;
+            };
+            header?: never;
+            path: {
+                state_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StateSubjectsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_subject_api_student_subjects__subject_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_subject_api_student_subjects__subject_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentSubjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSubjectRead"];
                 };
             };
             /** @description Validation Error */
@@ -6865,6 +7220,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudentSparkRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_subjects_api_students__student_id__subjects_get: {
+        parameters: {
+            query?: {
+                school_year_id?: number | null;
+            };
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSubjectsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_subject_api_students__student_id__subjects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentSubjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSubjectsRead"];
                 };
             };
             /** @description Validation Error */
