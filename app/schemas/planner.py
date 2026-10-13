@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import date
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.reference.grades import normalize_grade
 from app.reference.subjects import SUBJECTS_BY_CODE
+from app.schemas.courses import CourseRead
 from app.schemas.library import LibraryItemSummary, MissingRead, ProblemRead
 
 ROLES = {
@@ -59,9 +60,12 @@ class CurriculumFields(BaseModel):
 
 
 class PlannedCurriculumCreate(CurriculumFields):
-    """Start a curriculum, usually from a textbook (its subject and grade carry over)."""
+    """Start a curriculum, usually from a textbook (its subject and grade carry
+    over). ``first_item_id`` starts one around any library item instead: a
+    workbook, an online site or a book, for a subject without a textbook."""
 
     textbook_id: int | None = None
+    first_item_id: int | None = None
 
 
 class PlannedCurriculumUpdate(CurriculumFields):
@@ -77,21 +81,24 @@ class CurriculumItemRead(BaseModel):
     item: LibraryItemSummary
 
 
-class CourseRead(BaseModel):
-    id: int
-    curriculum_id: int
-    student_id: int
-    student_name: str
-    start_date: date
-    end_date: date | None
-    weekdays: list[int]
-    lessons_scheduled: int
-
-
 class CurriculumReadiness(BaseModel):
     ready: bool
     missing: list[MissingRead]
     problems: list[ProblemRead]
+
+
+class PaceRead(BaseModel):
+    """What sets a curriculum's pace: its textbook, or (without one) the item
+    the parent paces when scheduling: by pages, chapters or a finish date."""
+
+    kind: str
+    library_item_id: int
+    title: str
+    total_pages: int | None
+    chapters: int
+    lessons: int
+    usual_pages_per_day: int | None
+    measure: str | None
 
 
 class PlannedCurriculumRead(BaseModel):
@@ -107,14 +114,35 @@ class PlannedCurriculumRead(BaseModel):
     courses: list[CourseRead]
     # Started from a curriculum other families built
     community_curriculum_id: int | None = None
+    # One library item scheduled on its own, from the Library
+    solo: bool = False
+    paced_by: PaceRead | None = None
 
 
 class ScheduleRequest(BaseModel):
-    """Which children, starting when, and (optionally) which weekdays (Monday = 0)."""
+    """Which children, starting when, and (optionally) which weekdays (Monday = 0).
+
+    Without a textbook, the pace is chosen here, one of: finish by a date,
+    pages a day, or (a book with chapters) chapters a day. With none, the work
+    is spread over the rest of the school year. A textbook ignores them: its
+    lessons set the pace.
+    """
 
     student_ids: list[int] = Field(min_length=1)
     start_date: date
     weekdays: list[int] | None = None
+    finish_by: date | None = None
+    pages_per_day: int | None = Field(default=None, ge=1, le=200)
+    chapters_per_day: int | None = Field(default=None, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def _one_pace(self) -> "ScheduleRequest":
+        chosen = [name for name in ("finish_by", "pages_per_day", "chapters_per_day") if getattr(self, name) is not None]
+        if len(chosen) > 1:
+            raise ValueError("Pick one pace: a finish date, pages a day, or chapters a day.")
+        if self.finish_by is not None and self.finish_by < self.start_date:
+            raise ValueError("The finish date is before the start date.")
+        return self
 
     @field_validator("weekdays")
     @classmethod
@@ -145,6 +173,8 @@ class StudentPreview(BaseModel):
 
 
 class SchedulePreview(BaseModel):
+    # The pace in plain words: "One lesson of Saxon Math each school day"
+    pace: str
     start_date: date
     weekdays: list[int]
     weekday_names: list[str]

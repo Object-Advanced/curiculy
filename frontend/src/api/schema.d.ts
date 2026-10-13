@@ -1444,6 +1444,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/library/read-barcode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Barcode Photo
+         * @description The ISBN from a photo of a book's barcode (for phones that can't scan live).
+         */
+        post: operations["read_barcode_photo_api_library_read_barcode_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/read-page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Page Photo
+         * @description Chapters or lessons from a photo of a contents page or a lesson list.
+         *     Nothing is saved: the text comes back for the parent to check and add.
+         */
+        post: operations["read_page_photo_api_library_read_page_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/library/search": {
         parameters: {
             query?: never;
@@ -1560,6 +1601,48 @@ export interface paths {
          * @description Add numbered lessons to fill in ("make lessons 1-170").
          */
         post: operations["post_generate_lessons_api_library__item_id__lessons_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Schedule Item
+         * @description Put one book on the calendar on its own. Take it off again with
+         *     ``DELETE /api/planner/courses/{course_id}`` (finished lessons stay).
+         */
+        post: operations["schedule_item_api_library__item_id__schedule_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{item_id}/schedule/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Item Schedule
+         * @description Schedule one book on its own, without a curriculum: what it would put on
+         *     the calendar, for each child, at the chosen pace. Nothing is saved.
+         */
+        post: operations["preview_item_schedule_api_library__item_id__schedule_preview_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2553,6 +2636,16 @@ export interface components {
             /** Student Id */
             student_id: number;
         };
+        /**
+         * BarcodeRead
+         * @description The ISBN read from a photo of a barcode, or why not.
+         */
+        BarcodeRead: {
+            /** Isbn */
+            isbn: string | null;
+            /** Message */
+            message: string;
+        };
         /** Body_import_curriculum_csv_api_curriculum_import_csv_post */
         Body_import_curriculum_csv_api_curriculum_import_csv_post: {
             /**
@@ -2600,6 +2693,22 @@ export interface components {
             scope: string;
             /** Username */
             username: string;
+        };
+        /** Body_read_barcode_photo_api_library_read_barcode_post */
+        Body_read_barcode_photo_api_library_read_barcode_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
+        /** Body_read_page_photo_api_library_read_page_post */
+        Body_read_page_photo_api_library_read_page_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
         };
         /** Body_stage_evidence_api_evidence_staging_post */
         Body_stage_evidence_api_evidence_staging_post: {
@@ -4198,6 +4307,8 @@ export interface components {
             community?: components["schemas"]["CommunityLinkRead"] | null;
             /** Consumable */
             consumable: boolean;
+            /** Courses */
+            courses?: components["schemas"]["CourseRead"][];
             cover: components["schemas"]["CoverRead"];
             /** Curriculum Ids */
             curriculum_ids?: number[];
@@ -4372,6 +4483,29 @@ export interface components {
             label: string;
             /** Reason */
             reason: string;
+        };
+        /**
+         * PaceRead
+         * @description What sets a curriculum's pace: its textbook, or (without one) the item
+         *     the parent paces when scheduling: by pages, chapters or a finish date.
+         */
+        PaceRead: {
+            /** Chapters */
+            chapters: number;
+            /** Kind */
+            kind: string;
+            /** Lessons */
+            lessons: number;
+            /** Library Item Id */
+            library_item_id: number;
+            /** Measure */
+            measure: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages: number | null;
+            /** Usual Pages Per Day */
+            usual_pages_per_day: number | null;
         };
         /**
          * PacingCalculation
@@ -4570,6 +4704,21 @@ export interface components {
             resource_title: string;
             source: components["schemas"]["MappingSource"];
         };
+        /**
+         * PageReadingRead
+         * @description What was read from a photo of a printed page, one chapter or lesson per
+         *     line, for the parent to check before adding.
+         */
+        PageReadingRead: {
+            /** Left Out */
+            left_out: number;
+            /** Lines */
+            lines: number;
+            /** Message */
+            message: string;
+            /** Text */
+            text: string;
+        };
         /** ParentNotificationListRead */
         ParentNotificationListRead: {
             /** Notifications */
@@ -4605,11 +4754,15 @@ export interface components {
         ParentNotificationType: "homework_help_started" | "homework_help_redirect" | "curriculum_plan_ready" | "curriculum_plan_failed" | "catalog_update";
         /**
          * PlannedCurriculumCreate
-         * @description Start a curriculum, usually from a textbook (its subject and grade carry over).
+         * @description Start a curriculum, usually from a textbook (its subject and grade carry
+         *     over). ``first_item_id`` starts one around any library item instead: a
+         *     workbook, an online site or a book, for a subject without a textbook.
          */
         PlannedCurriculumCreate: {
             /** Days Per Week */
             days_per_week?: number | null;
+            /** First Item Id */
+            first_item_id?: number | null;
             /** Grade */
             grade?: string | null;
             /** Name */
@@ -4639,7 +4792,13 @@ export interface components {
             name: string;
             /** Notes */
             notes: string | null;
+            paced_by?: components["schemas"]["PaceRead"] | null;
             readiness: components["schemas"]["CurriculumReadiness"];
+            /**
+             * Solo
+             * @default false
+             */
+            solo: boolean;
             /** Subject Code */
             subject_code: string | null;
             /** Subject Name */
@@ -5103,6 +5262,8 @@ export interface components {
         };
         /** SchedulePreview */
         SchedulePreview: {
+            /** Pace */
+            pace: string;
             /** School Year End */
             school_year_end: string | null;
             /**
@@ -5122,8 +5283,19 @@ export interface components {
         /**
          * ScheduleRequest
          * @description Which children, starting when, and (optionally) which weekdays (Monday = 0).
+         *
+         *     Without a textbook, the pace is chosen here, one of: finish by a date,
+         *     pages a day, or (a book with chapters) chapters a day. With none, the work
+         *     is spread over the rest of the school year. A textbook ignores them: its
+         *     lessons set the pace.
          */
         ScheduleRequest: {
+            /** Chapters Per Day */
+            chapters_per_day?: number | null;
+            /** Finish By */
+            finish_by?: string | null;
+            /** Pages Per Day */
+            pages_per_day?: number | null;
             /**
              * Start Date
              * Format: date
@@ -8515,6 +8687,72 @@ export interface operations {
             };
         };
     };
+    read_barcode_photo_api_library_read_barcode_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_read_barcode_photo_api_library_read_barcode_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BarcodeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_page_photo_api_library_read_page_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_read_page_photo_api_library_read_page_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageReadingRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     search_library_api_library_search_get: {
         parameters: {
             query: {
@@ -8831,6 +9069,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    schedule_item_api_library__item_id__schedule_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_item_schedule_api_library__item_id__schedule_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulePreview"];
                 };
             };
             /** @description Validation Error */

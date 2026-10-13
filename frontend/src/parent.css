@@ -1023,6 +1023,53 @@
     gap: var(--space-2);
   }
 
+  .pace-options {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .pace-option {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+  }
+
+  .pace-option label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .pace-option input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+  }
+
+  .scanner-view {
+    position: relative;
+    width: min(100%, 480px);
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--surface-inverse);
+  }
+
+  .scanner-view video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .scanner-guide {
+    position: absolute;
+    inset: 32% 12%;
+    border: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+  }
+
   .weekdays {
     display: flex;
     flex-wrap: wrap;

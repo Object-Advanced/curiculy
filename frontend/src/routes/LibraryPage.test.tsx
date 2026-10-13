@@ -171,4 +171,99 @@ describe("Library", () => {
     );
     expect(await within(panel).findByText("Ready to schedule.")).toBeInTheDocument();
   });
+
+  it("scans a barcode from a photo and searches for the exact book", async () => {
+    let searched = "";
+    server.use(
+      http.get("*/api/library", () => HttpResponse.json([])),
+      http.post("*/api/library/read-barcode", () => HttpResponse.json({ isbn: "9780064400558", message: "Found ISBN 9780064400558." })),
+      http.get("*/api/library/search", ({ request }) => {
+        searched = new URL(request.url).searchParams.get("q") ?? "";
+        return HttpResponse.json({ query: searched, results: [], notice: "No book with that ISBN was found. You can add it yourself." });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt("/next/library?add=1");
+    const dialog = await screen.findByRole("dialog", { name: "Add to your library" });
+    await user.click(within(dialog).getByRole("button", { name: "Scan the barcode" }));
+    const scanner = within(dialog).getByRole("region", { name: "Scan a barcode" });
+    expect(within(scanner).getByText(/Take a photo of the barcode on the back cover/)).toBeInTheDocument();
+    await user.upload(within(scanner).getByLabelText("Take a photo of the barcode"), new File(["jpeg"], "back.jpg", { type: "image/jpeg" }));
+    expect(await within(dialog).findByText("No book with that ISBN was found. You can add it yourself.")).toBeInTheDocument();
+    expect(searched).toBe("9780064400558");
+    expect(within(dialog).getByRole("searchbox")).toHaveValue("9780064400558");
+  });
+
+  it("reads a lesson list from a photo, for the parent to check", async () => {
+    const textbook = item(5, "textbook", "Saxon Math 5/4", { ready: false });
+    server.use(
+      http.get("*/api/library", () => HttpResponse.json([summary(5, "textbook", "Saxon Math 5/4", { ready: false, missing_count: 1 })])),
+      http.get("*/api/library/5", () => HttpResponse.json(textbook)),
+      http.post("*/api/library/read-page", () =>
+        HttpResponse.json({ text: "1 Adding 1-4\n2 Subtracting 5-8", lines: 2, left_out: 1, message: "Read 2 lines from the photo. Check them against the page (photos aren't always read perfectly), then add them." }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAt("/next/library?item=5");
+    const panel = await screen.findByRole("dialog", { name: "Saxon Math 5/4" });
+    await user.click(within(panel).getByRole("tab", { name: "Lesson list" }));
+    await user.upload(within(panel).getByLabelText("Read a photo of the page"), new File(["png"], "plan.png", { type: "image/png" }));
+    expect(await within(panel).findByText(/Read 2 lines from the photo/)).toBeInTheDocument();
+    expect(within(panel).getByLabelText("Paste a lesson list")).toHaveValue("1 Adding 1-4\n2 Subtracting 5-8");
+    await user.click(within(panel).getByRole("button", { name: "Add these" }));
+    expect(within(panel).getByText("2 lessons, 2 with pages.")).toBeInTheDocument();
+  });
+
+  it("schedules one book on its own, at the parent's pace", async () => {
+    const book = item(9, "reading_book", "Charlotte's Web", { total_pages: 184 });
+    let previewed: unknown = null;
+    let scheduled: unknown = null;
+    server.use(
+      http.get("*/api/library", () => HttpResponse.json([summary(9, "reading_book", "Charlotte's Web")])),
+      http.get("*/api/library/9", () =>
+        HttpResponse.json(
+          scheduled
+            ? { ...book, courses: [{ id: 4, curriculum_id: 2, student_id: 3, student_name: "Ada", start_date: "2026-10-19", end_date: "2026-10-30", weekdays: [0, 1, 2, 3, 4], lessons_scheduled: 10 }] }
+            : book,
+        ),
+      ),
+      http.get("*/api/students", () =>
+        HttpResponse.json([{ id: 3, name: "Ada", grade: "4", color_hex: "#000000", grade_confirmed_on: null, grade_needs_confirming: false, has_iep: false, has_login: false, household_id: 1, notes: null }]),
+      ),
+      http.post("*/api/library/9/schedule/preview", async ({ request }) => {
+        previewed = await request.json();
+        return HttpResponse.json({
+          pace: "20 pages of Charlotte's Web a day", start_date: "2026-10-19", weekdays: [0, 1, 2, 3, 4],
+          weekday_names: ["Mon", "Tue", "Wed", "Thu", "Fri"], school_year_end: "2027-06-04", warnings: [],
+          students: [{ student_id: 3, student_name: "Ada", finish_date: "2026-10-30", lessons: 10,
+            items: [{ library_item_id: 9, title: "Charlotte's Web", role: "reading", summary: "184 pages over 10 days", count: 10, first_date: "2026-10-19", last_date: "2026-10-30" }] }],
+        });
+      }),
+      http.post("*/api/library/9/schedule", async ({ request }) => {
+        scheduled = await request.json();
+        return HttpResponse.json({
+          courses: [{ id: 4, curriculum_id: 2, student_id: 3, student_name: "Ada", start_date: "2026-10-19", end_date: "2026-10-30", weekdays: [0, 1, 2, 3, 4], lessons_scheduled: 10 }],
+          lessons_created: 10, calendar_url: "/#/assignments?from=planner&date=2026-10-19",
+        }, { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt("/next/library?item=9");
+    const panel = await screen.findByRole("dialog", { name: "Charlotte's Web" });
+    await user.click(within(panel).getByRole("button", { name: "Schedule it" }));
+    expect(within(panel).getByText(/without building a curriculum/)).toBeInTheDocument();
+    await user.click(within(panel).getByRole("radio", { name: "A number of pages a day" }));
+    const pages = within(panel).getByLabelText("Pages a day");
+    await user.clear(pages);
+    await user.type(pages, "20");
+    await user.click(within(panel).getByRole("button", { name: "Preview the dates" }));
+    expect(await within(panel).findByText("20 pages of Charlotte's Web a day", { exact: false })).toBeInTheDocument();
+    expect(previewed).toMatchObject({ student_ids: [3], pages_per_day: 20, weekdays: null });
+    await user.click(within(panel).getByRole("button", { name: "Put it on the calendar" }));
+    expect(await within(panel).findByText(/Done: 10 lessons on the calendar/)).toBeInTheDocument();
+    expect(scheduled).toMatchObject({ pages_per_day: 20, weekdays: [0, 1, 2, 3, 4] });
+    // The item refreshes with its new course; the "Done" message stays.
+    expect(await within(panel).findByRole("region", { name: "On the calendar" })).toHaveTextContent("Ada: Oct 19 to Oct 30, 10 lessons");
+    expect(within(panel).getByText(/Done: 10 lessons on the calendar/)).toBeInTheDocument();
+  });
 });

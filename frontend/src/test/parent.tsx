@@ -90,6 +90,7 @@ export function item(id: number, kind: string, title: string, extra: Partial<Lib
     lessons: [],
     readiness: ready,
     curriculum_ids: [],
+    courses: [],
     community: { status: "in_review", label: "Shared with the Curiculy catalog. An admin reviews it before other families see it." },
     ...extra,
   };
@@ -117,6 +118,17 @@ export function curriculum(id: number, extra: Partial<Curriculum> = {}): Curricu
     readiness: { ready: true, missing: [], problems: [] },
     courses: [],
     community_curriculum_id: null,
+    solo: false,
+    paced_by: {
+      kind: "textbook",
+      library_item_id: 5,
+      title: "BJU Reading 4",
+      total_pages: 300,
+      chapters: 0,
+      lessons: 170,
+      usual_pages_per_day: null,
+      measure: null,
+    },
     ...extra,
   };
 }

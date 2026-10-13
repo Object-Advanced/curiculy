@@ -1,6 +1,6 @@
 # Curriculum planner
 
-One subject's plan, built around **one textbook**, then put on the calendar for one or more children. It has its own page, separate from the Library.
+One subject's plan, usually built around **one textbook**, then put on the calendar for one or more children. A subject without a textbook can be built around a workbook, an online site or a book instead, and the parent picks the pace. It has its own page, separate from the Library. (One book on its own is scheduled from the [Library](21-library.md) instead: **Schedule it**.)
 
 | | |
 |---|---|
@@ -19,7 +19,7 @@ One subject's plan, built around **one textbook**, then put on the calendar for 
 - **"How curricula work":** three steps in plain words (pick the textbook; add what goes with it; put it on the calendar).
   - It's shown before the first curriculum, and can be hidden or brought back with **How this works**.
 - **Starting one** (`/next/planner/new?textbook=<id>`):
-  1. **Which textbook is it built around?** The family's textbooks, or a link to add one.
+  1. **Which textbook is it built around?** The family's textbooks, or a link to add one. Below that, **No textbook for this subject?** lists the family's workbooks, sites and books, and **Build it around…** starts there instead.
   2. **Other families built a similar curriculum:** each combination families used, with how many families and which books are already theirs. There are three ways in:
      - **Start from this one** takes the whole combination.
      - **Choose pieces** keeps the textbook and lets the family untick what they'll swap, such as different novels.
@@ -32,6 +32,7 @@ One subject's plan, built around **one textbook**, then put on the calendar for 
   3. **Ready to schedule?** Anything not ready is named, with what it's missing and a link to finish it in the Library.
   4. **Put it on the calendar:**
      - which children (one is picked automatically), a start date (next Monday by default), and which days (after the first preview)
+    - **without a textbook, how fast:** pages a day, a chapter or more a day (books and workbooks with chapters), finish by a date, or the rest of the school year (an online site measured in lessons: one lesson a session until it's done)
      - **Preview the dates** shows each book's count and dates, the finish date, and a warning if it ends after the school year
      - **Put it on the calendar** saves it, then **Go to the calendar**
 - **On the calendar:** each child's course and dates, with **Take off the calendar**. Finished lessons stay.
@@ -43,6 +44,12 @@ One subject's plan, built around **one textbook**, then put on the calendar for 
 ### Rules (pacing)
 See `app/services/planner.py` and [Product spine: Curriculum planner](../6-planning/product-spine.md#curriculum-planner-a-textbook-and-what-goes-with-it):
 - **The textbook sets the pace:** one lesson each course day.
+- **Without a textbook,** the first workbook (else book, else online site) sets the pace, at the parent's choice:
+  - **pages a day:** the course runs as many days as its pages need (the answer key and front matter left out)
+  - **chapters a day:** whole chapters each day, "ch. 3–4"
+  - **finish by:** every school day up to that date
+  - **an online site measured in lessons:** as many weeks as its lessons need, on its days a week
+  - **otherwise:** the rest of the school year (36 weeks when there's no year to go by)
 - **Workbook pages** are spread over the same days, a chapter at a time, never the answer key.
 - **Online sites** run on their own days a week.
 - **Books to read** are read one after another.
@@ -63,7 +70,7 @@ See `app/services/planner.py` and [Product spine: Curriculum planner](../6-plann
 **Works well:** nothing is saved without a preview; suggestions make a second family's setup fast; each step explains itself.
 
 **Gaps:**
-- curricula without a textbook (a workbook-only subject) aren't supported yet
+- curricula without a textbook aren't shared with the catalog (suggestions are found through a textbook)
 - the moves and catch-up formulas of the spine's calendar come later
 - the calendar tour is a simple card in the legacy calendar until the React calendar exists
 

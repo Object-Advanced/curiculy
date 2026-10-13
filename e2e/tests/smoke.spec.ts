@@ -203,3 +203,24 @@ test("a family's library shows every kind on one shelf", async ({ page }) => {
   await shelf.getByRole("button", { name: /BJU Reading 4 Worktext/ }).click();
   await expect(page.getByRole("dialog", { name: "BJU Reading 4 Worktext" })).toBeVisible();
 });
+
+test("a parent schedules one book on its own, without a curriculum", async ({ page }) => {
+  await startDemo(page);
+  const { novel } = await seedLibrary(page);
+  await page.goto(`/next/library?item=${novel}`);
+  const panel = page.getByRole("dialog", { name: "Charlotte's Web" });
+  await panel.getByRole("button", { name: "Schedule it" }).click();
+  await panel.getByRole("radio", { name: "A number of pages a day" }).check();
+  await panel.getByLabel("Pages a day", { exact: true }).fill("46");
+  await panel.getByRole("button", { name: "Preview the dates" }).click();
+  await expect(panel.getByText("Pace: 46 pages of Charlotte's Web a day.")).toBeVisible();
+  await expect(panel.getByText(/Sam Rivera: 4 lessons/)).toBeVisible();
+  await panel.getByRole("button", { name: "Put it on the calendar" }).click();
+  await expect(panel.getByText(/Done: 4 lessons on the calendar/)).toBeVisible();
+
+  // It isn't a curriculum to the family: the planner stays as it was.
+  const curricula = await apiAs<unknown[]>(page, "GET", "/planner/curricula");
+  expect(curricula).toEqual([]);
+  await panel.getByRole("link", { name: "Go to the calendar" }).click();
+  await expect(page.locator(".cal-event", { hasText: "Read Charlotte's Web, pp. 1–46" })).toBeVisible();
+});

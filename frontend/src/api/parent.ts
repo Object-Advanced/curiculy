@@ -33,6 +33,10 @@ export type ContributionSummary = Schemas["ContributionSummary"];
 export type ContributionDetail = Schemas["ContributionDetail"];
 export type EntryAdmin = Schemas["EntryAdminRead"];
 export type ApproveRequest = Schemas["ApproveRequest"];
+export type Pace = Schemas["PaceRead"];
+export type Course = Schemas["CourseRead"];
+export type BarcodeReading = Schemas["BarcodeRead"];
+export type PageReading = Schemas["PageReadingRead"];
 
 export const parentKeys = {
   reference: ["reference"] as const,
@@ -341,8 +345,52 @@ export function useUnschedule() {
   return useMutation({
     mutationFn: async (courseId: number) =>
       unwrap(await api.DELETE("/api/planner/courses/{course_id}", { params: { path: { course_id: courseId } } })),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.curricula }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: parentKeys.curricula });
+      // A book scheduled on its own shows its courses in the Library.
+      void queryClient.invalidateQueries({ queryKey: parentKeys.library });
+    },
   });
+}
+
+// ---- One book on its own (the Library's "Schedule") ---------------------------
+
+export async function previewItemSchedule(itemId: number, body: ScheduleRequest): Promise<SchedulePreview> {
+  return unwrap(
+    await api.POST("/api/library/{item_id}/schedule/preview", { params: { path: { item_id: itemId } }, body }),
+  );
+}
+
+export function useScheduleItem(itemId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: ScheduleRequest) =>
+      unwrap(await api.POST("/api/library/{item_id}/schedule", { params: { path: { item_id: itemId } }, body })),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.library }),
+  });
+}
+
+// ---- Reading photos -------------------------------------------------------------
+
+function photoBody(file: File) {
+  return {
+    body: { file: file as unknown as string },
+    bodySerializer: () => {
+      const form = new FormData();
+      form.append("file", file);
+      return form;
+    },
+  };
+}
+
+/** The ISBN from a photo of a book's barcode. */
+export async function readBarcodePhoto(file: File): Promise<BarcodeReading> {
+  return unwrap(await api.POST("/api/library/read-barcode", photoBody(file)));
+}
+
+/** Chapters or lessons, one per line, from a photo of a printed page. */
+export async function readPagePhoto(file: File): Promise<PageReading> {
+  return unwrap(await api.POST("/api/library/read-page", photoBody(file)));
 }
 
 // ---- Admin review queue ------------------------------------------------------

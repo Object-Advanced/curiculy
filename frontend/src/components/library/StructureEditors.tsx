@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 
-import type { ChapterWrite, LessonWrite } from "../../api/parent";
+import { readPagePhoto, type ChapterWrite, type LessonWrite } from "../../api/parent";
 import {
   numberedLessons,
   parseChapters,
@@ -35,12 +35,53 @@ function PasteBox({
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [message, setMessage] = useState("");
+  const [photoNote, setPhotoNote] = useState("");
+  const [reading, setReading] = useState(false);
+  const fileId = useId();
+
+  const readPhoto = async (file: File) => {
+    setReading(true);
+    setMessage("");
+    try {
+      const result = await readPagePhoto(file);
+      setValue(result.text);
+      setPhotoNote(result.message);
+      setOpen(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "That photo couldn't be read.");
+    } finally {
+      setReading(false);
+    }
+  };
+
   if (!open) {
     return (
       <span className="row">
-        <button type="button" className="btn btn-small" onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className="btn btn-small"
+          onClick={() => {
+            setPhotoNote("");
+            setOpen(true);
+          }}
+        >
           {label}
         </button>
+        <label className="btn btn-small" htmlFor={fileId}>
+          {reading ? "Reading the photo…" : "Read a photo of the page"}
+        </label>
+        <input
+          id={fileId}
+          className="sr-only"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void readPhoto(file);
+            event.target.value = "";
+          }}
+        />
         {message ? (
           <span className="field-hint" role="status">
             {message}
@@ -51,6 +92,11 @@ function PasteBox({
   }
   return (
     <div className="card stack">
+      {photoNote ? (
+        <p className="notice" role="status">
+          {photoNote}
+        </p>
+      ) : null}
       <TextArea label={label} hint={hint} value={value} onChange={setValue} placeholder={placeholder} />
       <div className="row">
         <button

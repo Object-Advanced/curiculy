@@ -151,4 +151,56 @@ describe("Curriculum planner", () => {
     expect(scheduled).toEqual({ student_ids: [3], start_date: "2026-10-19", weekdays: [0, 1, 2, 3] });
     expect(screen.getByRole("link", { name: "Go to the calendar" })).toHaveAttribute("href", "/#/assignments?from=planner&date=2026-10-19");
   });
+
+  it("builds a curriculum without a textbook, around a workbook", async () => {
+    let created: unknown = null;
+    server.use(
+      http.get("*/api/library", () =>
+        HttpResponse.json([summary(6, "workbook", "Spectrum Math 4", { subject_code: "math", subject_name: "Math" })]),
+      ),
+      http.post("*/api/planner/curricula", async ({ request }) => {
+        created = await request.json();
+        return HttpResponse.json(curriculum(9, { name: "Spectrum Math 4" }), { status: 201 });
+      }),
+      http.get("*/api/planner/curricula/9", () => HttpResponse.json(curriculum(9, { name: "Spectrum Math 4" }))),
+      http.get("*/api/students", () => HttpResponse.json([ada])),
+      http.get("*/api/community/suggestions", () =>
+        HttpResponse.json({ textbook: null, families_count: 0, curricula: [], often_used_with: [], message: "" }),
+      ),
+      http.get("*/api/planner/curricula", () => HttpResponse.json([])),
+    );
+    const user = userEvent.setup();
+    const router = renderAt("/next/planner/new");
+    expect(await screen.findByText(/There's no textbook in your library yet/)).toBeInTheDocument();
+    const section = screen.getByRole("region", { name: "No textbook for this subject?" });
+    await user.click(within(section).getByRole("radio", { name: /Spectrum Math 4/ }));
+    await user.click(within(section).getByRole("button", { name: "Build it around Spectrum Math 4" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/next/planner/9"));
+    expect(created).toEqual({ first_item_id: 6 });
+  });
+
+  it("asks how fast when there's no textbook to set the pace", async () => {
+    let previewed: unknown = null;
+    const workbookPace = { kind: "workbook", library_item_id: 6, title: "Spectrum Math 4", total_pages: 160, chapters: 8, lessons: 0, usual_pages_per_day: null, measure: null };
+    server.use(
+      http.get("*/api/planner/curricula/9", () => HttpResponse.json(curriculum(9, { name: "Spectrum Math 4", paced_by: workbookPace, items: [] }))),
+      http.get("*/api/library", () => HttpResponse.json([])),
+      http.get("*/api/students", () => HttpResponse.json([ada])),
+      http.post("*/api/planner/curricula/9/schedule/preview", async ({ request }) => {
+        previewed = await request.json();
+        return HttpResponse.json({ pace: "A chapter of Spectrum Math 4 a day", start_date: "2026-10-19", weekdays: [0, 1, 2, 3, 4], weekday_names: ["Mon", "Tue", "Wed", "Thu", "Fri"], school_year_end: null, warnings: [], students: [] });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt("/next/planner/9");
+    const fast = await screen.findByRole("group", { name: "How fast?" });
+    expect(within(fast).getAllByRole("radio").map((radio) => radio.closest("label")?.textContent)).toEqual([
+      "A number of pages a day", "A chapter or more a day", "Finish by a date", "Spread it over the rest of the school year",
+    ]);
+    expect(within(fast).getByRole("radio", { name: "Spread it over the rest of the school year" })).toBeChecked();
+    await user.click(within(fast).getByRole("radio", { name: "A chapter or more a day" }));
+    await user.click(screen.getByRole("button", { name: "Preview the dates" }));
+    expect(await screen.findByText(/A chapter of Spectrum Math 4 a day/)).toBeInTheDocument();
+    expect(previewed).toMatchObject({ chapters_per_day: 1 });
+  });
 });

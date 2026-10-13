@@ -1,6 +1,15 @@
 import { useMemo, useState } from "react";
 
-import { previewSchedule, useSchedule, type Curriculum, type SchedulePreview, type ScheduleResult } from "../../api/parent";
+import {
+  previewItemSchedule,
+  previewSchedule,
+  useSchedule,
+  useScheduleItem,
+  type Pace,
+  type SchedulePreview,
+  type ScheduleRequest,
+  type ScheduleResult,
+} from "../../api/parent";
 import { useStudents } from "../../api/queries";
 import { shortDate, todayISO } from "../../lib/dates";
 import { nextMonday } from "../../lib/structure";
@@ -8,17 +17,58 @@ import { ErrorLine, TextField } from "../ui/Fields";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+/** What's being scheduled: a curriculum from the planner, or one library item on its own. */
+export interface ScheduleTarget {
+  kind: "curriculum" | "item";
+  id: number;
+  ready: boolean;
+  pacedBy: Pace | null | undefined;
+  daysPerWeek: number | null | undefined;
+  scheduledStudentIds: number[];
+}
+
+type PaceChoice = "year" | "pages" | "chapters" | "finish";
+
+function paceOptions(pace: Pace): { value: PaceChoice; label: string }[] {
+  const options: { value: PaceChoice; label: string }[] = [];
+  const pages = pace.kind === "workbook" || pace.kind === "reading_book";
+  if (pages) options.push({ value: "pages", label: "A number of pages a day" });
+  if (pages && pace.chapters > 0) options.push({ value: "chapters", label: "A chapter or more a day" });
+  options.push({ value: "finish", label: "Finish by a date" });
+  options.push({
+    value: "year",
+    label:
+      pace.kind === "online_program" && pace.measure === "lessons"
+        ? "One lesson each session, until it's done"
+        : "Spread it over the rest of the school year",
+  });
+  return options;
+}
+
+function defaultChoice(pace: Pace): PaceChoice {
+  if ((pace.kind === "workbook" || pace.kind === "reading_book") && pace.usual_pages_per_day) return "pages";
+  return "year";
+}
+
 /**
- * Put a curriculum on the calendar: which children, from when, on which days.
- * A preview shows every book's dates first; nothing is saved until "Put it on the calendar".
+ * Put a curriculum (or one book) on the calendar: which children, from when,
+ * on which days, and, without a textbook, how fast. A preview shows every
+ * book's dates first; nothing is saved until "Put it on the calendar".
  */
-export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
+export function ScheduleStep({ target }: { target: ScheduleTarget }) {
   const students = useStudents(true);
-  const schedule = useSchedule(curriculum.id);
-  const scheduledFor = useMemo(() => new Set(curriculum.courses.map((course) => course.student_id)), [curriculum.courses]);
+  const scheduleCurriculum = useSchedule(target.id);
+  const scheduleItem = useScheduleItem(target.id);
+  const schedule = target.kind === "curriculum" ? scheduleCurriculum : scheduleItem;
+  const scheduledFor = useMemo(() => new Set(target.scheduledStudentIds), [target.scheduledStudentIds]);
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [start, setStart] = useState(() => nextMonday(todayISO()));
   const [weekdays, setWeekdays] = useState<number[] | null>(null);
+  const pace = target.pacedBy && target.pacedBy.kind !== "textbook" ? target.pacedBy : null;
+  const [choice, setChoice] = useState<PaceChoice>(() => (pace ? defaultChoice(pace) : "year"));
+  const [pagesPerDay, setPagesPerDay] = useState<number | null>(pace?.usual_pages_per_day ?? 5);
+  const [chaptersPerDay, setChaptersPerDay] = useState<number | null>(1);
+  const [finishBy, setFinishBy] = useState("");
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -27,12 +77,26 @@ export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
   const kids = (students.data ?? []).filter((student) => !scheduledFor.has(student.id));
   const chosen = picked.size ? [...picked] : kids.length === 1 ? [kids[0]!.id] : [];
   const stale = () => setPreview(null);
+  const paceMissing =
+    pace !== null &&
+    ((choice === "pages" && !pagesPerDay) || (choice === "chapters" && !chaptersPerDay) || (choice === "finish" && !finishBy));
+
+  const request = (): ScheduleRequest => ({
+    student_ids: chosen,
+    start_date: start,
+    weekdays,
+    ...(pace && choice === "pages" ? { pages_per_day: pagesPerDay } : {}),
+    ...(pace && choice === "chapters" ? { chapters_per_day: chaptersPerDay } : {}),
+    ...(pace && choice === "finish" ? { finish_by: finishBy } : {}),
+  });
 
   const runPreview = async () => {
     setPreviewing(true);
     setError(null);
     try {
-      const shown = await previewSchedule(curriculum.id, { student_ids: chosen, start_date: start, weekdays });
+      const body = request();
+      const shown =
+        target.kind === "curriculum" ? await previewSchedule(target.id, body) : await previewItemSchedule(target.id, body);
       setPreview(shown);
       setWeekdays(shown.weekdays);
     } catch (problem) {
@@ -66,8 +130,14 @@ export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
     );
   }
 
-  if (!curriculum.readiness.ready) {
-    return <p className="notice notice-warn">Finish the steps above first. Then you can put it on the calendar.</p>;
+  if (!target.ready) {
+    return (
+      <p className="notice notice-warn">
+        {target.kind === "curriculum"
+          ? "Finish the steps above first. Then you can put it on the calendar."
+          : "Finish what's missing above first. Then you can put it on the calendar."}
+      </p>
+    );
   }
 
   if (students.isSuccess && kids.length === 0) {
@@ -75,7 +145,7 @@ export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
       <p className="notice">
         {students.data.length === 0
           ? "Add your children first (Kids, in the menu above). Then you can put this on their calendars."
-          : "This curriculum is already on every child's calendar."}
+          : "This is already on every child's calendar."}
       </p>
     );
   }
@@ -120,6 +190,75 @@ export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
         />
       </div>
 
+      {pace ? (
+        <fieldset className="field">
+          <legend className="field-label">How fast?</legend>
+          <p className="field-hint">
+            There's no textbook to set the pace, so you choose it for {pace.title}
+            {pace.total_pages ? ` (${pace.total_pages} pages${pace.chapters ? `, ${pace.chapters} chapters` : ""})` : ""}.
+          </p>
+          <div className="pace-options">
+            {paceOptions(pace).map((option) => (
+              <div className="pace-option" key={option.value}>
+                <label>
+                  <input
+                    type="radio"
+                    name={`pace-${target.kind}-${target.id}`}
+                    checked={choice === option.value}
+                    onChange={() => {
+                      stale();
+                      setChoice(option.value);
+                    }}
+                  />
+                  <span>{option.label}</span>
+                </label>
+                {option.value === "pages" && choice === "pages" ? (
+                  <input
+                    className="input input-small num-input"
+                    type="number"
+                    min={1}
+                    max={200}
+                    aria-label="Pages a day"
+                    value={pagesPerDay ?? ""}
+                    onChange={(event) => {
+                      stale();
+                      setPagesPerDay(event.target.value ? Number(event.target.value) : null);
+                    }}
+                  />
+                ) : null}
+                {option.value === "chapters" && choice === "chapters" ? (
+                  <input
+                    className="input input-small num-input"
+                    type="number"
+                    min={1}
+                    max={20}
+                    aria-label="Chapters a day"
+                    value={chaptersPerDay ?? ""}
+                    onChange={(event) => {
+                      stale();
+                      setChaptersPerDay(event.target.value ? Number(event.target.value) : null);
+                    }}
+                  />
+                ) : null}
+                {option.value === "finish" && choice === "finish" ? (
+                  <input
+                    className="input input-small"
+                    type="date"
+                    aria-label="Finish by"
+                    min={start}
+                    value={finishBy}
+                    onChange={(event) => {
+                      stale();
+                      setFinishBy(event.target.value);
+                    }}
+                  />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+
       <fieldset className="field">
         <legend className="field-label">Which days?</legend>
         {weekdays ? (
@@ -146,14 +285,20 @@ export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
           </div>
         ) : (
           <p className="field-hint">
-            Your school days{curriculum.days_per_week ? `, ${curriculum.days_per_week} a week` : ""}. A 4-day program on a
-            5-day week leaves a free day for catching up. You can change the days after the preview.
+            Your school days{target.daysPerWeek ? `, ${target.daysPerWeek} a week` : ""}.
+            {target.daysPerWeek ? " A 4-day program on a 5-day week leaves a free day for catching up." : ""} You can change
+            the days after the preview.
           </p>
         )}
       </fieldset>
 
       <div className="row">
-        <button type="button" className="btn btn-primary" disabled={!chosen.length || !start || previewing || weekdays?.length === 0} onClick={runPreview}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!chosen.length || !start || previewing || weekdays?.length === 0 || paceMissing}
+          onClick={runPreview}
+        >
           {previewing ? "Working it out…" : preview ? "Preview again" : "Preview the dates"}
         </button>
         {!chosen.length ? <span className="field-hint">Pick a child first.</span> : null}
@@ -162,6 +307,9 @@ export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
 
       {preview ? (
         <section className="stack-lg" aria-label="Preview">
+          <p className="small">
+            <strong>Pace:</strong> {preview.pace}.
+          </p>
           {preview.warnings.map((warning) => (
             <p className="notice notice-warn" key={warning}>
               {warning}
@@ -198,9 +346,7 @@ export function ScheduleStep({ curriculum }: { curriculum: Curriculum }) {
               type="button"
               className="btn btn-primary"
               disabled={schedule.isPending}
-              onClick={() =>
-                schedule.mutate({ student_ids: chosen, start_date: start, weekdays }, { onSuccess: setResult })
-              }
+              onClick={() => schedule.mutate(request(), { onSuccess: setResult })}
             >
               {schedule.isPending ? "Adding lessons…" : "Put it on the calendar"}
             </button>

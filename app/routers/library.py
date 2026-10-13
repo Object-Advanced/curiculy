@@ -5,6 +5,7 @@ Every change also updates the item's contribution to the community catalog
 See docs/6-planning/product-spine.md ("Library: one shelf, four kinds of book").
 """
 
+import subprocess
 from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
@@ -17,7 +18,9 @@ from app.db import get_catalog_db
 from app.evidence import resolve_evidence_file, store_cover
 from app.models import LibraryItem
 from app.schemas.community import AdoptEntry
+from app.schemas.planner import SchedulePreview, ScheduleRequest, ScheduleResult
 from app.schemas.library import (
+    BarcodeRead,
     ChapterWrite,
     LessonGenerate,
     LessonWrite,
@@ -25,6 +28,7 @@ from app.schemas.library import (
     LibraryItemRead,
     LibraryItemSummary,
     LibraryItemUpdate,
+    PageReadingRead,
     SearchResults,
 )
 from app.services.library import (
@@ -38,7 +42,7 @@ from app.services.library import (
     replace_lessons,
     search,
 )
-from app.services import community, planner
+from app.services import barcodes, community, page_reader, planner
 from app.services.library_rules import KINDS
 from app.services.providers.base import BibliographicProvider
 from app.services.providers.google_books import GoogleBooksProvider
@@ -120,6 +124,58 @@ def add_from_community(
     return item_read(get_item(db, item.id))
 
 
+def _photo(file: UploadFile, limit: int) -> bytes:
+    data = file.file.read(limit + 1)
+    if len(data) > limit:
+        raise HTTPException(status_code=413, detail="Photos can be up to 15 MB.")
+    return data
+
+
+@router.post("/read-barcode", response_model=BarcodeRead)
+def read_barcode_photo(file: UploadFile = File(...)) -> BarcodeRead:
+    """The ISBN from a photo of a book's barcode (for phones that can't scan live)."""
+    try:
+        isbn, other = barcodes.read_barcode(_photo(file, barcodes.MAX_BYTES))
+    except barcodes.NotAnImage as error:
+        raise HTTPException(status_code=415, detail=str(error)) from error
+    if isbn:
+        return BarcodeRead(isbn=isbn, message=f"Found ISBN {isbn}.")
+    if other:
+        return BarcodeRead(
+            isbn=None,
+            message="That barcode isn't a book's ISBN. Look for the one on the back cover that starts with 978 or 979.",
+        )
+    return BarcodeRead(
+        isbn=None,
+        message="No barcode found. Hold the camera closer, keep the barcode flat and sharp, or type the ISBN instead.",
+    )
+
+
+@router.post("/read-page", response_model=PageReadingRead)
+def read_page_photo(file: UploadFile = File(...)) -> PageReadingRead:
+    """Chapters or lessons from a photo of a contents page or a lesson list.
+    Nothing is saved: the text comes back for the parent to check and add."""
+    try:
+        reading = page_reader.read_page(_photo(file, page_reader.MAX_BYTES))
+    except page_reader.NotAnImage as error:
+        raise HTTPException(status_code=415, detail=str(error)) from error
+    except page_reader.ReaderBusy as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except (subprocess.SubprocessError, OSError) as error:
+        raise HTTPException(status_code=503, detail="Curiculy couldn't read that photo right now. Try again, or type them.") from error
+    count = len(reading.lines)
+    if count:
+        message = (
+            f"Read {count} line{'s' if count != 1 else ''} from the photo. Check them against the page "
+            "(photos aren't always read perfectly), then add them."
+        )
+        if reading.left_out:
+            message += f" Left out {reading.left_out} line{'s' if reading.left_out != 1 else ''} without a page number."
+    else:
+        message = "No lines with page numbers were found. Try a sharper photo taken straight on, or type them."
+    return PageReadingRead(text="\n".join(reading.lines), lines=count, left_out=reading.left_out, message=message)
+
+
 @router.get("/{item_id}", response_model=LibraryItemRead)
 def read_item(item_id: int, db: Session = Depends(get_tenant_db)) -> LibraryItemRead:
     return item_read(get_item(db, item_id))
@@ -149,6 +205,7 @@ def delete_item(
     db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
 ) -> Response:
+    planner.delete_solo_for_item(db, item_id)
     curricula = planner.curricula_using(db, item_id)
     db.delete(get_item(db, item_id))
     db.commit()
@@ -157,6 +214,20 @@ def delete_item(
     for curriculum_id in curricula:
         planner.refresh_contribution(db, catalog_db, curriculum_id, family)
     return Response(status_code=204)
+
+
+@router.post("/{item_id}/schedule/preview", response_model=SchedulePreview)
+def preview_item_schedule(item_id: int, payload: ScheduleRequest, db: Session = Depends(get_tenant_db)) -> SchedulePreview:
+    """Schedule one book on its own, without a curriculum: what it would put on
+    the calendar, for each child, at the chosen pace. Nothing is saved."""
+    return planner.preview_item(db, get_item(db, item_id), payload)
+
+
+@router.post("/{item_id}/schedule", response_model=ScheduleResult, status_code=201)
+def schedule_item(item_id: int, payload: ScheduleRequest, db: Session = Depends(get_tenant_db)) -> ScheduleResult:
+    """Put one book on the calendar on its own. Take it off again with
+    ``DELETE /api/planner/courses/{course_id}`` (finished lessons stay)."""
+    return planner.schedule_item(db, get_item(db, item_id), payload)
 
 
 @router.put("/{item_id}/chapters", response_model=LibraryItemRead)

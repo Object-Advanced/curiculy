@@ -8,10 +8,13 @@ import {
   useRemoveCover,
   useSaveChapters,
   useSaveLessons,
+  useUnschedule,
   useUpdateItem,
   useUploadCover,
   type LibraryItem,
 } from "../../api/parent";
+import { shortDate } from "../../lib/dates";
+import { ScheduleStep } from "../planner/ScheduleStep";
 import { ReadinessList } from "../ui/Checklist";
 import { ErrorLine, TextField } from "../ui/Fields";
 import { Modal } from "../ui/Modal";
@@ -19,7 +22,82 @@ import { BookCover } from "./BookCover";
 import { KindFields, draftFromItem, draftToFields, type Draft } from "./KindFields";
 import { ChapterEditor, LessonEditor } from "./StructureEditors";
 
-type Tab = "details" | "structure" | "cover";
+type Tab = "details" | "structure" | "cover" | "schedule";
+
+/** Schedule one item on its own: no curriculum to build first. */
+function ScheduleSection({ item }: { item: LibraryItem }) {
+  const unschedule = useUnschedule();
+  const [message, setMessage] = useState("");
+  // A fresh schedule form after taking it off a calendar (not after adding: the
+  // "Done" message must survive the refresh that shows the new course).
+  const [round, setRound] = useState(0);
+  return (
+    <div className="stack-lg">
+      <p className="step-lede">
+        Put {item.title} on a child's calendar on its own, without building a curriculum.
+        {item.kind === "textbook"
+          ? " Its lessons set the pace, one each school day."
+          : " You choose how fast: pages or chapters a day, a finish date, or the rest of the school year."}
+      </p>
+      {item.courses?.length ? (
+        <section className="stack" aria-label="On the calendar">
+          <p className="role-title">On the calendar</p>
+          {item.courses.map((course) => (
+            <div className="row-between" key={course.id}>
+              <span>
+                <strong>{course.student_name}</strong>: {shortDate(course.start_date)}
+                {course.end_date ? ` to ${shortDate(course.end_date)}` : ""}, {course.lessons_scheduled} lessons
+              </span>
+              <button
+                type="button"
+                className="btn btn-small"
+                disabled={unschedule.isPending}
+                onClick={() =>
+                  unschedule.mutate(course.id, {
+                    onSuccess: (result) => {
+                      setRound((value) => value + 1);
+                      setMessage(
+                        `Took ${result.lessons_removed} lessons off ${course.student_name}'s calendar.${result.lessons_kept ? ` ${result.lessons_kept} finished lessons stay.` : ""}`,
+                      );
+                    },
+                  })
+                }
+              >
+                Take off the calendar
+              </button>
+            </div>
+          ))}
+          {message ? (
+            <p className="field-hint" role="status">
+              {message}
+            </p>
+          ) : null}
+          <ErrorLine error={unschedule.error} />
+        </section>
+      ) : null}
+      <ScheduleStep
+        key={round}
+        target={{
+          kind: "item",
+          id: item.id,
+          ready: item.ready,
+          pacedBy: {
+            kind: item.kind,
+            library_item_id: item.id,
+            title: item.title,
+            total_pages: item.total_pages ?? null,
+            chapters: item.chapters.length,
+            lessons: item.lessons.length,
+            usual_pages_per_day: item.usual_pages_per_day ?? null,
+            measure: item.measure ?? null,
+          },
+          daysPerWeek: item.kind === "textbook" ? item.days_per_week : null,
+          scheduledStudentIds: (item.courses ?? []).map((course) => course.student_id),
+        }}
+      />
+    </div>
+  );
+}
 
 function CoverSection({ item }: { item: LibraryItem }) {
   const upload = useUploadCover(item.id);
@@ -181,6 +259,7 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
 
   const curricula = item.curriculum_ids ?? [];
   const hasStructure = item.kind !== "online_program";
+  const schedulable = !(item.kind === "textbook" && item.for_parent);
   const structureName = item.kind === "textbook" ? "Lesson list" : "Chapters";
   const plannable = item.kind === "textbook" && !item.for_parent;
 
@@ -211,11 +290,18 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
               Delete
             </button>
           )}
-          {plannable ? (
-            <button type="button" className="btn btn-primary" onClick={() => navigate(`/planner/new?textbook=${item.id}`)}>
-              Plan a curriculum with it
-            </button>
-          ) : null}
+          <div className="row">
+            {schedulable && tab !== "schedule" ? (
+              <button type="button" className={plannable ? "btn" : "btn btn-primary"} onClick={() => setTab("schedule")}>
+                Schedule it
+              </button>
+            ) : null}
+            {plannable ? (
+              <button type="button" className="btn btn-primary" onClick={() => navigate(`/planner/new?textbook=${item.id}`)}>
+                Plan a curriculum with it
+              </button>
+            ) : null}
+          </div>
         </>
       }
     >
@@ -247,7 +333,7 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
         <ReadinessList readiness={item.readiness} />
       </section>
       <div className="chips" role="tablist" aria-label="Edit">
-        {(["details", ...(hasStructure ? ["structure"] : []), "cover"] as Tab[]).map((name) => (
+        {(["details", ...(hasStructure ? ["structure"] : []), "cover", ...(schedulable ? ["schedule"] : [])] as Tab[]).map((name) => (
           <button
             key={name}
             type="button"
@@ -257,7 +343,7 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
             aria-pressed={tab === name}
             onClick={() => setTab(name)}
           >
-            {name === "details" ? "Details" : name === "structure" ? structureName : "Cover"}
+            {name === "details" ? "Details" : name === "structure" ? structureName : name === "cover" ? "Cover" : "Schedule"}
           </button>
         ))}
       </div>
@@ -265,6 +351,7 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
         {tab === "details" ? <DetailsSection key={item.id} item={item} /> : null}
         {tab === "structure" ? <StructureSection item={item} /> : null}
         {tab === "cover" ? <CoverSection item={item} /> : null}
+        {tab === "schedule" ? <ScheduleSection item={item} /> : null}
       </div>
       <ErrorLine error={remove.error} />
     </Modal>

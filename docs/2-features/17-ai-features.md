@@ -13,7 +13,7 @@ Where Curiculy uses AI, what it sends, and the safety rules. Today all AI runs o
 | ["Stuck?" nudges](07-stuck-nudges.md) | Writes **one** short nudge back to the child's own materials. Never answers or teaches. | Text model (`llama3.1`, falling back to `mistral`) | The child, and the parent (quoted in the notification) | A built-in nudge |
 | ["Ask Sam"](05-kids-page.md) | A kind question for the parent to ask about today's lessons | Text model | The parent | A simple question built in the browser |
 | [PDF lesson plans](09-pacing-and-lesson-plans.md) | Turns extracted PDF text into Week/Day lessons | Text model | The parent (the new plan) | The plan is marked "failed"; use CSV or the builder |
-| [Paper lesson plans](09-pacing-and-lesson-plans.md) | Reads handwriting in each cell of a photographed week sheet | Vision model (`llama3.2-vision`) | The parent | The plan is marked "failed" |
+| [Paper lesson plans](09-pacing-and-lesson-plans.md) | Reads handwriting in each cell of a photographed week sheet | Vision model (`llama3.2-vision`): **not installed on the production server as of 2026-10-13**, so this fails there ([open issue 3a](../6-planning/open-issues.md)) | The parent | The plan is marked "failed" |
 
 **Not AI:** Auto-schedule (pacing) is plain arithmetic, the daily "Just for fun" puzzle is made in the browser, and ISBN lookup uses book databases.
 
@@ -47,3 +47,5 @@ All of them mock the AI.
 | High | A child-safety evaluation suite run in CI against the chosen provider | Phase 8 |
 | High | Limits and cost tracking per household; feature switches | Phase 8 |
 | Medium | Durable job queue for PDF and paper reading | Phase 8 |
+
+**Not AI:** the Library's barcode reading (OpenCV) and "Read a photo of the page" (Tesseract) are ordinary image processing on the server's CPU, with the parent checking every result. See [Library](21-library.md).

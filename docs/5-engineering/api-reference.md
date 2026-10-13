@@ -71,6 +71,10 @@ See the Library section of the [Product spine](../6-planning/product-spine.md#li
 | POST | `/api/library/from-community` | parent | Add a community catalog entry (details, chapters, lesson list copied in); returns your copy if you already have it |
 | GET | `/api/library/search` | parent | Search your library, the community catalog, the book cache, Open Library and Google Books; each result's kind (or guessed kind) |
 | GET / PATCH / DELETE | `/api/library/{item_id}` | parent | Read (with readiness: what's missing and why; its curricula; its place in the community catalog), edit, delete |
+| POST | `/api/library/read-barcode` | parent | The ISBN from a photo of a book's barcode |
+| POST | `/api/library/read-page` | parent | Chapters or lessons, one per line, from a photo of a printed page (nothing saved) |
+| POST | `/api/library/{item_id}/schedule/preview` | parent | Schedule one book on its own: what it would do, per child, at the chosen pace; saves nothing |
+| POST | `/api/library/{item_id}/schedule` | parent | Put one book on the calendar on its own (`DELETE /api/planner/courses/{course_id}` takes it off) |
 | PUT | `/api/library/{item_id}/chapters` | parent | Replace chapters (books, workbooks) |
 | PUT | `/api/library/{item_id}/lessons` | parent | Replace a textbook's lesson list |
 | POST | `/api/library/{item_id}/lessons/generate` | parent | Add numbered lessons to fill in |
@@ -81,12 +85,12 @@ See [Product spine: Curriculum planner](../6-planning/product-spine.md#curriculu
 
 | Method | Path | Who | Handler |
 |---|---|---|---|
-| GET / POST | `/api/planner/curricula` | parent | List; start one (usually from a textbook: `textbook_id`) |
+| GET / POST | `/api/planner/curricula` | parent | List (single books scheduled on their own aren't in it); start one from a textbook (`textbook_id`) or, without a textbook, from any item (`first_item_id`) |
 | POST | `/api/planner/curricula/from-community` | parent | Start from a curriculum other families built (`entry_ids` leaves pieces out) |
 | GET / PATCH / DELETE | `/api/planner/curricula/{planned_curriculum_id}` | parent | Read (items, readiness, courses), edit, delete (only when unscheduled) |
 | POST | `/api/planner/curricula/{planned_curriculum_id}/items` | parent | Add a library item in a role: textbook, workbook, online, reading, teacher |
 | DELETE | `/api/planner/curricula/{planned_curriculum_id}/items/{item_id}` | parent | Take a library item out (it stays in the library) |
-| POST | `/api/planner/curricula/{planned_curriculum_id}/schedule/preview` | parent | What scheduling would do, per child; saves nothing |
+| POST | `/api/planner/curricula/{planned_curriculum_id}/schedule/preview` | parent | What scheduling would do, per child; saves nothing. Without a textbook, one pace: `pages_per_day`, `chapters_per_day` or `finish_by` (none: the rest of the school year) |
 | POST | `/api/planner/curricula/{planned_curriculum_id}/schedule` | parent | A course and dated lessons for each child |
 | DELETE | `/api/planner/courses/{course_id}` | parent | Unschedule (finished lessons stay) |
 

@@ -123,7 +123,9 @@ function ItemsStep({ curriculum }: { curriculum: Curriculum }) {
 
   return (
     <div className="stack-lg">
-      {groups.length === 0 ? <p className="muted">Nothing yet. Start with the textbook.</p> : null}
+      {groups.length === 0 ? (
+        <p className="muted">Nothing yet. Start with the textbook, or, for a subject without one, a workbook, website or book.</p>
+      ) : null}
       {groups.map((group) => (
         <div className="role-group" key={group.code}>
           <p className="role-title">{group.role?.label ?? group.code}</p>
@@ -254,7 +256,7 @@ function ItemsStep({ curriculum }: { curriculum: Curriculum }) {
   );
 }
 
-function CoursesSection({ curriculum }: { curriculum: Curriculum }) {
+function CoursesSection({ curriculum, onUnscheduled }: { curriculum: Curriculum; onUnscheduled: () => void }) {
   const unschedule = useUnschedule();
   const [confirming, setConfirming] = useState<number | null>(null);
   const [message, setMessage] = useState("");
@@ -280,6 +282,7 @@ function CoursesSection({ curriculum }: { curriculum: Curriculum }) {
                 onClick={() =>
                   unschedule.mutate(course.id, {
                     onSuccess: (result) => {
+                      onUnscheduled();
                       setConfirming(null);
                       setMessage(
                         `Took ${result.lessons_removed} lessons off the calendar.${result.lessons_kept ? ` ${result.lessons_kept} finished lessons stay where they were done.` : ""}`,
@@ -319,6 +322,9 @@ export function CurriculumPage() {
   const query = useCurriculum(Number.isFinite(curriculumId) ? curriculumId : null);
   const remove = useDeleteCurriculum();
   const [confirming, setConfirming] = useState(false);
+  // A fresh schedule form after taking a course off the calendar (not after
+  // adding one: the "Done" message must survive that refresh).
+  const [round, setRound] = useState(0);
   const curriculum = query.data;
 
   useEffect(() => {
@@ -360,8 +366,9 @@ export function CurriculumPage() {
             <div>
               <h2 className="section-title">What goes with it</h2>
               <p className="field-hint">
-                The textbook sets the pace. Add the workbooks, websites and books your child uses alongside it, and the
-                teacher's edition for you.
+                {curriculum.paced_by?.kind === "textbook" || !curriculum.paced_by
+                  ? "The textbook sets the pace. Add the workbooks, websites and books your child uses alongside it, and the teacher's edition for you."
+                  : `No textbook: ${curriculum.paced_by.title} sets the pace, and you choose how fast when you schedule it. Add anything that goes with it.`}
               </p>
             </div>
           </div>
@@ -391,12 +398,21 @@ export function CurriculumPage() {
               <p className="field-hint">You'll see every date before anything is saved.</p>
             </div>
           </div>
-          {/* Not keyed on the courses: the "Done" message must survive the refresh that adds one. */}
-          <ScheduleStep curriculum={curriculum} />
+          <ScheduleStep
+            key={round}
+            target={{
+              kind: "curriculum",
+              id: curriculum.id,
+              ready: curriculum.readiness.ready,
+              pacedBy: curriculum.paced_by,
+              daysPerWeek: curriculum.days_per_week,
+              scheduledStudentIds: curriculum.courses.map((course) => course.student_id),
+            }}
+          />
         </li>
       </ol>
 
-      <CoursesSection curriculum={curriculum} />
+      <CoursesSection curriculum={curriculum} onUnscheduled={() => setRound((value) => value + 1)} />
 
       {curriculum.courses.length === 0 ? (
         <div className="row">

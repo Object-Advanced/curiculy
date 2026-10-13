@@ -14,7 +14,15 @@ from fastapi import HTTPException
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, object_session, selectinload
 
-from app.models import BookEdition, LibraryChapter, LibraryItem, LibraryLesson, PlannedCurriculumItem, Work
+from app.models import (
+    BookEdition,
+    LibraryChapter,
+    LibraryItem,
+    LibraryLesson,
+    PlannedCurriculum,
+    PlannedCurriculumItem,
+    Work,
+)
 from app.reference.subjects import subject_name
 from app.schemas.library import (
     ChapterWrite,
@@ -29,6 +37,7 @@ from app.schemas.library import (
     SearchResults,
 )
 from app.services import community
+from app.services.courses import solo_courses
 from app.services.library_rules import (
     KINDS,
     READING_BOOK,
@@ -122,12 +131,14 @@ def item_read(item: LibraryItem) -> LibraryItemRead:
         chapters=item.chapters,
         lessons=item.lessons,
         readiness=_readiness_read(result),
-        curriculum_ids=sorted(
-            {link.curriculum_id for link in object_session(item).scalars(
-                select(PlannedCurriculumItem).where(PlannedCurriculumItem.library_item_id == item.id)
-            )}
-        ),
+        # The planner's curricula; a book scheduled on its own isn't one to the family.
+        curriculum_ids=sorted(set(object_session(item).scalars(
+            select(PlannedCurriculumItem.curriculum_id)
+            .join(PlannedCurriculum, PlannedCurriculum.id == PlannedCurriculumItem.curriculum_id)
+            .where(PlannedCurriculumItem.library_item_id == item.id, PlannedCurriculum.solo.is_(False))
+        ))),
         community=community.link_status(item, result.ready),
+        courses=solo_courses(object_session(item), item.id),
     )
 
 

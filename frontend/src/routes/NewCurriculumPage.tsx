@@ -16,6 +16,7 @@ export function NewCurriculumPage() {
   const [params, setParams] = useSearchParams();
   const library = useLibrary();
   const textbookId = params.get("textbook") ? Number(params.get("textbook")) : null;
+  const otherId = params.get("item") ? Number(params.get("item")) : null;
   const suggestions = useSuggestions(textbookId);
   const create = useCreateCurriculum();
   const adopt = useCurriculumFromCommunity();
@@ -25,7 +26,9 @@ export function NewCurriculumPage() {
   }, []);
 
   const textbooks = (library.data ?? []).filter((item) => item.kind === "textbook");
+  const others = (library.data ?? []).filter((item) => item.kind !== "textbook");
   const picked = textbooks.find((item) => item.id === textbookId) ?? null;
+  const other = picked ? null : (others.find((item) => item.id === otherId) ?? null);
 
   const open = (id: number) => navigate(`/planner/${id}`, { replace: true });
 
@@ -40,7 +43,7 @@ export function NewCurriculumPage() {
         </div>
       </div>
 
-      {picked ? null : <PlannerIntro />}
+      {picked || other ? null : <PlannerIntro />}
 
       <section className="card stack-lg" aria-labelledby="pick-textbook">
         <div>
@@ -55,7 +58,10 @@ export function NewCurriculumPage() {
         {library.isPending ? <p className="muted">Loading your library…</p> : null}
         {library.isSuccess && textbooks.length === 0 ? (
           <div className="notice">
-            <p>There's no textbook in your library yet. Add one first; it takes a few minutes, or seconds if it's in the catalog.</p>
+            <p>
+              There's no textbook in your library yet. Add one (a few minutes, or seconds if it's in the catalog), or
+              build this curriculum around a workbook, website or book{others.length ? " below" : " from your library"}.
+            </p>
             <p>
               <Link className="btn btn-primary btn-small" to="/library?add=1">
                 Add a textbook to your library
@@ -96,6 +102,52 @@ export function NewCurriculumPage() {
           </p>
         ) : null}
       </section>
+
+      {others.length > 0 ? (
+        <section className="card stack-lg" aria-labelledby="no-textbook">
+          <div>
+            <h2 className="section-title" id="no-textbook">
+              No textbook for this subject?
+            </h2>
+            <p className="page-lede">
+              Build it around a workbook, an online site or a book instead. You'll choose how fast it goes when you
+              schedule it: pages or chapters a day, a finish date, or the rest of the school year.
+            </p>
+          </div>
+          <fieldset className="choice-cards">
+            <legend className="sr-only">Build it around</legend>
+            {others.map((item) => (
+              <label className="choice-card" key={item.id}>
+                <input
+                  type="radio"
+                  name="textbook"
+                  checked={item.id === otherId && !picked}
+                  onChange={() => setParams({ item: String(item.id) }, { replace: true })}
+                />
+                <span className="row">
+                  <BookCover small url={item.cover.url} title={item.title} kindLabel={item.kind_label} subjectCode={item.subject_code} kind={item.kind} />
+                  <span className="choice-text">
+                    <span className="choice-title">{item.title}</span>
+                    <span className="choice-hint">{[item.kind_label, item.subject_name].filter(Boolean).join(" · ")}</span>
+                  </span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          {other ? (
+            <div className="row">
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={create.isPending}
+                onClick={() => create.mutate({ first_item_id: other.id }, { onSuccess: (curriculum) => open(curriculum.id) })}
+              >
+                {create.isPending ? "Starting…" : `Build it around ${other.title}`}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {picked ? (
         <>

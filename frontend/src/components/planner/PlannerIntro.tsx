@@ -13,8 +13,10 @@ export function PlannerIntro({ onHide }: { onHide?: () => void }) {
         ) : null}
       </div>
       <p className="step-lede">
-        A curriculum is your plan for one subject. It's built around <strong>one textbook</strong>, the main book you
-        teach from, and everything that goes with it.
+        A curriculum is your plan for one subject. It's usually built around <strong>one textbook</strong>, the main
+        book you teach from, and everything that goes with it. No textbook? Build it around a workbook, a website or a
+        book, and choose how fast it goes. (To schedule one book by itself, use <strong>Schedule it</strong> in the
+        Library.)
       </p>
       <ol className="explain">
         <li>

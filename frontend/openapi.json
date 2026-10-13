@@ -969,6 +969,32 @@
         "title": "AttendanceUpsert",
         "type": "object"
       },
+      "BarcodeRead": {
+        "description": "The ISBN read from a photo of a barcode, or why not.",
+        "properties": {
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "isbn",
+          "message"
+        ],
+        "title": "BarcodeRead",
+        "type": "object"
+      },
       "Body_import_curriculum_csv_api_curriculum_import_csv_post": {
         "properties": {
           "file": {
@@ -1068,6 +1094,34 @@
           "password"
         ],
         "title": "Body_login_for_access_token_api_auth_token_post",
+        "type": "object"
+      },
+      "Body_read_barcode_photo_api_library_read_barcode_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_read_barcode_photo_api_library_read_barcode_post",
+        "type": "object"
+      },
+      "Body_read_page_photo_api_library_read_page_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_read_page_photo_api_library_read_page_post",
         "type": "object"
       },
       "Body_stage_evidence_api_evidence_staging_post": {
@@ -6424,6 +6478,13 @@
             "title": "Consumable",
             "type": "boolean"
           },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseRead"
+            },
+            "title": "Courses",
+            "type": "array"
+          },
           "cover": {
             "$ref": "#/components/schemas/CoverRead"
           },
@@ -7178,6 +7239,76 @@
         "title": "MissingRead",
         "type": "object"
       },
+      "PaceRead": {
+        "description": "What sets a curriculum's pace: its textbook, or (without one) the item\nthe parent paces when scheduling: by pages, chapters or a finish date.",
+        "properties": {
+          "chapters": {
+            "title": "Chapters",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lessons": {
+            "title": "Lessons",
+            "type": "integer"
+          },
+          "library_item_id": {
+            "title": "Library Item Id",
+            "type": "integer"
+          },
+          "measure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "total_pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Pages"
+          },
+          "usual_pages_per_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usual Pages Per Day"
+          }
+        },
+        "required": [
+          "kind",
+          "library_item_id",
+          "title",
+          "total_pages",
+          "chapters",
+          "lessons",
+          "usual_pages_per_day",
+          "measure"
+        ],
+        "title": "PaceRead",
+        "type": "object"
+      },
       "PacingCalculation": {
         "description": "The arithmetic behind a preview, so the caller can show its reasoning.\n\n``day_interval`` and ``lessons_per_day`` are two views of the same ratio: a\nstretched course lands on every Nth school day, a compressed one stacks N\nlessons onto each of them.",
         "properties": {
@@ -7668,6 +7799,35 @@
         "title": "PageMappingRead",
         "type": "object"
       },
+      "PageReadingRead": {
+        "description": "What was read from a photo of a printed page, one chapter or lesson per\nline, for the parent to check before adding.",
+        "properties": {
+          "left_out": {
+            "title": "Left Out",
+            "type": "integer"
+          },
+          "lines": {
+            "title": "Lines",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "lines",
+          "left_out",
+          "message"
+        ],
+        "title": "PageReadingRead",
+        "type": "object"
+      },
       "ParentNotificationListRead": {
         "properties": {
           "notifications": {
@@ -7771,7 +7931,7 @@
         "type": "string"
       },
       "PlannedCurriculumCreate": {
-        "description": "Start a curriculum, usually from a textbook (its subject and grade carry over).",
+        "description": "Start a curriculum, usually from a textbook (its subject and grade carry\nover). ``first_item_id`` starts one around any library item instead: a\nworkbook, an online site or a book, for a subject without a textbook.",
         "properties": {
           "days_per_week": {
             "anyOf": [
@@ -7785,6 +7945,17 @@
               }
             ],
             "title": "Days Per Week"
+          },
+          "first_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Item Id"
           },
           "grade": {
             "anyOf": [
@@ -7915,8 +8086,23 @@
             ],
             "title": "Notes"
           },
+          "paced_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaceRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "readiness": {
             "$ref": "#/components/schemas/CurriculumReadiness"
+          },
+          "solo": {
+            "default": false,
+            "title": "Solo",
+            "type": "boolean"
           },
           "subject_code": {
             "anyOf": [
@@ -9003,6 +9189,10 @@
       },
       "SchedulePreview": {
         "properties": {
+          "pace": {
+            "title": "Pace",
+            "type": "string"
+          },
           "school_year_end": {
             "anyOf": [
               {
@@ -9050,6 +9240,7 @@
           }
         },
         "required": [
+          "pace",
           "start_date",
           "weekdays",
           "weekday_names",
@@ -9061,8 +9252,46 @@
         "type": "object"
       },
       "ScheduleRequest": {
-        "description": "Which children, starting when, and (optionally) which weekdays (Monday = 0).",
+        "description": "Which children, starting when, and (optionally) which weekdays (Monday = 0).\n\nWithout a textbook, the pace is chosen here, one of: finish by a date,\npages a day, or (a book with chapters) chapters a day. With none, the work\nis spread over the rest of the school year. A textbook ignores them: its\nlessons set the pace.",
         "properties": {
+          "chapters_per_day": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapters Per Day"
+          },
+          "finish_by": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish By"
+          },
+          "pages_per_day": {
+            "anyOf": [
+              {
+                "maximum": 200.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages Per Day"
+          },
           "start_date": {
             "format": "date",
             "title": "Start Date",
@@ -15132,6 +15361,100 @@
         ]
       }
     },
+    "/api/library/read-barcode": {
+      "post": {
+        "description": "The ISBN from a photo of a book's barcode (for phones that can't scan live).",
+        "operationId": "read_barcode_photo_api_library_read_barcode_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_read_barcode_photo_api_library_read_barcode_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BarcodeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Barcode Photo",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/library/read-page": {
+      "post": {
+        "description": "Chapters or lessons from a photo of a contents page or a lesson list.\nNothing is saved: the text comes back for the parent to check and add.",
+        "operationId": "read_page_photo_api_library_read_page_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_read_page_photo_api_library_read_page_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageReadingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Page Photo",
+        "tags": [
+          "library"
+        ]
+      }
+    },
     "/api/library/search": {
       "get": {
         "description": "Your library, the community catalog (ready to add), the shared book cache, then Open Library\nand Google Books; each with its kind (catalog entries) or a guessed kind.",
@@ -15647,6 +15970,122 @@
           }
         ],
         "summary": "Post Generate Lessons",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/library/{item_id}/schedule": {
+      "post": {
+        "description": "Put one book on the calendar on its own. Take it off again with\n``DELETE /api/planner/courses/{course_id}`` (finished lessons stay).",
+        "operationId": "schedule_item_api_library__item_id__schedule_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Schedule Item",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/library/{item_id}/schedule/preview": {
+      "post": {
+        "description": "Schedule one book on its own, without a curriculum: what it would put on\nthe calendar, for each child, at the chosen pace. Nothing is saved.",
+        "operationId": "preview_item_schedule_api_library__item_id__schedule_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Preview Item Schedule",
         "tags": [
           "library"
         ]

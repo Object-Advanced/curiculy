@@ -1,8 +1,10 @@
 """The Curriculum planner, and scheduling a curriculum for a child.
 
-A ``PlannedCurriculum`` is a plan for one subject: its textbook (whose lesson
-list sets the pace) plus any workbooks, online sites and books that go with
-it, each a ``PlannedCurriculumItem`` pointing at a Library item. It isn't tied
+A ``PlannedCurriculum`` is a plan for one subject: usually its textbook (whose
+lesson list sets the pace) plus any workbooks, online sites and books that go
+with it, each a ``PlannedCurriculumItem`` pointing at a Library item. Without
+a textbook, the parent picks the pace when scheduling. A single book
+scheduled from the Library is a ``solo`` curriculum of one item. It isn't tied
 to a child, so one plan can serve two children or be reused next year.
 
 Scheduling makes a ``Course``: one child, one curriculum, one school year, a
@@ -14,7 +16,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import TenantBase
@@ -32,6 +34,9 @@ class PlannedCurriculum(TimestampMixin, TenantBase):
     # How many days a week the lessons happen (a 4-day program leaves a flex day).
     days_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # One library item scheduled on its own (the Library's "Schedule"): kept
+    # out of the planner's list and never contributed to the catalog.
+    solo: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
     # Started from a community curriculum ("Other families built a similar
     # curriculum"); unchanged copies aren't contributed back as new.
     # (A shared table, so it's referenced by its column, not by name.)

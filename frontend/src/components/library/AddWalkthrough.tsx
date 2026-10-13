@@ -15,6 +15,7 @@ import {
 import { ErrorLine, TextField } from "../ui/Fields";
 import { Modal, Steps } from "../ui/Modal";
 import { ReadinessList } from "../ui/Checklist";
+import { BarcodeScanner } from "./BarcodeScanner";
 import { BookCover } from "./BookCover";
 import { KindFields, draftToCreate, emptyDraft, type Draft } from "./KindFields";
 import { ChapterEditor, LessonEditor } from "./StructureEditors";
@@ -77,20 +78,25 @@ function SearchStep({
   const [results, setResults] = useState<SearchResults | null>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [scanning, setScanning] = useState(false);
   const adopt = useAddFromCommunity();
 
-  const search = async (event: FormEvent) => {
-    event.preventDefault();
-    if (query.trim().length < 2) return;
+  const run = async (text: string) => {
+    if (text.trim().length < 2) return;
     setSearching(true);
     setError(null);
     try {
-      setResults(await searchLibrary(query.trim()));
+      setResults(await searchLibrary(text.trim()));
     } catch (problem) {
       setError(problem);
     } finally {
       setSearching(false);
     }
+  };
+
+  const search = (event: FormEvent) => {
+    event.preventDefault();
+    void run(query);
   };
 
   const groups = results
@@ -130,6 +136,23 @@ function SearchStep({
           {searching ? "Searching…" : "Search"}
         </button>
       </form>
+      {scanning ? (
+        <BarcodeScanner
+          onClose={() => setScanning(false)}
+          onFound={(isbn) => {
+            setScanning(false);
+            setQuery(isbn);
+            void run(isbn);
+          }}
+        />
+      ) : (
+        <div className="row">
+          <button type="button" className="btn btn-small" onClick={() => setScanning(true)}>
+            Scan the barcode
+          </button>
+          <span className="field-hint">The ISBN barcode on the back cover finds the exact edition.</span>
+        </div>
+      )}
       <ErrorLine error={error ?? adopt.error} />
       {results?.notice ? <p className="notice">{results.notice}</p> : null}
       {groups.map((group) => (
