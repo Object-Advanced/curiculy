@@ -1,7 +1,10 @@
 """The Curriculum planner: build a subject's curriculum, then schedule it.
 
-A curriculum is built around a **textbook**: its lesson list sets the pace,
-one lesson each course day. Alongside it:
+A curriculum is usually built around a **textbook**: its lesson list sets the
+pace, one lesson each course day. Without one (a subject taught from a
+workbook, a website or books), the parent picks the pace when scheduling:
+pages a day, chapters a day, a finish date, or the rest of the school year.
+Alongside the pace-setter:
 
 - **workbooks**: their pages spread over the same days, a chapter at a time,
   never the answer key
@@ -13,7 +16,8 @@ one lesson each course day. Alongside it:
 
 Scheduling makes a ``Course`` per child and its dated lessons, skipping the
 family's days off and the child's own. Nothing is written until the parent
-has seen the preview.
+has seen the preview. A single book scheduled from the Library is a ``solo``
+curriculum of one item, kept out of the planner's list.
 
 A fully built curriculum is contributed to the community catalog (no toggle),
 so the next family with the same textbook can start from it. See
@@ -25,9 +29,10 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
+from math import ceil
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.enums import AssignmentStatus
@@ -46,12 +51,12 @@ from app.schemas.library import MissingRead, ProblemRead
 from app.schemas.planner import (
     ROLE_HINTS,
     ROLES,
-    CourseRead,
-    CurriculumCreate,
+    PaceRead,
+    PlannedCurriculumCreate,
     CurriculumItemRead,
-    CurriculumRead,
+    PlannedCurriculumRead,
     CurriculumReadiness,
-    CurriculumUpdate,
+    PlannedCurriculumUpdate,
     ScheduledItemPreview,
     SchedulePreview,
     ScheduleRequest,
@@ -59,6 +64,7 @@ from app.schemas.planner import (
     StudentPreview,
 )
 from app.services import community
+from app.services.courses import course_read, solo_curriculum_id
 from app.services.library import get_item, item_summary
 from app.services.library_rules import ONLINE_PROGRAM, READING_BOOK, TEXTBOOK, WORKBOOK, readiness
 from app.services.school_year import (
@@ -66,7 +72,6 @@ from app.services.school_year import (
     ensure_operational_school_year,
     exception_dates_for_household,
     load_school_year_settings,
-    parse_weekdays,
 )
 
 # Which kinds of library item can fill each role.
@@ -78,6 +83,8 @@ ROLE_KINDS = {
     "teacher": {TEXTBOOK, WORKBOOK, READING_BOOK},
 }
 ROLE_ORDER = {"textbook": 0, "workbook": 1, "online": 2, "reading": 3, "teacher": 4}
+# The role an item takes when a curriculum starts from it, or it's scheduled on its own.
+ROLE_FOR_KIND = {TEXTBOOK: "textbook", WORKBOOK: "workbook", READING_BOOK: "reading", ONLINE_PROGRAM: "online"}
 DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 CALENDAR_URL = "/#/assignments"
 
@@ -106,7 +113,13 @@ def get_curriculum(db: Session, curriculum_id: int) -> PlannedCurriculum:
 
 
 def list_curricula(db: Session) -> list[PlannedCurriculum]:
-    return list(db.scalars(select(PlannedCurriculum).options(*_options()).order_by(PlannedCurriculum.name)))
+    """The planner's list: single books scheduled from the Library aren't in it."""
+    return list(db.scalars(
+        select(PlannedCurriculum)
+        .where(PlannedCurriculum.solo.is_(False))
+        .options(*_options())
+        .order_by(PlannedCurriculum.name)
+    ))
 
 
 def curricula_using(db: Session, library_item_id: int) -> list[int]:
@@ -119,19 +132,46 @@ def textbook_of(curriculum: PlannedCurriculum) -> LibraryItem | None:
     return next((link.library_item for link in curriculum.items if link.role == "textbook"), None)
 
 
+def lead_item(curriculum: PlannedCurriculum) -> LibraryItem | None:
+    """What sets the pace: the textbook, else the first workbook, book to read, or online site."""
+    for role in ("textbook", "workbook", "reading", "online"):
+        for link in sorted(curriculum.items, key=lambda link: (link.position, link.id or 0)):
+            if link.role == role:
+                return link.library_item
+    return None
+
+
+def pace_read(curriculum: PlannedCurriculum) -> PaceRead | None:
+    item = lead_item(curriculum)
+    if item is None:
+        return None
+    return PaceRead(
+        kind=item.kind,
+        library_item_id=item.id,
+        title=item.title,
+        total_pages=item.total_pages,
+        chapters=len(_page_sections(item)) if item.chapters else 0,
+        lessons=len(item.lessons),
+        usual_pages_per_day=item.usual_pages_per_day,
+        measure=item.measure,
+    )
+
+
 def curriculum_readiness(curriculum: PlannedCurriculum) -> CurriculumReadiness:
     missing: list[MissingRead] = []
     problems: list[ProblemRead] = []
-    if not curriculum.subject_code:
+    if not curriculum.subject_code and not curriculum.solo:
         missing.append(MissingRead(
             field="subject_code", label="Subject",
             reason="The subject connects this curriculum to your child's subjects and your state's requirements.",
         ))
-    textbook = textbook_of(curriculum)
-    if textbook is None:
+    if lead_item(curriculum) is None:
         missing.append(MissingRead(
-            field="textbook", label="A textbook",
-            reason="A curriculum is built around a textbook: its lessons set the pace, one lesson each school day.",
+            field="items", label="Something to schedule",
+            reason=(
+                "Add a textbook (its lessons set the pace), or a workbook, online site or book, "
+                "and pick its pace when you schedule."
+            ),
         ))
     for link in curriculum.items:
         item = link.library_item
@@ -145,24 +185,9 @@ def curriculum_readiness(curriculum: PlannedCurriculum) -> CurriculumReadiness:
     return CurriculumReadiness(ready=not missing and not problems, missing=missing, problems=problems)
 
 
-def _course_read(db: Session, course: Course) -> CourseRead:
-    student = db.get(Student, course.student_id)
-    lessons = db.scalar(select(func.count()).select_from(Assignment).where(Assignment.course_id == course.id))
-    return CourseRead(
-        id=course.id,
-        curriculum_id=course.curriculum_id,
-        student_id=course.student_id,
-        student_name=student.name if student else "",
-        start_date=course.start_date,
-        end_date=course.end_date,
-        weekdays=parse_weekdays(course.weekdays),
-        lessons_scheduled=lessons or 0,
-    )
-
-
-def curriculum_read(db: Session, curriculum: PlannedCurriculum) -> CurriculumRead:
+def curriculum_read(db: Session, curriculum: PlannedCurriculum) -> PlannedCurriculumRead:
     links = sorted(curriculum.items, key=lambda link: (ROLE_ORDER.get(link.role, 9), link.position, link.id))
-    return CurriculumRead(
+    return PlannedCurriculumRead(
         id=curriculum.id,
         name=curriculum.name,
         subject_code=curriculum.subject_code,
@@ -178,8 +203,10 @@ def curriculum_read(db: Session, curriculum: PlannedCurriculum) -> CurriculumRea
             for link in links
         ],
         readiness=curriculum_readiness(curriculum),
-        courses=[_course_read(db, course) for course in sorted(curriculum.courses, key=lambda c: c.id)],
+        courses=[course_read(db, course) for course in sorted(curriculum.courses, key=lambda c: c.id)],
         community_curriculum_id=curriculum.community_curriculum_id,
+        solo=curriculum.solo,
+        paced_by=pace_read(curriculum),
     )
 
 
@@ -207,9 +234,11 @@ def add_item(db: Session, curriculum: PlannedCurriculum, item: LibraryItem, role
         PlannedCurriculumItem(library_item_id=item.id, role=role, position=len(curriculum.items))
     )
     db.flush()
-    if role == "textbook":
+    if role != "teacher":
+        # The first item fills in what the curriculum doesn't have yet.
         curriculum.subject_code = curriculum.subject_code or item.subject_code
         curriculum.grade = curriculum.grade or item.grade
+    if role == "textbook":
         curriculum.days_per_week = curriculum.days_per_week or item.days_per_week
 
 
@@ -220,11 +249,19 @@ def remove_item(curriculum: PlannedCurriculum, library_item_id: int) -> None:
     curriculum.items.remove(link)
 
 
-def create_curriculum(db: Session, payload: CurriculumCreate) -> PlannedCurriculum:
+def role_for(item: LibraryItem) -> str:
+    if item.kind == TEXTBOOK and item.for_parent:
+        raise HTTPException(status_code=409, detail="A teacher's edition is for you, so it isn't scheduled.")
+    return ROLE_FOR_KIND[item.kind]
+
+
+def create_curriculum(db: Session, payload: PlannedCurriculumCreate) -> PlannedCurriculum:
     textbook = get_item(db, payload.textbook_id) if payload.textbook_id else None
-    name = payload.name or (textbook.title if textbook else None)
+    first = get_item(db, payload.first_item_id) if payload.first_item_id and not textbook else None
+    starting = textbook or first
+    name = payload.name or (starting.title if starting else None)
     if not name:
-        raise HTTPException(status_code=422, detail="Give the curriculum a name, or start from a textbook.")
+        raise HTTPException(status_code=422, detail="Give the curriculum a name, or start from a book.")
     curriculum = PlannedCurriculum(
         name=name,
         subject_code=payload.subject_code,
@@ -236,11 +273,13 @@ def create_curriculum(db: Session, payload: CurriculumCreate) -> PlannedCurricul
     db.flush()
     if textbook is not None:
         add_item(db, curriculum, textbook, "textbook")
+    elif first is not None:
+        add_item(db, curriculum, first, role_for(first))
     db.commit()
     return get_curriculum(db, curriculum.id)
 
 
-def update_curriculum(db: Session, curriculum: PlannedCurriculum, payload: CurriculumUpdate) -> None:
+def update_curriculum(db: Session, curriculum: PlannedCurriculum, payload: PlannedCurriculumUpdate) -> None:
     for name, value in payload.model_dump(exclude_unset=True).items():
         if name == "name" and not value:
             continue
@@ -250,7 +289,7 @@ def update_curriculum(db: Session, curriculum: PlannedCurriculum, payload: Curri
 
 def delete_curriculum(db: Session, curriculum: PlannedCurriculum) -> None:
     if curriculum.courses:
-        names = ", ".join(sorted({_course_read(db, course).student_name for course in curriculum.courses}))
+        names = ", ".join(sorted({course_read(db, course).student_name for course in curriculum.courses}))
         raise HTTPException(
             status_code=409,
             detail=f"It's scheduled for {names}. Unschedule it first (finished lessons stay on the calendar).",
@@ -268,8 +307,12 @@ def refresh_contribution(db: Session, catalog_db: Session, curriculum_id: int, f
         community.safely(catalog_db, community.curriculum_removed, catalog_db, curriculum_id, family)
         return
     curriculum = get_curriculum(db, curriculum_id)
-    ready = curriculum_readiness(curriculum).ready
-    community.safely(catalog_db, community.curriculum_changed, db, catalog_db, curriculum, family, ready)
+    # Suggestions are found through a textbook, so only curricula built around
+    # one are shared; a single book scheduled on its own never is.
+    shareable = (
+        curriculum_readiness(curriculum).ready and not curriculum.solo and textbook_of(curriculum) is not None
+    )
+    community.safely(catalog_db, community.curriculum_changed, db, catalog_db, curriculum, family, shareable)
 
 
 def refresh_contributions_for_item(db: Session, catalog_db: Session, library_item_id: int, family: str | None) -> None:
@@ -361,6 +404,85 @@ def course_days(start: date, weekdays: list[int], off: set[date], count: int) ->
     return days
 
 
+def school_days_between(start: date, end: date, weekdays: list[int], off: set[date]) -> list[date]:
+    days: list[date] = []
+    day = start
+    while day <= end:
+        if day.weekday() in weekdays and day not in off:
+            days.append(day)
+        day += timedelta(days=1)
+    return days
+
+
+def days_for_sessions(start: date, weekdays: list[int], off: set[date], per_week: int, sessions: int) -> list[date]:
+    """Enough course days that their first ``per_week`` days each week make ``sessions`` sessions."""
+    days: list[date] = []
+    day = start
+    limit = start + timedelta(days=366 * 3)
+    week, used, count = None, 0, 0
+    while count < sessions and day <= limit:
+        if day.weekday() in weekdays and day not in off:
+            days.append(day)
+            this_week = day.isocalendar()[:2]
+            if this_week != week:
+                week, used = this_week, 0
+            if used < per_week:
+                used += 1
+                count += 1
+        day += timedelta(days=1)
+    return days
+
+
+@dataclass
+class Span:
+    """The course days for one child, and the pace in plain words."""
+
+    days: list[date]
+    pace: str
+
+
+# Without a usable school-year end, "the rest of the year" is 36 weeks.
+FALLBACK_WEEKS = 36
+
+
+def course_span(
+    curriculum: PlannedCurriculum,
+    request: ScheduleRequest,
+    weekdays: list[int],
+    off: set[date],
+    year_end: date | None,
+) -> Span:
+    """How many school days the course runs: a textbook's lesson count, or
+    (without one) the pace the parent picked."""
+    start = request.start_date
+    textbook = textbook_of(curriculum)
+    if textbook is not None:
+        return Span(course_days(start, weekdays, off, len(textbook.lessons)), f"One lesson of {textbook.title} each school day")
+    if request.finish_by is not None:
+        return Span(school_days_between(start, request.finish_by, weekdays, off), f"Finishing by {request.finish_by:%B %-d}")
+    item = lead_item(curriculum)
+    if item is not None and item.kind in (WORKBOOK, READING_BOOK):
+        sections = _page_sections(item)
+        if request.chapters_per_day and item.chapters and sections:
+            count = ceil(len(sections) / request.chapters_per_day)
+            per = "A chapter" if request.chapters_per_day == 1 else f"{request.chapters_per_day} chapters"
+            return Span(course_days(start, weekdays, off, count), f"{per} of {item.title} a day")
+        per_day = request.pages_per_day or item.usual_pages_per_day
+        if per_day and sections:
+            pages = sum(end - first + 1 for _, first, end in sections)
+            return Span(course_days(start, weekdays, off, ceil(pages / per_day)), f"{per_day} pages of {item.title} a day")
+    if item is not None and item.kind == ONLINE_PROGRAM and item.measure == "lessons" and item.lesson_count:
+        per_week = item.days_per_week or len(weekdays)
+        return Span(
+            days_for_sessions(start, weekdays, off, per_week, item.lesson_count),
+            f"One lesson of {item.title} each session, {per_week} days a week",
+        )
+    if year_end is not None and year_end > start:
+        return Span(school_days_between(start, year_end, weekdays, off), f"Spread over the rest of the school year, to {year_end:%B %-d}")
+    end = start + timedelta(weeks=FALLBACK_WEEKS)
+    return Span(school_days_between(start, end, weekdays, off), f"Spread over {FALLBACK_WEEKS} weeks")
+
+
 def _split(total: int, parts: int) -> list[int]:
     """Split ``total`` into ``parts`` near-equal whole numbers (bigger ones first)."""
     if parts <= 0:
@@ -434,6 +556,22 @@ def page_plan(item: LibraryItem, days: list[date]) -> list[tuple[date, int, int,
     return plan
 
 
+def chapter_plan(item: LibraryItem, days: list[date], per_day: int) -> list[tuple[date, int, int, str | None]]:
+    """Whole chapters each day ("ch. 3–4"), as many days as it takes (or fits)."""
+    sections = [section for section in _page_sections(item) if section[0] is not None]
+    if not sections or not days:
+        return []
+    per_day = max(per_day, ceil(len(sections) / len(days)))
+    numbers = {name: index + 1 for index, (name, _, _) in enumerate(sections)}
+    plan = []
+    for day, offset in zip(days, range(0, len(sections), per_day)):
+        group = sections[offset : offset + per_day]
+        first_number, last_number = numbers[group[0][0]], numbers[group[-1][0]]
+        label = f"ch. {first_number}" if first_number == last_number else f"ch. {first_number}–{last_number}"
+        plan.append((day, group[0][1], group[-1][2], label))
+    return plan
+
+
 def _sessions(days: list[date], per_week: int) -> list[date]:
     """The first ``per_week`` course days of each week."""
     weeks: dict[tuple[int, int], list[date]] = defaultdict(list)
@@ -455,20 +593,26 @@ def _lesson_title(item: LibraryItem, lesson) -> str:
     return title[:255]
 
 
-def plan_lessons(curriculum: PlannedCurriculum, days: list[date]) -> list[Planned]:
-    """Every dated lesson for one child, given the course days (one per textbook lesson)."""
+def plan_lessons(curriculum: PlannedCurriculum, days: list[date], chapters_per_day: int | None = None) -> list[Planned]:
+    """Every dated lesson for one child, given the course days. ``chapters_per_day``
+    (no textbook) schedules the pace-setting book or workbook a chapter at a time."""
     planned: list[Planned] = []
     textbook = textbook_of(curriculum)
-    if textbook is None:
-        return planned
-    for day, lesson in zip(days, textbook.lessons):
-        planned.append(Planned(day, _lesson_title(textbook, lesson), textbook, "textbook", lesson.id))
+    if textbook is not None:
+        for day, lesson in zip(days, textbook.lessons):
+            planned.append(Planned(day, _lesson_title(textbook, lesson), textbook, "textbook", lesson.id))
+    lead = lead_item(curriculum) if textbook is None and chapters_per_day else None
+
+    def pages_of(item: LibraryItem, item_days: list[date]):
+        if lead is not None and item.id == lead.id:
+            return chapter_plan(item, item_days, chapters_per_day or 1)
+        return page_plan(item, item_days)
 
     readers = [link.library_item for link in curriculum.items if link.role == "reading"]
     for link in curriculum.items:
         item = link.library_item
         if link.role == "workbook":
-            for day, first, last, chapter in page_plan(item, days):
+            for day, first, last, chapter in pages_of(item, days):
                 where = f" ({chapter})" if chapter else ""
                 planned.append(Planned(day, f"{item.title} · {_pages(first, last)}{where}"[:255], item, "workbook"))
         elif link.role == "online":
@@ -491,7 +635,7 @@ def plan_lessons(curriculum: PlannedCurriculum, days: list[date]) -> list[Planne
         shares = _apportion([book.total_pages or 1 for book in readers], len(days)) if len(readers) <= len(days) else []
         start = 0
         for book, share in zip(readers, shares):
-            for day, first, last, chapter in page_plan(book, days[start : start + share]):
+            for day, first, last, chapter in pages_of(book, days[start : start + share]):
                 where = f" ({chapter})" if chapter else ""
                 planned.append(Planned(day, f"Read {book.title}, {_pages(first, last)}{where}"[:255], book, "reading"))
             start += share
@@ -515,17 +659,21 @@ def preview(db: Session, curriculum: PlannedCurriculum, request: ScheduleRequest
         ))
     _, year_end, school_weekdays, _ = load_school_year_settings(db)
     weekdays = _course_weekdays(curriculum, school_weekdays, request.weekdays)
-    textbook = textbook_of(curriculum)
     warnings: list[str] = []
     students: list[StudentPreview] = []
+    pace = ""
     for student_id in request.student_ids:
         student = db.get(Student, student_id)
         if student is None:
             raise HTTPException(status_code=404, detail="Child not found")
         if any(course.student_id == student_id for course in curriculum.courses):
             warnings.append(f"{student.name} already has this curriculum on the calendar. Unschedule it first.")
-        days = course_days(request.start_date, weekdays, _days_off(db, student_id), len(textbook.lessons))
-        rows = plan_lessons(curriculum, days)
+        span = course_span(curriculum, request, weekdays, _days_off(db, student_id), year_end)
+        pace = span.pace
+        days = span.days
+        rows = plan_lessons(curriculum, days, request.chapters_per_day)
+        if not rows:
+            warnings.append(f"Nothing would land on {student.name}'s calendar: there are no school days in that time.")
         by_item: dict[int, list[Planned]] = defaultdict(list)
         for row in rows:
             by_item[row.item.id].append(row)
@@ -553,6 +701,7 @@ def preview(db: Session, curriculum: PlannedCurriculum, request: ScheduleRequest
             student_id=student.id, student_name=student.name, finish_date=finish, lessons=len(rows), items=items,
         ))
     return SchedulePreview(
+        pace=pace,
         start_date=request.start_date,
         weekdays=weekdays,
         weekday_names=[DAY_NAMES[day] for day in weekdays],
@@ -568,12 +717,12 @@ def schedule(db: Session, curriculum: PlannedCurriculum, request: ScheduleReques
     if any(student_id in already for student_id in request.student_ids):
         raise HTTPException(status_code=409, detail="Already on the calendar for that child. Unschedule it first.")
     year = ensure_operational_school_year(db)
+    year_end = load_school_year_settings(db)[1]
     weekdays = plan.weekdays
-    textbook = textbook_of(curriculum)
     created = 0
     courses: list[Course] = []
     for student_id in request.student_ids:
-        days = course_days(request.start_date, weekdays, _days_off(db, student_id), len(textbook.lessons))
+        days = course_span(curriculum, request, weekdays, _days_off(db, student_id), year_end).days
         course = Course(
             curriculum_id=curriculum.id,
             student_id=student_id,
@@ -584,7 +733,7 @@ def schedule(db: Session, curriculum: PlannedCurriculum, request: ScheduleReques
         )
         db.add(course)
         db.flush()
-        for row in plan_lessons(curriculum, days):
+        for row in plan_lessons(curriculum, days, request.chapters_per_day):
             db.add(Assignment(
                 student_id=student_id,
                 title=row.title,
@@ -598,7 +747,7 @@ def schedule(db: Session, curriculum: PlannedCurriculum, request: ScheduleReques
         courses.append(course)
     db.commit()
     return ScheduleResult(
-        courses=[_course_read(db, course) for course in courses],
+        courses=[course_read(db, course) for course in courses],
         lessons_created=created,
         calendar_url=f"{CALENDAR_URL}?from=planner&date={request.start_date.isoformat()}",
     )
@@ -622,3 +771,49 @@ def unschedule(db: Session, course: Course) -> tuple[int, int]:
     db.commit()
     return len(lessons) - len(finished), len(finished)
 
+
+
+# --- One book on its own (the Library's "Schedule") ---------------------------------
+
+def _solo(db: Session, item: LibraryItem, *, create: bool) -> PlannedCurriculum | None:
+    """The one-item curriculum for scheduling ``item`` on its own; made on first use."""
+    existing = solo_curriculum_id(db, item.id)
+    if existing is not None:
+        return get_curriculum(db, existing)
+    curriculum = PlannedCurriculum(
+        name=item.title,
+        subject_code=item.subject_code,
+        grade=item.grade,
+        days_per_week=item.days_per_week if item.kind == TEXTBOOK else None,
+        solo=True,
+    )
+    link = PlannedCurriculumItem(library_item_id=item.id, role=role_for(item), position=0)
+    if not create:
+        # A preview only: never added to the session, so nothing is saved.
+        link.library_item = item
+        curriculum.items.append(link)
+        return curriculum
+    curriculum.items.append(link)
+    db.add(curriculum)
+    db.flush()
+    return get_curriculum(db, curriculum.id)
+
+
+def preview_item(db: Session, item: LibraryItem, request: ScheduleRequest) -> SchedulePreview:
+    return preview(db, _solo(db, item, create=False), request)
+
+
+def schedule_item(db: Session, item: LibraryItem, request: ScheduleRequest) -> ScheduleResult:
+    return schedule(db, _solo(db, item, create=True), request)
+
+
+def delete_solo_for_item(db: Session, library_item_id: int) -> None:
+    """Before an item is deleted: its own schedule goes too (finished lessons stay)."""
+    curriculum_id = solo_curriculum_id(db, library_item_id)
+    if curriculum_id is None:
+        return
+    curriculum = get_curriculum(db, curriculum_id)
+    for course in list(curriculum.courses):
+        unschedule(db, course)
+    db.delete(get_curriculum(db, curriculum_id))
+    db.commit()

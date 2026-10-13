@@ -99,11 +99,11 @@ Parents see: **Today · Calendar · Library · Records · Tasks.**
   - The checklist tracks coverage across the grade band, plus anything the state wants every year (Pennsylvania: fire-safety instruction, "regular and continuous").
 
 ## Library: one shelf, four kinds of book
-One **Library** for everything the family teaches or reads from, with filter chips: **All · Books · Textbooks · Workbooks · Online sites**. It looks like a real bookshelf: covers standing on shelves (see [Covers](#covers-a-library-that-looks-like-a-library)). It replaces the "Curriculum catalog" (decided 2026-10-12: that name hid what the page holds). **Backend built** (October 2026); the new screen is next.
+One **Library** for everything the family teaches or reads from, with filter chips: **All · Books · Textbooks · Workbooks · Online sites**. It looks like a real bookshelf: covers standing on shelves (see [Covers](#covers-a-library-that-looks-like-a-library)). It replaces the "Curriculum catalog" (decided 2026-10-12: that name hid what the page holds). **Built** (October 2026): [Library](../2-features/21-library.md).
 
 ### Adding something: a walkthrough, one step at a time
 Adding happens in a pop-up walkthrough, not one long form. Each step explains itself in plain words, for parents who aren't technical.
-1. **Find it.** One search box: ISBN (typed or scanned), title, author or series. Results come in groups:
+1. **Find it.** One search box: ISBN (typed, or **scanned**: live where the browser can, from a photo of the barcode everywhere else), title, author or series. Results come in groups:
    - **In the Curiculy catalog:** "BJU Reading 4 (4th ed.): textbook, 170 lessons, entered by 4 families." Pick it and it's done: the details, chapters and lesson list are copied in, ready to schedule.
    - **Book matches** from Open Library or Google Books, with cover, author and page count, to start from.
    - **Already in your library.**
@@ -111,7 +111,7 @@ Adding happens in a pop-up walkthrough, not one long form. Each step explains it
 2. **The basics:** title, author or publisher, cover. Pre-filled from a match.
 3. **"What is this?"** **Book · Textbook · Workbook · Online site**, each with one line under it saying what it means. After a match, one is pre-selected as a guess, and the parent confirms it.
 4. **The questions for that kind** appear next, each with why it's needed (below).
-5. **The structure:** chapters (books, workbooks) or the lesson list (textbooks), typed, pasted, or made with "make lessons 1–170" and filled in.
+5. **The structure:** chapters (books, workbooks) or the lesson list (textbooks), typed, pasted, **read from a photo of the page** (Tesseract, then checked by the parent), or made with "make lessons 1–170" and filled in.
 6. **Done**, or, after a textbook, **"Plan a curriculum with this textbook"**, which opens the [Curriculum planner](#curriculum-planner-a-textbook-and-what-goes-with-it). The first textbook a family adds starts the planner's short explanation of how curricula work.
 
 ### What each kind asks for
@@ -168,8 +168,8 @@ A live preview shows the result as lessons go in: "170 lessons, 5 a week = 34 we
 **The link opens from wherever the work shows up:** the lesson on the calendar, the parent's Today and Tasks, and an **Open IXL** button on the kid's trail stop. A screenshot of the score (the Chrome extension) becomes the work sample.
 
 ### Scheduling, by kind
-**"Auto-schedule a book" goes away.** A textbook is scheduled through its **curriculum** (below), with whatever goes with it. A book, workbook or online site on its own gets a **Schedule** button too (later: **Schedule from library** on the calendar):
-- **Book:** pages, minutes or chapters a day, or a finish-by date
+**"Auto-schedule a book" goes away.** A textbook is scheduled through its **curriculum** (below), with whatever goes with it. A book, workbook or online site on its own has **Schedule it** in the Library (**built**, October 2026; later also **Schedule from library** on the calendar):
+- **Book:** pages or chapters a day, or a finish-by date (minutes a day: later)
 - **Workbook:** pages a day inside chapter boundaries; never the answer key
 - **Online site:** lessons or minutes, on its days a week, with the link
 
@@ -185,9 +185,9 @@ A live preview shows the result as lessons go in: "170 lessons, 5 a week = 34 we
 - **The look:** covers standing on shelves, in Morning Light for parents; the kid's **My books** uses Sticker Book.
 
 ## Curriculum planner: a textbook and what goes with it
-A separate page from the Library (decided 2026-10-12). **Backend built** (October 2026); the screens are next.
+A separate page from the Library (decided 2026-10-12). **Built** (October 2026): [Curriculum planner](../2-features/22-curriculum-planner.md).
 
-**What a curriculum is:** one subject's plan, built around **one textbook**. The textbook's lessons set the pace: one lesson each course day. Alongside it go:
+**What a curriculum is:** one subject's plan, usually built around **one textbook**. The textbook's lessons set the pace: one lesson each course day. **A subject without a textbook** (decided 2026-10-13) is built around a workbook, an online site or a book, and the parent picks the pace when scheduling: pages a day, chapters a day, a finish date, or the rest of the school year. Alongside the pace-setter go:
 | Role | What happens to it when scheduled |
 |---|---|
 | **Textbook** | One lesson each course day, in order; quizzes and tests keep their place |
@@ -423,7 +423,7 @@ When a requirement asks for something Curiculy doesn't have, we don't squeeze it
 ## Community catalog: built by every family
 The catalog of books, textbooks, workbooks, online sites and curricula is what makes Curiculy fast to set up, so **every family's entries build it.**
 
-**Backend built** (October 2026): automatic contributions, the checks, the review queue's API, versions and rollback, catalog results in Library search, "add from the catalog", and curriculum suggestions. **Not built yet:** the admin review screen and the Library screens (next, in React); face detection on covers; publishing trusted contributors' clean entries without review; catch-up feedback in the queue (with the catch-up sheet); founding-family discounts (with billing, Phase 8); the lawyer's read of the notice wording.
+**Built** (October 2026): automatic contributions, the checks, the review queue (`/next/admin/catalog`), versions and rollback, catalog results in Library search, "add from the catalog", and curriculum suggestions. See [Community catalog and review](../2-features/23-community-catalog.md). **Not built yet:** face detection on covers; publishing trusted contributors' clean entries without review; catch-up feedback in the queue (with the catch-up sheet); founding-family discounts (with billing, Phase 8); the lawyer's read of the notice wording.
 
 ### How contributions work
 - **No share toggle.** When a family adds a book, textbook, workbook or online site by hand, its **structure** goes to the catalog automatically, after review: title, author, publisher, edition, ISBN, total pages, chapters and their start pages, the lesson list (numbers, names, types, pages), and an uploaded cover image. A fully built **curriculum** goes too: which textbook, workbooks, sites and books, in which roles.
@@ -461,7 +461,7 @@ Each check is a small rule that raises a flag with a plain-words reason. Structu
 The family's own copy works either way. Only the catalog waits for review.
 
 ### The admin review queue
-In Settings → Admin, next to invites. **The API is built** (`/api/admin/community/…`); the screen comes with the React pages.
+**Catalog review** (`/next/admin/catalog`), in the nav and the user menu for admins.
 - **Each contribution** shows its flags with reasons, a side-by-side comparison with the catalog entry or the ISBN data, and the cover.
 - **Actions:** Approve · Approve with edits · Merge into existing · Reject with a reason · Ask the contributor.
 - **At launch everything is reviewed;** later, clean contributions from trusted contributors can publish on their own, and only flagged ones wait.

@@ -95,6 +95,8 @@ BODIES = {
         "student_ids": [1], "start_date": "2026-10-13"},
     ("POST", "/api/planner/curricula/{planned_curriculum_id}/schedule"): {
         "student_ids": [1], "start_date": "2026-10-13"},
+    ("POST", "/api/library/{item_id}/schedule/preview"): {"student_ids": [1], "start_date": "2026-10-13"},
+    ("POST", "/api/library/{item_id}/schedule"): {"student_ids": [1], "start_date": "2026-10-13"},
 }
 
 
@@ -319,6 +321,10 @@ def test_ids_inside_request_bodies_refuse_another_familys_records(probe: dict) -
         ("POST", f"/api/planner/curricula/{a['planned_curriculum']}/schedule",
          {"student_ids": [b["student"]], "start_date": "2026-10-13"}),
         ("GET", f"/api/community/suggestions?library_item_id={b['textbook']}", None),
+        ("POST", f"/api/library/{a['library_item']}/schedule/preview",
+         {"student_ids": [b["student"]], "start_date": "2026-10-13"}),
+        ("POST", f"/api/library/{a['library_item']}/schedule",
+         {"student_ids": [b["student"]], "start_date": "2026-10-13"}),
     ]
     for method, url, body in attempts:
         response = client.request(method, url, headers=headers, json=body)

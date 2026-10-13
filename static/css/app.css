@@ -3932,7 +3932,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261012-grades");
+    background-image: url("/static/night-mountains.jpg?v=20261013-library");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -4511,4 +4511,25 @@ html[data-role="child"] .nav-kid {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--border-color);
+}
+
+/* Arriving from the Curriculum planner (/next/planner): a short calendar tour. */
+.planner-tour {
+    margin-bottom: var(--space-4);
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
+}
+
+.planner-tour h2 {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+}
+
+.planner-tour ol {
+    margin: 0 0 var(--space-3);
+    padding-left: var(--space-5);
+    display: grid;
+    gap: var(--space-2);
+    line-height: var(--leading-normal);
 }

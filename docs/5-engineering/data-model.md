@@ -87,7 +87,7 @@ erDiagram
 | `library_items` | The Library: a book, textbook, workbook or online site (`kind`), with its details, cover, website link, `for_parent` (a teacher's edition), and the catalog entry and version it matches |
 | `library_chapters` | Chapters with start pages (books, workbooks) |
 | `library_lessons` | A textbook's full lesson list: number, name, type, unit, minutes, first and last page |
-| `planned_curricula`, `planned_curriculum_items` | The Curriculum planner: a subject's curriculum (name, subject, grade, days a week, the community curriculum it started from) and its library items, each in a role (`textbook`, `workbook`, `online`, `reading`, `teacher`) |
+| `planned_curricula`, `planned_curriculum_items` | The Curriculum planner: a subject's curriculum (name, subject, grade, days a week, the community curriculum it started from) and its library items, each in a role (`textbook`, `workbook`, `online`, `reading`, `teacher`). `solo` marks the one-item curricula the Library's "Schedule it" makes, kept out of the planner's list |
 | `courses` | A curriculum scheduled for one child: school year, start and end dates, weekdays |
 | `school_years` | Name, start and end dates (the latest is "operational") |
 | `household_settings` | School weekdays; colors for days off |
@@ -114,7 +114,7 @@ There are no real users yet, so the tables for curricula, lesson plans, enrollme
 - **Alembic migrations** in `migrations/versions/`, run as the owner role at startup (`python -m app.db_startup`, called by `entrypoint.sh`). Each migration runs in one transaction: it applies fully or not at all.
 - **A new family table also needs, in its migration,** `tenancy.protect_family_table("<table>")` and `tenancy.add_family_reference(...)` for each reference to another family table (`migrations/tenancy.py`). The safety check refuses to start if either is missing.
 - **To write one:** change the models, run `alembic revision --autogenerate -m "…"`, read what it wrote, then add the tenancy steps. `tests/test_database.py` fails if the migrations and models disagree.
-- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`).
+- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`). `0006` added `planned_curricula.solo`.
 
 ## Known data gaps
 - **Lessons aren't tied to a school year,** so reports use date ranges.

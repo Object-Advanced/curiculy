@@ -70,7 +70,9 @@ curiculy/
 | `assignments.py`, `calendar.py` | [Calendar and lessons](../2-features/04-calendar-and-lessons.md) |
 | `homework_help.py` | [Stuck? nudges](../2-features/07-stuck-nudges.md) |
 | `curricula.py`, `catalog.py`, `books.py` | [Library and books](../2-features/08-library-and-books.md) |
-| `library.py`, `planner.py`, `community.py`, `community_admin.py` | [Product spine](../6-planning/product-spine.md): Library, Curriculum planner, Community catalog (screens next) |
+| `library.py` | [Library](../2-features/21-library.md) |
+| `planner.py` | [Curriculum planner](../2-features/22-curriculum-planner.md) |
+| `community.py`, `community_admin.py` | [Community catalog and review](../2-features/23-community-catalog.md) |
 | `pacing.py`, `curriculum_plans.py` | [Pacing and lesson plans](../2-features/09-pacing-and-lesson-plans.md) |
 | `recalibration.py` | [Recalibrate](../2-features/10-recalibrate.md) |
 | `school_years.py`, `exceptions.py` | [School year and days off](../2-features/11-school-year-and-days-off.md) |

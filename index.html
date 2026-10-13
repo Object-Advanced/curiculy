@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curiculy</title>
-    <script src="/static/js/theme-boot.js?v=20261012-grades"></script>
-    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261012-grades">
-    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261012-grades">
-    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261012-grades" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="/static/css/tokens.css?v=20261012-grades">
-    <link rel="stylesheet" href="/static/css/app.css?v=20261012-grades">
+    <script src="/static/js/theme-boot.js?v=20261013-library"></script>
+    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261013-library">
+    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261013-library">
+    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261013-library" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/css/tokens.css?v=20261013-library">
+    <link rel="stylesheet" href="/static/css/app.css?v=20261013-library">
 </head>
 <body>
     <div id="auth-page">
         <section class="auth-card" aria-labelledby="auth-title-signin">
             <header class="auth-brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261012-grades" alt="" width="72" height="72" aria-hidden="true">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261013-library" alt="" width="72" height="72" aria-hidden="true">
                 <p class="auth-product">Curiculy</p>
             </header>
             <p id="login-error" class="banner error" hidden></p>
@@ -108,7 +108,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261012-grades" alt="" width="40" height="40">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261013-library" alt="" width="40" height="40">
                 <div>
                     <strong>Curiculy</strong>
                     <p>Homeschool planner</p>
@@ -120,7 +120,8 @@
                 <a href="#/dashboard" data-route="dashboard" class="nav-parent">Home</a>
                 <a href="#/assignments" data-route="assignments" class="nav-parent">Calendar</a>
                 <a href="#/students" data-route="students" class="nav-parent">Kids</a>
-                <a href="#/curricula" data-route="curricula" class="nav-parent">Curriculum catalog</a>
+                <a href="/next/library" class="nav-parent">Library</a>
+                <a href="/next/planner" class="nav-parent">Curriculum planner</a>
                 <a href="#/portfolios" data-route="portfolios" class="nav-parent">Portfolios</a>
             </nav>
             <div class="sidebar-user">
@@ -144,6 +145,7 @@
                     <a href="#/settings/school-years" role="menuitem" class="nav-parent">School Years</a>
                     <a href="#/settings/enrollments" role="menuitem" class="nav-parent">Enrollments</a>
                     <a href="#/settings/admin" role="menuitem" id="admin-menu-item" hidden>Admin</a>
+                    <a href="/next/admin/catalog" role="menuitem" id="catalog-review-menu-item" hidden>Catalog review</a>
                     <button type="button" role="menuitem" data-action="logout">Log out</button>
                 </div>
             </div>
@@ -329,12 +331,12 @@
                 <p class="muted">Name your household, set the school year, then add a student so you can start planning.</p>
                 <ol class="wizard-points">
                     <li>
-                        <strong>Build your Catalog</strong>
-                        <span>Add the books and curricula you teach.</span>
+                        <strong>Fill your Library</strong>
+                        <span>Add the books, textbooks, workbooks and websites you teach from.</span>
                     </li>
                     <li>
-                        <strong>Auto-schedule lessons</strong>
-                        <span>Turn a book into a daily plan that fits your calendar.</span>
+                        <strong>Plan each subject</strong>
+                        <span>Build a curriculum around a textbook, and put it on the calendar.</span>
                     </li>
                     <li>
                         <strong>Check off work &amp; attach evidence</strong>
@@ -688,7 +690,7 @@
     <input type="file" id="curriculum-pdf-input" accept="application/pdf" hidden>
     <input type="file" id="paper-import-input" accept="image/*" capture="environment" style="display: none;">
     <div id="toast-container" aria-live="polite" aria-relevant="additions text"></div>
-    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261012-grades"></script>
-    <script src="/static/js/app.js?v=20261012-grades"></script>
+    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261013-library"></script>
+    <script src="/static/js/app.js?v=20261013-library"></script>
 </body>
 </html>

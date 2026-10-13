@@ -1,6 +1,8 @@
 @import "tailwindcss";
 /* One token system for both apps: the same file the legacy app loads. */
 @import "../../static/css/tokens.css";
+/* Parent screens: the Library, the Curriculum planner, catalog review. */
+@import "./parent.css";
 
 /* Tailwind utilities read the tokens (bg-card, text-ink, font-display…). */
 @theme inline {

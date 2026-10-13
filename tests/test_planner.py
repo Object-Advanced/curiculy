@@ -19,6 +19,7 @@ from app.models import (
     CatalogContribution,
     CommunityCurriculum,
     Course,
+    PlannedCurriculum,
     SchoolYear,
     Student,
 )
@@ -92,10 +93,11 @@ class TestBuilding:
         assert [(i["role"], i["role_label"]) for i in body["items"]] == [("textbook", "Textbook")]
         assert body["readiness"]["ready"] is True
 
-    def test_a_curriculum_is_built_around_a_textbook(self, client: TestClient) -> None:
+    def test_a_curriculum_needs_something_to_schedule(self, client: TestClient) -> None:
         body = client.post("/api/planner/curricula", json={"name": "Reading 4", "subject_code": "english"}).json()
         [missing] = body["readiness"]["missing"]
-        assert missing["field"] == "textbook" and "set the pace" in missing["reason"]
+        assert missing["field"] == "items" and "pick its pace" in missing["reason"]
+        assert body["paced_by"] is None
 
     def test_each_role_fits_its_kind(self, client: TestClient) -> None:
         textbook, workbook = _textbook(client), _workbook(client)
@@ -298,3 +300,135 @@ class TestCommunityCurricula:
         assert db.get(CommunityCurriculum, community_id).families_count == 2
         open_ones = db.scalars(select(CatalogContribution).where(CatalogContribution.status == "pending")).all()
         assert open_ones == []  # an unchanged copy isn't contributed again
+
+
+class TestWithoutATextbook:
+    """A subject taught from a workbook, a website or books: the parent picks the pace."""
+
+    def _workbook_curriculum(self, client: TestClient) -> dict:
+        workbook = _workbook(client)
+        body = client.post("/api/planner/curricula", json={"first_item_id": workbook["id"]}).json()
+        assert (body["name"], body["subject_code"], body["readiness"]["ready"]) == ("BJU Reading 4 Worktext", "english", True)
+        assert body["paced_by"]["kind"] == "workbook" and body["paced_by"]["chapters"] == 2
+        return body
+
+    def _preview(self, client: TestClient, curriculum: dict, ada: int, **pace) -> dict:
+        response = client.post(
+            f"/api/planner/curricula/{curriculum['id']}/schedule/preview",
+            json={"student_ids": [ada], "start_date": MONDAY.isoformat(), **pace},
+        )
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    def test_pages_a_day(self, client: TestClient, ada: int) -> None:
+        body = self._preview(client, self._workbook_curriculum(client), ada, pages_per_day=10)
+        assert body["pace"] == "10 pages of BJU Reading 4 Worktext a day"
+        [kid] = body["students"]
+        assert kid["lessons"] == 10  # 100 pages before the answer key, 10 a day
+        assert kid["finish_date"] == "2026-10-23"  # two weeks of Mon-Fri
+
+    def test_finish_by_a_date(self, client: TestClient, ada: int) -> None:
+        body = self._preview(client, self._workbook_curriculum(client), ada, finish_by="2026-10-16")
+        assert body["pace"] == "Finishing by October 16"
+        assert body["students"][0]["finish_date"] == "2026-10-16"
+        assert body["students"][0]["lessons"] == 5
+
+    def test_the_rest_of_the_school_year_by_default(self, client: TestClient, ada: int) -> None:
+        body = self._preview(client, self._workbook_curriculum(client), ada)
+        assert body["pace"] == "Spread over the rest of the school year, to June 4"
+        [kid] = body["students"]
+        assert kid["lessons"] == 100 and kid["finish_date"] < "2027-06-05"
+
+    def test_a_book_a_chapter_or_more_a_day(self, client: TestClient, db: Session, ada: int) -> None:
+        book = _novel(client)
+        client.put(f"/api/library/{book['id']}/chapters", json=[
+            {"name": "Before Breakfast", "start_page": 1}, {"name": "Wilbur", "start_page": 9},
+            {"name": "Escape", "start_page": 15}, {"name": "Loneliness", "start_page": 25},
+            {"name": "Charlotte", "start_page": 33},
+        ])
+        body = client.post("/api/planner/curricula", json={"first_item_id": book["id"], "subject_code": "english"}).json()
+        preview = self._preview(client, body, ada, chapters_per_day=2)
+        assert preview["pace"] == "2 chapters of Charlotte's Web a day"
+        assert preview["students"][0]["lessons"] == 3
+        client.post(f"/api/planner/curricula/{body['id']}/schedule",
+                    json={"student_ids": [ada], "start_date": MONDAY.isoformat(), "chapters_per_day": 2})
+        titles = [lesson.title for lesson in db.scalars(select(Assignment).order_by(Assignment.scheduled_date))]
+        assert titles == [
+            "Read Charlotte's Web, pp. 1–14 (ch. 1–2)",
+            "Read Charlotte's Web, pp. 15–32 (ch. 3–4)",
+            "Read Charlotte's Web, pp. 33–184 (ch. 5)",
+        ]
+
+    def test_an_online_site_one_lesson_a_session(self, client: TestClient, ada: int) -> None:
+        site = _add(client, kind="online_program", title="Teaching Textbooks 4", website_url="https://www.teachingtextbooks.com",
+                    subject_code="math", grade="4", measure="lessons", lesson_count=6, days_per_week=3)
+        body = client.post("/api/planner/curricula", json={"first_item_id": site["id"]}).json()
+        preview = self._preview(client, body, ada)
+        assert preview["pace"] == "One lesson of Teaching Textbooks 4 each session, 3 days a week"
+        [kid] = preview["students"]
+        assert kid["lessons"] == 6 and kid["finish_date"] == "2026-10-21"  # Mon-Wed, two weeks
+
+    def test_one_pace_at_a_time(self, client: TestClient, ada: int) -> None:
+        curriculum = self._workbook_curriculum(client)
+        url = f"/api/planner/curricula/{curriculum['id']}/schedule/preview"
+        both = client.post(url, json={"student_ids": [ada], "start_date": MONDAY.isoformat(), "pages_per_day": 5, "finish_by": "2026-12-01"})
+        assert both.status_code == 422
+        backwards = client.post(url, json={"student_ids": [ada], "start_date": MONDAY.isoformat(), "finish_by": "2026-10-01"})
+        assert backwards.status_code == 422
+
+    def test_curricula_without_a_textbook_are_not_shared(self, client: TestClient, db: Session) -> None:
+        self._workbook_curriculum(client)
+        shared = db.scalars(select(CatalogContribution).where(CatalogContribution.kind == "curriculum")).all()
+        assert shared == []
+
+
+class TestOneBookOnItsOwn:
+    """The Library's "Schedule": one book, workbook or site, without building a curriculum."""
+
+    def test_preview_saves_nothing_and_scheduling_keeps_the_planner_tidy(
+        self, client: TestClient, db: Session, ada: int
+    ) -> None:
+        book = _novel(client)
+        request = {"student_ids": [ada], "start_date": MONDAY.isoformat(), "pages_per_day": 20}
+        preview = client.post(f"/api/library/{book['id']}/schedule/preview", json=request).json()
+        assert preview["pace"] == "20 pages of Charlotte's Web a day"
+        assert preview["students"][0]["lessons"] == 10
+        assert db.scalars(select(PlannedCurriculum)).all() == []
+
+        result = client.post(f"/api/library/{book['id']}/schedule", json=request)
+        assert result.status_code == 201 and result.json()["lessons_created"] == 10
+        assert client.get("/api/planner/curricula").json() == []  # not a curriculum to the family
+        mine = client.get(f"/api/library/{book['id']}").json()
+        assert [(c["student_name"], c["lessons_scheduled"]) for c in mine["courses"]] == [("Ada", 10)]
+        assert mine["curriculum_ids"] == []  # its one-book plan isn't a curriculum to the family
+        assert client.post(f"/api/library/{book['id']}/schedule", json=request).status_code == 409
+
+        removed = client.delete(f"/api/planner/courses/{mine['courses'][0]['id']}").json()
+        assert removed == {"lessons_removed": 10, "lessons_kept": 0}
+        assert client.get(f"/api/library/{book['id']}").json()["courses"] == []
+
+    def test_a_teachers_edition_is_never_scheduled(self, client: TestClient, ada: int) -> None:
+        teacher = _add(client, kind="textbook", title="Teacher's Edition", publisher="BJU Press", edition="4th",
+                       subject_code="english", grade="4", total_pages=500, for_parent=True)
+        response = client.post(f"/api/library/{teacher['id']}/schedule/preview",
+                               json={"student_ids": [ada], "start_date": MONDAY.isoformat()})
+        assert response.status_code == 409
+
+    def test_an_unfinished_book_cant_be_scheduled(self, client: TestClient, ada: int) -> None:
+        unfinished = _add(client, kind="workbook", title="Spectrum Reading 4")
+        response = client.post(f"/api/library/{unfinished['id']}/schedule/preview",
+                               json={"student_ids": [ada], "start_date": MONDAY.isoformat()})
+        assert response.status_code == 409 and "Not ready" in response.json()["detail"]
+
+    def test_deleting_the_book_takes_its_schedule_but_not_finished_work(
+        self, client: TestClient, db: Session, ada: int
+    ) -> None:
+        book = _novel(client)
+        client.post(f"/api/library/{book['id']}/schedule",
+                    json={"student_ids": [ada], "start_date": MONDAY.isoformat(), "pages_per_day": 92})
+        first = db.scalars(select(Assignment).order_by(Assignment.scheduled_date)).first()
+        first.status = AssignmentStatus.COMPLETED
+        db.flush()
+        assert client.delete(f"/api/library/{book['id']}").status_code == 204
+        assert [lesson.status for lesson in db.scalars(select(Assignment))] == [AssignmentStatus.COMPLETED]
+        assert db.scalars(select(PlannedCurriculum)).all() == []

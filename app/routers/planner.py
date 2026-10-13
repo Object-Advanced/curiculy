@@ -13,10 +13,10 @@ from app.core.deps import get_tenant_db
 from app.core.security import CurrentUser, get_current_user, require_parent
 from app.db import get_catalog_db
 from app.schemas.planner import (
-    CurriculumCreate,
+    PlannedCurriculumCreate,
     CurriculumItemWrite,
-    CurriculumRead,
-    CurriculumUpdate,
+    PlannedCurriculumRead,
+    PlannedCurriculumUpdate,
     FromCommunityRequest,
     SchedulePreview,
     ScheduleRequest,
@@ -30,35 +30,35 @@ from app.services.library import get_item
 router = APIRouter(prefix="/planner", tags=["planner"], dependencies=[Depends(require_parent)])
 
 
-def _changed(db: Session, catalog_db: Session, curriculum_id: int, user: CurrentUser) -> CurriculumRead:
+def _changed(db: Session, catalog_db: Session, curriculum_id: int, user: CurrentUser) -> PlannedCurriculumRead:
     service.refresh_contribution(db, catalog_db, curriculum_id, community.family_of(user))
     return service.curriculum_read(db, service.get_curriculum(db, curriculum_id))
 
 
-@router.get("/curricula", response_model=list[CurriculumRead])
-def list_curricula(db: Session = Depends(get_tenant_db)) -> list[CurriculumRead]:
+@router.get("/curricula", response_model=list[PlannedCurriculumRead])
+def list_curricula(db: Session = Depends(get_tenant_db)) -> list[PlannedCurriculumRead]:
     return [service.curriculum_read(db, curriculum) for curriculum in service.list_curricula(db)]
 
 
-@router.post("/curricula", response_model=CurriculumRead, status_code=201)
+@router.post("/curricula", response_model=PlannedCurriculumRead, status_code=201)
 def create_curriculum(
-    payload: CurriculumCreate,
+    payload: PlannedCurriculumCreate,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
-) -> CurriculumRead:
+) -> PlannedCurriculumRead:
     """Start a curriculum, usually from a textbook (its subject and grade carry over)."""
     curriculum = service.create_curriculum(db, payload)
     return _changed(db, catalog_db, curriculum.id, user)
 
 
-@router.post("/curricula/from-community", response_model=CurriculumRead, status_code=201)
+@router.post("/curricula/from-community", response_model=PlannedCurriculumRead, status_code=201)
 def create_from_community(
     payload: FromCommunityRequest,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
-) -> CurriculumRead:
+) -> PlannedCurriculumRead:
     """Start from a curriculum other families built. Its books are added to your
     library (or your copies are used), and you can change anything after."""
     curriculum = service.from_community(
@@ -68,19 +68,19 @@ def create_from_community(
     return _changed(db, catalog_db, curriculum.id, user)
 
 
-@router.get("/curricula/{planned_curriculum_id}", response_model=CurriculumRead)
-def read_curriculum(planned_curriculum_id: int, db: Session = Depends(get_tenant_db)) -> CurriculumRead:
+@router.get("/curricula/{planned_curriculum_id}", response_model=PlannedCurriculumRead)
+def read_curriculum(planned_curriculum_id: int, db: Session = Depends(get_tenant_db)) -> PlannedCurriculumRead:
     return service.curriculum_read(db, service.get_curriculum(db, planned_curriculum_id))
 
 
-@router.patch("/curricula/{planned_curriculum_id}", response_model=CurriculumRead)
+@router.patch("/curricula/{planned_curriculum_id}", response_model=PlannedCurriculumRead)
 def update_curriculum(
     planned_curriculum_id: int,
-    payload: CurriculumUpdate,
+    payload: PlannedCurriculumUpdate,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
-) -> CurriculumRead:
+) -> PlannedCurriculumRead:
     service.update_curriculum(db, service.get_curriculum(db, planned_curriculum_id), payload)
     return _changed(db, catalog_db, planned_curriculum_id, user)
 
@@ -98,14 +98,14 @@ def delete_curriculum(
     return Response(status_code=204)
 
 
-@router.post("/curricula/{planned_curriculum_id}/items", response_model=CurriculumRead)
+@router.post("/curricula/{planned_curriculum_id}/items", response_model=PlannedCurriculumRead)
 def add_item(
     planned_curriculum_id: int,
     payload: CurriculumItemWrite,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
-) -> CurriculumRead:
+) -> PlannedCurriculumRead:
     """Add a library item as the textbook, a workbook, an online site, a book to
     read, or something for the parent."""
     curriculum = service.get_curriculum(db, planned_curriculum_id)
@@ -114,14 +114,14 @@ def add_item(
     return _changed(db, catalog_db, planned_curriculum_id, user)
 
 
-@router.delete("/curricula/{planned_curriculum_id}/items/{item_id}", response_model=CurriculumRead)
+@router.delete("/curricula/{planned_curriculum_id}/items/{item_id}", response_model=PlannedCurriculumRead)
 def remove_item(
     planned_curriculum_id: int,
     item_id: int,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
-) -> CurriculumRead:
+) -> PlannedCurriculumRead:
     """Take a library item out of the curriculum (it stays in your library)."""
     curriculum = service.get_curriculum(db, planned_curriculum_id)
     service.remove_item(curriculum, item_id)

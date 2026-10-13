@@ -7,6 +7,7 @@ import re
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.reference.grades import normalize_grade
+from app.schemas.courses import CourseRead
 from app.reference.subjects import SUBJECTS_BY_CODE
 from app.services.library_rules import KINDS, LESSON_TYPES, MEASURES, READING_KINDS
 
@@ -255,6 +256,8 @@ class LibraryItemRead(LibraryItemSummary):
     curriculum_ids: list[int] = Field(default_factory=list)
     # Its place in the community catalog, in plain words.
     community: CommunityLinkRead | None = None
+    # On a child's calendar on its own (scheduled from the Library)
+    courses: list[CourseRead] = Field(default_factory=list)
 
 
 class SearchResult(BaseModel):
@@ -277,6 +280,23 @@ class SearchResult(BaseModel):
     families_count: int | None = None
     # "170 lessons, 640 pages, entered by 4 families"
     detail: str | None = None
+
+
+class BarcodeRead(BaseModel):
+    """The ISBN read from a photo of a barcode, or why not."""
+
+    isbn: str | None
+    message: str
+
+
+class PageReadingRead(BaseModel):
+    """What was read from a photo of a printed page, one chapter or lesson per
+    line, for the parent to check before adding."""
+
+    text: str
+    lines: int
+    left_out: int
+    message: str
 
 
 class SearchResults(BaseModel):

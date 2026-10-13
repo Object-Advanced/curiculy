@@ -113,12 +113,67 @@ export async function openSignIn(page: Page) {
   await expect(page.locator("#health-pill")).toHaveText(/^API /);
 }
 
-/** Starts a fresh demo household and finishes onboarding. */
+/** Starts a fresh demo household and finishes onboarding, which ends in the Library. */
 export async function startDemo(page: Page, household = "The Rivera family", kid: Kid = FIRST_KID) {
   await openSignIn(page);
   await page.getByRole("button", { name: "Try Demo" }).click();
   await completeWizard(page, household, kid);
-  await expect(page.locator("#page-title")).toHaveText("Curriculum catalog");
+  await expect(page).toHaveURL(/\/next\/library\?welcome=1$/);
+  await expect(page.getByRole("heading", { name: "Library", level: 1 })).toBeVisible();
+}
+
+/** A ready textbook, workbook and novel on the shelf, the way a family would add them. */
+export async function seedLibrary(page: Page): Promise<{ textbook: number; workbook: number; novel: number }> {
+  const textbook = await apiAs<{ id: number }>(page, "POST", "/library", {
+    kind: "textbook",
+    title: "BJU Reading 4",
+    publisher: "BJU Press",
+    edition: "4th",
+    subject_code: "english",
+    grade: "4",
+    total_pages: 300,
+    days_per_week: 4,
+  });
+  await apiAs(
+    page,
+    "PUT",
+    `/library/${textbook.id}/lessons`,
+    Array.from({ length: 12 }, (_, index) => ({
+      number: index + 1,
+      name: `Story ${index + 1}`,
+      start_page: index * 4 + 1,
+      end_page: index * 4 + 4,
+    })),
+  );
+  const workbook = await apiAs<{ id: number }>(page, "POST", "/library", {
+    kind: "workbook",
+    title: "BJU Reading 4 Worktext",
+    subject_code: "english",
+    grade: "4",
+    total_pages: 120,
+    answer_key_start_page: 101,
+  });
+  await apiAs(page, "PUT", `/library/${workbook.id}/chapters`, [
+    { name: "Unit 1", start_page: 1 },
+    { name: "Unit 2", start_page: 51 },
+  ]);
+  const novel = await apiAs<{ id: number }>(page, "POST", "/library", {
+    kind: "reading_book",
+    title: "Charlotte's Web",
+    author: "E. B. White",
+    total_pages: 184,
+  });
+  await apiAs(page, "POST", "/library", {
+    kind: "online_program",
+    title: "IXL Language Arts",
+    website_url: "https://www.ixl.com/ela",
+    subject_code: "english",
+    grade: "4",
+    measure: "minutes",
+    minutes_per_session: 15,
+    days_per_week: 2,
+  });
+  return { textbook: textbook.id, workbook: workbook.id, novel: novel.id };
 }
 
 /** Calls the API with the signed-in user's token. Throws on any non-2xx. */
