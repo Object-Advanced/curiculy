@@ -1798,21 +1798,42 @@ function buildDailySpark(student, assignments) {
   };
 }
 
+// "Ask Sam": a question for the parent to ask about today's lessons. Made here
+// from the lesson titles (no AI), and the same all day for each child.
+const TALK_QUESTIONS = [
+  (name, about) => `${name}, you’re in “${about}” today. What’s the most interesting part so far?`,
+  (name, about) => `${name}, what was the trickiest part of “${about}”, and how did you get past it?`,
+  (name, about) => `${name}, if you taught one thing from “${about}” to someone else, what would it be?`,
+  (name, about) => `${name}, what’s one question “${about}” made you wonder about?`,
+  (name, about) => `${name}, which part of “${about}” would you like to do again, and why?`,
+  (name, about) => `${name}, what surprised you in “${about}” today?`,
+  (name, about) => `${name}, how did “${about}” go, from one to five? What would make it a five?`,
+  (name, about) => `${name}, what did you notice in “${about}” that you didn’t expect?`,
+  (name, about) => `${name}, where did you get stuck in “${about}”, and what helped?`,
+  (name, about) => `${name}, what do you think comes next after “${about}”?`,
+];
+const QUIET_DAY_QUESTIONS = [
+  (name) => `${name}, what’s one thing you hope to notice or try today?`,
+  (name) => `${name}, what’s something you’d like to learn more about this week?`,
+  (name) => `${name}, what was the best part of yesterday?`,
+];
+
+// Picked by the day and the child's name: the same all day, different per child.
+function talkPick(list, name, offset = 0) {
+  const day = Math.floor(Date.parse(`${todayISO()}T00:00:00Z`) / 86400000);
+  const seed = [...String(name || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return list[(day + seed + offset) % list.length];
+}
+
 function localTalkPrompt(student, assignments) {
   const name = firstName(student?.name);
   const today = (assignments || []).filter((item) => item.scheduled_date === todayISO());
-  const item = today[0];
-  if (!item) {
-    return {
-      prompt: `${name}, what’s one thing you hope to notice or try today?`,
-      about: null,
-    };
+  if (!today.length) {
+    return { prompt: talkPick(QUIET_DAY_QUESTIONS, name)(name), about: null };
   }
+  const item = talkPick(today, name);
   const about = item.resource_title || item.title;
-  return {
-    prompt: `${name}, you’re in “${about}” today. What do you think happens next, or what’s the most interesting part so far?`,
-    about,
-  };
+  return { prompt: talkPick(TALK_QUESTIONS, name, 3)(name, about), about };
 }
 
 function sparkSolvedKey(studentId) {
@@ -2558,23 +2579,20 @@ function renderSparkCard(student, assignments) {
     </section>`;
 }
 
-function renderTalkCard(student, assignments, ai) {
-  const local = localTalkPrompt(student, assignments);
-  const prompt = ai?.question || local.prompt;
-  const about = ai?.about || local.about;
-  const source = ai?.question ? "About today’s lessons" : about ? "A question to ask" : "A little wonder";
+function renderTalkCard(student, assignments) {
+  const { prompt, about } = localTalkPrompt(student, assignments);
   return `
     <section class="card talk-card" id="kid-talk">
-      <p class="spark-kicker">${escapeHtml(source)}</p>
+      <p class="spark-kicker">${about ? "A question to ask" : "A little wonder"}</p>
       <h2>Ask ${escapeHtml(firstName(student?.name))}</h2>
       <p class="talk-prompt">${escapeHtml(prompt)}</p>
-      ${about && !ai?.question ? `<p class="meta">From ${escapeHtml(about)}</p>` : ""}
+      ${about ? `<p class="meta">From ${escapeHtml(about)}</p>` : ""}
     </section>`;
 }
 
-function paintKidTalk(student, assignments, ai) {
+function paintKidTalk(student, assignments) {
   const talkHost = $("kid-talk");
-  if (talkHost) talkHost.outerHTML = renderTalkCard(student, assignments, ai);
+  if (talkHost) talkHost.outerHTML = renderTalkCard(student, assignments);
 }
 
 function markSparkSolved(card, ok) {
@@ -2630,12 +2648,7 @@ async function loadStudentDashboard(studentId) {
     state.dashboardCourses = courseRows || [];
     paintStudentDashboard();
     if (student) {
-      paintKidTalk(student, state.dashboardAssignments, null);
-    }
-    const spark = await api(`/students/${id}/spark`).catch(() => null);
-    if (token !== dashboardRequest || !$("kid-talk")) return;
-    if (student && spark?.question) {
-      paintKidTalk(student, state.dashboardAssignments, spark);
+      paintKidTalk(student, state.dashboardAssignments);
     }
   } catch (error) {
     if (token !== dashboardRequest || !$("today-checklist")) return;
@@ -7551,7 +7564,9 @@ function renderKidAssignment(item, assignmentId) {
 }
 
 // "Stuck?": one nudge back toward the family's own materials, then a grown-up.
-// The app guides; it does not teach.
+// The app guides; it does not teach. No AI talks to children: the nudge is
+// built from the lesson itself (its book, pages and the parent's note), and the
+// child types nothing.
 function renderStuckCard() {
   const raw = state.homework.session;
   const session = raw && raw.status !== "closed" ? raw : null;
@@ -7586,16 +7601,11 @@ function renderStuckCard() {
   return `
     <section class="card stuck-card">
       <h2>Stuck?</h2>
-      <p class="muted">Get one small nudge to help you keep going. Still stuck after that? Ask a grown-up.</p>
-      <form class="stuck-form" data-form="stuck-nudge">
-        <label><span>What part is tricky? <span class="muted">(you can skip this)</span></span>
-          <textarea name="content" maxlength="500" rows="2"></textarea>
-        </label>
-        <div class="stuck-actions">
-          <button type="submit"${off}>${state.homework.busy ? "Thinking…" : "Give me a nudge"}</button>
-          <button type="button" class="ghost" data-action="stuck-grown-up"${off}>Get a grown-up</button>
-        </div>
-      </form>
+      <p class="muted">Get one small nudge back to your book. Still stuck after that? Ask a grown-up.</p>
+      <div class="stuck-actions">
+        <button type="button" data-action="stuck-nudge"${off}>${state.homework.busy ? "One moment…" : "Give me a nudge"}</button>
+        <button type="button" class="ghost" data-action="stuck-grown-up"${off}>Get a grown-up</button>
+      </div>
     </section>`;
 }
 
@@ -7637,11 +7647,10 @@ async function stuckRequest(send) {
   }
 }
 
-function askForNudge(content) {
+function askForNudge() {
   return stuckRequest((session) =>
-    api(`/homework-help/sessions/${session.id}/messages`, {
+    api(`/homework-help/sessions/${session.id}/nudge`, {
       method: "POST",
-      body: JSON.stringify({ content: content || "I'm stuck." }),
       skipOutbox: true,
     })
   );
@@ -7777,6 +7786,9 @@ async function handleClick(event) {
   switch (control.dataset.action) {
     case "open-kid-work":
       window.location.hash = `#/my-work/${control.dataset.id}`;
+      break;
+    case "stuck-nudge":
+      await askForNudge();
       break;
     case "stuck-helped":
       await recordStuckOutcome("helped");
@@ -8223,10 +8235,6 @@ async function handleSubmit(event) {
   const kind = form.dataset.form;
   const data = formValues(form);
   try {
-    if (kind === "stuck-nudge") {
-      await askForNudge(String(data.content || "").trim());
-      return;
-    }
     if (kind === "switch-user") {
       await submitSwitchUser(form);
       return;

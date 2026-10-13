@@ -3932,7 +3932,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261013-library");
+    background-image: url("/static/night-mountains.jpg?v=20261013-no-ai");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -4427,18 +4427,13 @@ html[data-role="child"] .nav-kid {
 }
 
 /* "Stuck?": one nudge, then a grown-up. */
-.stuck-card,
-.stuck-form {
+.stuck-card {
     display: grid;
     gap: var(--space-3);
 }
 
 .stuck-card h2 {
     margin-bottom: 0;
-}
-
-.stuck-form textarea {
-    width: 100%;
 }
 
 .stuck-nudge {

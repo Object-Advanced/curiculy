@@ -45,7 +45,7 @@ flowchart LR
 
   The app connects with a role that can't switch this off, and it refuses to start unless every family table is protected. See [Data model](../5-engineering/data-model.md).
 - **Work samples** (photos and PDFs) are files on the big data array, one folder per family. Only paths are stored in the database.
-- **AI** runs locally on the home server's GPU through **Ollama**. It's used for "Stuck?" nudges, "Ask Sam", and reading PDF and handwritten lesson plans. Every AI feature has a fallback. See [AI features](../2-features/17-ai-features.md).
+- **AI** runs locally on the home server's GPU through **Ollama**, and only on the parent's side: reading PDF and handwritten lesson plans on the older catalog page. **No AI talks to children.** See [AI features](../2-features/17-ai-features.md).
 - **Backups:** the `curiculy_backup` container dumps the database nightly, proves the dump restores, writes one file per family, mirrors new work samples, and keeps 14 days. See [Backups](../4-operations/backups-and-restore.md).
 - **Public access:** Cloudflare handles HTTPS for **curiculy.com** and forwards traffic through a tunnel to the server's port 3040. The app records each visitor's real address for rate limits and logs.
 

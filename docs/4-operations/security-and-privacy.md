@@ -14,13 +14,13 @@ What protects families today, and what's still open. Children's data lives here,
 | **Request size** | 50 MB cap on any request |
 | **Secrets** | The app refuses to start with a missing, weak or placeholder `JWT_SECRET`; `.env` is never committed |
 | **Chrome extension token** | Can only upload to the unsorted inbox; can be revoked without changing the master secret |
-| **AI and children** | Nudges never answer; the AI sees only the first name and lesson context; parents see everything said |
+| **AI and children** | **No AI talks to children** (since 2026-10-13). "Stuck?" nudges are built from the lesson's own book and pages; children type nothing; parents see every nudge |
 | **Offline queue** | No sign-in tokens stored; emptied on sign-out; idempotency keys stop double writes |
 | **Backups** | Nightly, checked, kept 14 days, on a separate disk |
 
 ## Open items (by priority)
 1. **High:** the sign-in token is kept in browser storage (`localStorage`). Move to secure cookies with CSRF protection (Phase 3).
-2. **High:** **children's privacy law (COPPA):** verifiable parental consent when a child account is created; limits on how long AI and chat logs are kept; parents can see and delete data; a privacy policy, terms and data-processing agreements; legal sign-off by April 2027 (Phase 8).
+2. **High:** **children's privacy law (COPPA):** verifiable parental consent when a child account is created; limits on how long nudge histories are kept; parents can see and delete data; a privacy policy, terms and data-processing agreements; legal sign-off by April 2027 (Phase 8).
 3. **High:** **no off-site backup** (see [Backups](backups-and-restore.md)).
 4. **Medium:** the **Chrome extension asks for access to every website.** Narrow it to the family's server before the Web Store submission.
 5. **Medium:** **self-serve password reset, email verification, sign out everywhere, and optional two-factor sign-in for parents** (Phase 8).

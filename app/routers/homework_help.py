@@ -9,7 +9,6 @@ from app.db import get_catalog_db
 from app.enums import HomeworkHelpMessageRole, HomeworkHelpStatus
 from app.models import Assignment, HomeworkHelpMessage, HomeworkHelpSession, Student
 from app.schemas.homework import (
-    HomeworkHelpMessageCreate,
     HomeworkHelpMessageRead,
     HomeworkHelpOutcome,
     HomeworkHelpSessionCreate,
@@ -18,16 +17,13 @@ from app.schemas.homework import (
 from app.services.assignments import AssignmentQuery
 from app.services.child_accounts import is_child
 from app.services.homework_help import (
-    ANSWER_SEEKING_NUDGE,
+    STUCK_MESSAGE,
     allow_another_nudge,
-    first_name,
     has_nudge,
-    is_answer_seeking,
     latest_session,
     notify_grown_up,
     notify_nudge,
-    nudge_with_ollama,
-    parent_note,
+    nudge_for,
 )
 
 router = APIRouter(prefix="/homework-help", tags=["homework-help"])
@@ -42,7 +38,6 @@ def _session_read(session: HomeworkHelpSession) -> HomeworkHelpSessionRead:
         student_id=session.student_id,
         assignment_id=session.assignment_id,
         status=session.status,
-        push_count=session.push_count,
         locked=session.status == HomeworkHelpStatus.REDIRECTED,
         nudged=has_nudge(session),
         messages=[HomeworkHelpMessageRead.model_validate(item) for item in session.messages],
@@ -125,7 +120,6 @@ def start_session(
         student_id=user.student_id,
         assignment_id=assignment.id,
         status=HomeworkHelpStatus.ACTIVE,
-        push_count=0,
     )
     db.add(session)
     db.commit()
@@ -133,15 +127,15 @@ def start_session(
     return _session_read(session)
 
 
-@router.post("/sessions/{session_id}/messages", response_model=HomeworkHelpSessionRead)
-async def ask_for_nudge(
+@router.post("/sessions/{session_id}/nudge", response_model=HomeworkHelpSessionRead)
+def ask_for_nudge(
     session_id: int,
-    payload: HomeworkHelpMessageCreate,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
     catalog_db: Session = Depends(get_catalog_db),
 ) -> HomeworkHelpSessionRead:
-    """The child says what's tricky (optional) and gets their one nudge."""
+    """The child taps Stuck? and gets their one nudge, built from the lesson
+    itself (its book, pages and the parent's note). No AI; nothing typed."""
     session = _child_session(db, user, session_id)
     if session.status != HomeworkHelpStatus.ACTIVE or has_nudge(session):
         raise HTTPException(status_code=403, detail=ASK_A_GROWN_UP)
@@ -150,20 +144,9 @@ async def ask_for_nudge(
     if student is None:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    content = payload.content.strip() or "I'm stuck."
-    db.add(HomeworkHelpMessage(session_id=session.id, role=HomeworkHelpMessageRole.USER, content=content))
-    if is_answer_seeking(content):
-        session.push_count += 1
-        nudge = ANSWER_SEEKING_NUDGE
-    else:
-        loaded = AssignmentQuery(db, catalog_db).get(assignment.id)
-        nudge = await nudge_with_ollama(
-            assignment_title=assignment.title,
-            resource_title=loaded.resource_title if loaded else None,
-            note=parent_note(assignment),
-            child_name=first_name(student.name),
-            user_message=content,
-        )
+    db.add(HomeworkHelpMessage(session_id=session.id, role=HomeworkHelpMessageRole.USER, content=STUCK_MESSAGE))
+    loaded = AssignmentQuery(db, catalog_db).get(assignment.id)
+    nudge = nudge_for(db, assignment, loaded.resource_title if loaded else None)
     db.add(HomeworkHelpMessage(session_id=session.id, role=HomeworkHelpMessageRole.ASSISTANT, content=nudge))
     notify_nudge(db, student, assignment, nudge)
     db.commit()

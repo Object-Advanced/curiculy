@@ -46,7 +46,6 @@ Feature page: [Household, students and settings](../2-features/02-household-setu
 | PUT | `/api/students/{student_id}` | parent | Update student |
 | DELETE | `/api/students/{student_id}/pin` | parent | Clear student pin |
 | POST | `/api/students/{student_id}/pin` | parent | Set student pin |
-| GET | `/api/students/{student_id}/spark` | parent | Get student spark |
 | POST | `/api/students/{student_id}/confirm-grade` | parent | Confirm the grade for the new school year |
 
 ## Reference lists and subjects
@@ -146,7 +145,7 @@ Feature page: [Stuck? nudges](../2-features/07-stuck-nudges.md)
 | GET | `/api/homework-help/sessions` | signed in | List sessions |
 | POST | `/api/homework-help/sessions` | signed in | Start session |
 | GET | `/api/homework-help/sessions/{session_id}` | signed in | Get session |
-| POST | `/api/homework-help/sessions/{session_id}/messages` | signed in | Ask for nudge |
+| POST | `/api/homework-help/sessions/{session_id}/nudge` | signed in | The one nudge, built from the lesson (no AI) |
 | POST | `/api/homework-help/sessions/{session_id}/outcome` | signed in | Record outcome |
 
 ## Library and books

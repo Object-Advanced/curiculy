@@ -5330,21 +5330,6 @@
         "title": "HealthResponse",
         "type": "object"
       },
-      "HomeworkHelpMessageCreate": {
-        "properties": {
-          "content": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Content",
-            "type": "string"
-          }
-        },
-        "required": [
-          "content"
-        ],
-        "title": "HomeworkHelpMessageCreate",
-        "type": "object"
-      },
       "HomeworkHelpMessageRead": {
         "properties": {
           "content": {
@@ -5440,10 +5425,6 @@
             "title": "Nudged",
             "type": "boolean"
           },
-          "push_count": {
-            "title": "Push Count",
-            "type": "integer"
-          },
           "status": {
             "$ref": "#/components/schemas/HomeworkHelpStatus"
           },
@@ -5456,8 +5437,7 @@
           "id",
           "student_id",
           "assignment_id",
-          "status",
-          "push_count"
+          "status"
         ],
         "title": "HomeworkHelpSessionRead",
         "type": "object"
@@ -10152,47 +10132,6 @@
           "grade_label"
         ],
         "title": "StudentRead",
-        "type": "object"
-      },
-      "StudentSparkRead": {
-        "description": "A question about today's lessons, when the local model is available.",
-        "properties": {
-          "about": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "About"
-          },
-          "question": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Question"
-          },
-          "source": {
-            "title": "Source",
-            "type": "string"
-          },
-          "student_id": {
-            "title": "Student Id",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "student_id",
-          "source"
-        ],
-        "title": "StudentSparkRead",
         "type": "object"
       },
       "StudentSubjectCreate": {
@@ -14926,10 +14865,10 @@
         ]
       }
     },
-    "/api/homework-help/sessions/{session_id}/messages": {
+    "/api/homework-help/sessions/{session_id}/nudge": {
       "post": {
-        "description": "The child says what's tricky (optional) and gets their one nudge.",
-        "operationId": "ask_for_nudge_api_homework_help_sessions__session_id__messages_post",
+        "description": "The child taps Stuck? and gets their one nudge, built from the lesson\nitself (its book, pages and the parent's note). No AI; nothing typed.",
+        "operationId": "ask_for_nudge_api_homework_help_sessions__session_id__nudge_post",
         "parameters": [
           {
             "in": "path",
@@ -14941,16 +14880,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/HomeworkHelpMessageCreate"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
@@ -18218,54 +18147,6 @@
           }
         ],
         "summary": "Set Student Pin",
-        "tags": [
-          "students"
-        ]
-      }
-    },
-    "/api/students/{student_id}/spark": {
-      "get": {
-        "description": "Ask a kind question about today's lessons when the local model is up.",
-        "operationId": "get_student_spark_api_students__student_id__spark_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "student_id",
-            "required": true,
-            "schema": {
-              "title": "Student Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StudentSparkRead"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "summary": "Get Student Spark",
         "tags": [
           "students"
         ]

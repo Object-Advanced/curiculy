@@ -151,7 +151,7 @@ Adding happens in a pop-up walkthrough, not one long form. Each step explains it
 **Without the full lesson list the calendar has nothing to place,** and can't catch up properly after a missed day. Scheduling stays locked until every lesson is in. Ways in, easiest first:
 1. the catalog's version
 2. import the publisher's lesson plan (PDF)
-3. a photo of the contents or lesson-plan pages, read by the vision AI, with a review screen
+3. a photo of the contents or lesson-plan pages, read by Tesseract (no AI), checked by the parent (**built**)
 4. paste or CSV
 5. "make lessons 1–170", then fill in names and pages
 
@@ -334,7 +334,7 @@ Parents may add work every day, so this has to be nearly free. **Capture is pare
 ### After launch
 - **A private upload email address** per family: forward photos to it, or point a home printer's scan-to-email at it. Items land in the inbox with suggestions.
 - **Share to Curiculy** from the phone's Photos app. This works for installed web apps on Android; iPhone would need a native app.
-- **Read the page number** off a worksheet ("Worktext p. 88") and match it to the lesson that lists those pages, using the vision AI that reads paper plans today.
+- **Read the page number** off a worksheet ("Worktext p. 88") and match it to the lesson that lists those pages, with the same printed-text reading the Library uses (Tesseract, no AI).
 - **Edge detection and auto-crop** in the in-app camera.
 
 ### The Chrome extension
