@@ -81,3 +81,8 @@ export function rangeLabel(fromISO: string, toISO: string): string {
   const to = monthOf(fromISO) === monthOf(toISO) ? `${dayOf(toISO)}` : `${monthName(toISO).slice(0, 3)} ${dayOf(toISO)}`;
   return `${from} – ${to}`;
 }
+
+/** "Oct 12": a short date in the reader's own style. */
+export function shortDate(iso: string): string {
+  return toUTC(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+}

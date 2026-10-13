@@ -143,6 +143,8 @@ const state = {
   attendance: [],
   currentPeriod: "week",
   currentAnchorDate: null,
+  // Arrived from the Curriculum planner: show the calendar tour once.
+  plannerTour: false,
   calendarStudentId: null,
   calendar: null,
   evidenceStaging: [],
@@ -233,8 +235,47 @@ function initTheme() {
 initTheme();
 
 function routeSegments() {
-  const hash = (window.location.hash.replace(/^#\/?/, "") || "dashboard").replace(/\/+$/, "");
+  const path = window.location.hash.replace(/^#\/?/, "").split("?")[0];
+  const hash = (path || "dashboard").replace(/\/+$/, "");
   return hash.split("/").filter(Boolean);
+}
+
+/** Options after the route: "#/assignments?from=planner&date=2026-10-19". */
+function hashQuery() {
+  const hash = window.location.hash;
+  const at = hash.indexOf("?");
+  return new URLSearchParams(at === -1 ? "" : hash.slice(at + 1));
+}
+
+// The Curriculum planner (/next/planner) sends parents here after scheduling:
+// open the week the new lessons start, with a short tour of the calendar.
+function takePlannerHandoff() {
+  const query = hashQuery();
+  if (query.get("from") !== "planner") return;
+  const date = query.get("date");
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) state.currentAnchorDate = date;
+  state.plannerTour = true;
+  history.replaceState(null, "", "#/assignments");
+}
+
+function showPlannerTour() {
+  state.plannerTour = false;
+  const view = $("view");
+  if (!view || $("planner-tour")) return;
+  view.insertAdjacentHTML(
+    "afterbegin",
+    `<section class="card planner-tour" id="planner-tour" aria-labelledby="planner-tour-title">
+      <h2 id="planner-tour-title">Your new lessons are on the calendar</h2>
+      <ol>
+        <li><strong>Each day shows its lessons:</strong> the book and the pages. Switch to Week or Month to look further ahead.</li>
+        <li><strong>Need to move one?</strong> Open the lesson and change its date. Finished lessons stay on the day they were done.</li>
+        <li><strong>A sick day or a day off?</strong> Add it in Settings, under Calendar Exceptions. Fell behind? <strong>Recalibrate</strong> moves the rest forward.</li>
+      </ol>
+      <button type="button" id="planner-tour-done">Got it</button>
+    </section>`
+  );
+  $("planner-tour-done")?.addEventListener("click", () => $("planner-tour")?.remove());
+  $("planner-tour-done")?.focus();
 }
 
 function routeName() {
@@ -7637,6 +7678,8 @@ const ACTIVATORS = {
 
 function render() {
   const route = routeName();
+  // Before the calendar is built: it opens on the planner's start date.
+  if (route === "assignments") takePlannerHandoff();
   destroyDashboardCharts();
   const student =
     route === "students"
@@ -7660,6 +7703,7 @@ function render() {
   }
   $("view").innerHTML = VIEWS[route]();
   ACTIVATORS[route]?.();
+  if (route === "assignments" && state.plannerTour) showPlannerTour();
   syncSessionChrome();
 }
 
@@ -8509,11 +8553,8 @@ async function finishOnboarding(form) {
     if (isOfflineQueued(created)) {
       button.disabled = false;
       await fadeOutOnboardingWizard();
-      if (routeName() === "curricula") {
-        render();
-      } else {
-        window.location.hash = "#/curricula";
-      }
+      // The Library needs a connection; the calendar works offline.
+      window.location.hash = "#/assignments";
       return;
     }
   } catch (error) {
@@ -8526,11 +8567,8 @@ async function finishOnboarding(form) {
   } catch (error) {
     flash(error.message, true);
   }
-  if (routeName() === "curricula") {
-    render();
-  } else {
-    window.location.hash = "#/curricula";
-  }
+  // Next: add what they teach from, in the Library.
+  window.location.assign("/next/library?welcome=1");
 }
 
 function handleWizardClick(event) {
@@ -8636,6 +8674,8 @@ function syncSessionChrome() {
   }
   const adminLink = $("admin-menu-item");
   if (adminLink) adminLink.hidden = !currentUserIsAdmin() || currentUserIsChild();
+  const reviewLink = $("catalog-review-menu-item");
+  if (reviewLink) reviewLink.hidden = !currentUserIsAdmin() || currentUserIsChild();
   document.documentElement.setAttribute(
     "data-role",
     currentUserIsChild() ? "child" : "parent"
@@ -9285,6 +9325,8 @@ async function openNotification(id) {
   closeNotifications();
   if (item?.assignment_id) {
     await openAssignment(item.assignment_id);
+  } else if (item?.type === "catalog_update") {
+    window.location.assign("/next/library");
   } else if (
     item?.type === "curriculum_plan_ready" ||
     item?.type === "curriculum_plan_failed"

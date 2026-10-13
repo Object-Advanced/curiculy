@@ -58,13 +58,13 @@ class CurriculumFields(BaseModel):
         return normalize_grade(value) if isinstance(value, str) and value.strip() else None
 
 
-class CurriculumCreate(CurriculumFields):
+class PlannedCurriculumCreate(CurriculumFields):
     """Start a curriculum, usually from a textbook (its subject and grade carry over)."""
 
     textbook_id: int | None = None
 
 
-class CurriculumUpdate(CurriculumFields):
+class PlannedCurriculumUpdate(CurriculumFields):
     pass
 
 
@@ -94,7 +94,7 @@ class CurriculumReadiness(BaseModel):
     problems: list[ProblemRead]
 
 
-class CurriculumRead(BaseModel):
+class PlannedCurriculumRead(BaseModel):
     id: int
     name: str
     subject_code: str | None

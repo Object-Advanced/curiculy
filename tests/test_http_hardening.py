@@ -62,6 +62,13 @@ class TestSecurityHeaders:
         assert response.headers["x-content-type-options"] == "nosniff"
         assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
 
+    def test_book_cover_hosts_are_allowed_for_images_only(self, client: TestClient) -> None:
+        policy = client.get("/").headers["content-security-policy"]
+        directives = dict(part.strip().split(" ", 1) for part in policy.split(";"))
+        assert "https://covers.openlibrary.org" in directives["img-src"]
+        assert "https://books.google.com" in directives["img-src"]
+        assert all("https://" not in sources for name, sources in directives.items() if name != "img-src")
+
     def test_api_responses_carry_the_headers_too(self, client: TestClient) -> None:
         response = client.get("/api/health")
         assert response.headers["x-content-type-options"] == "nosniff"

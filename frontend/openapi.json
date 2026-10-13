@@ -3098,6 +3098,76 @@
         "title": "CoverRead",
         "type": "object"
       },
+      "CurriculumCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISBN or proprietary barcode so a later scan finds this book locally.",
+            "title": "Sku"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/CurriculumSource",
+            "default": "manual"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "CurriculumCreate",
+        "type": "object"
+      },
       "CurriculumFromISBNRead": {
         "properties": {
           "book_edition": {
@@ -4016,6 +4086,81 @@
         "title": "CurriculumPlanWrite",
         "type": "object"
       },
+      "CurriculumRead": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_scheduled": {
+            "default": false,
+            "title": "Is Scheduled",
+            "type": "boolean"
+          },
+          "publisher_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher Id"
+          },
+          "publisher_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/CurriculumSource"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "publisher_id",
+          "publisher_name",
+          "subject",
+          "description",
+          "source_type"
+        ],
+        "title": "CurriculumRead",
+        "type": "object"
+      },
       "CurriculumReadiness": {
         "properties": {
           "missing": {
@@ -4300,71 +4445,6 @@
           "notes"
         ],
         "title": "CurriculumUnitNode",
-        "type": "object"
-      },
-      "CurriculumUpdate": {
-        "properties": {
-          "days_per_week": {
-            "anyOf": [
-              {
-                "maximum": 7.0,
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Days Per Week"
-          },
-          "grade": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Grade"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
-          },
-          "subject_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Code"
-          }
-        },
-        "title": "CurriculumUpdate",
         "type": "object"
       },
       "DashboardStatsRead": {
@@ -7690,6 +7770,257 @@
         "title": "ParentNotificationType",
         "type": "string"
       },
+      "PlannedCurriculumCreate": {
+        "description": "Start a curriculum, usually from a textbook (its subject and grade carry over).",
+        "properties": {
+          "days_per_week": {
+            "anyOf": [
+              {
+                "maximum": 7.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "textbook_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textbook Id"
+          }
+        },
+        "title": "PlannedCurriculumCreate",
+        "type": "object"
+      },
+      "PlannedCurriculumRead": {
+        "properties": {
+          "community_curriculum_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Community Curriculum Id"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseRead"
+            },
+            "title": "Courses",
+            "type": "array"
+          },
+          "days_per_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CurriculumItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/CurriculumReadiness"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "subject_code",
+          "subject_name",
+          "grade",
+          "days_per_week",
+          "notes",
+          "items",
+          "readiness",
+          "courses"
+        ],
+        "title": "PlannedCurriculumRead",
+        "type": "object"
+      },
+      "PlannedCurriculumUpdate": {
+        "properties": {
+          "days_per_week": {
+            "anyOf": [
+              {
+                "maximum": 7.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          }
+        },
+        "title": "PlannedCurriculumUpdate",
+        "type": "object"
+      },
       "PortfolioBookRead": {
         "properties": {
           "completed_assignments": {
@@ -10547,337 +10878,6 @@
         ],
         "title": "WorkRead",
         "type": "object"
-      },
-      "app__schemas__core__CurriculumCreate": {
-        "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "publisher": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publisher"
-          },
-          "sku": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "ISBN or proprietary barcode so a later scan finds this book locally.",
-            "title": "Sku"
-          },
-          "source_type": {
-            "$ref": "#/components/schemas/CurriculumSource",
-            "default": "manual"
-          },
-          "subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          }
-        },
-        "title": "CurriculumCreate",
-        "type": "object"
-      },
-      "app__schemas__core__CurriculumRead": {
-        "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "is_scheduled": {
-            "default": false,
-            "title": "Is Scheduled",
-            "type": "boolean"
-          },
-          "publisher_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publisher Id"
-          },
-          "publisher_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publisher Name"
-          },
-          "source_type": {
-            "$ref": "#/components/schemas/CurriculumSource"
-          },
-          "subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "publisher_id",
-          "publisher_name",
-          "subject",
-          "description",
-          "source_type"
-        ],
-        "title": "CurriculumRead",
-        "type": "object"
-      },
-      "app__schemas__planner__CurriculumCreate": {
-        "description": "Start a curriculum, usually from a textbook (its subject and grade carry over).",
-        "properties": {
-          "days_per_week": {
-            "anyOf": [
-              {
-                "maximum": 7.0,
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Days Per Week"
-          },
-          "grade": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Grade"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
-          },
-          "subject_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Code"
-          },
-          "textbook_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Textbook Id"
-          }
-        },
-        "title": "CurriculumCreate",
-        "type": "object"
-      },
-      "app__schemas__planner__CurriculumRead": {
-        "properties": {
-          "community_curriculum_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Community Curriculum Id"
-          },
-          "courses": {
-            "items": {
-              "$ref": "#/components/schemas/CourseRead"
-            },
-            "title": "Courses",
-            "type": "array"
-          },
-          "days_per_week": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Days Per Week"
-          },
-          "grade": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Grade"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/CurriculumItemRead"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
-          },
-          "readiness": {
-            "$ref": "#/components/schemas/CurriculumReadiness"
-          },
-          "subject_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Code"
-          },
-          "subject_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Name"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "subject_code",
-          "subject_name",
-          "grade",
-          "days_per_week",
-          "notes",
-          "items",
-          "readiness",
-          "courses"
-        ],
-        "title": "CurriculumRead",
-        "type": "object"
       }
     },
     "securitySchemes": {
@@ -13011,7 +13011,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/app__schemas__core__CurriculumRead"
+                    "$ref": "#/components/schemas/CurriculumRead"
                   },
                   "title": "Response List Curricula Api Curricula Get",
                   "type": "array"
@@ -13037,7 +13037,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/app__schemas__core__CurriculumCreate"
+                "$ref": "#/components/schemas/CurriculumCreate"
               }
             }
           },
@@ -13048,7 +13048,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__core__CurriculumRead"
+                  "$ref": "#/components/schemas/CurriculumRead"
                 }
               }
             },
@@ -13219,7 +13219,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__core__CurriculumRead"
+                  "$ref": "#/components/schemas/CurriculumRead"
                 }
               }
             },
@@ -15902,7 +15902,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                    "$ref": "#/components/schemas/PlannedCurriculumRead"
                   },
                   "title": "Response List Curricula Api Planner Curricula Get",
                   "type": "array"
@@ -15929,7 +15929,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/app__schemas__planner__CurriculumCreate"
+                "$ref": "#/components/schemas/PlannedCurriculumCreate"
               }
             }
           },
@@ -15940,7 +15940,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                  "$ref": "#/components/schemas/PlannedCurriculumRead"
                 }
               }
             },
@@ -15987,7 +15987,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                  "$ref": "#/components/schemas/PlannedCurriculumRead"
                 }
               }
             },
@@ -16073,7 +16073,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                  "$ref": "#/components/schemas/PlannedCurriculumRead"
                 }
               }
             },
@@ -16117,7 +16117,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CurriculumUpdate"
+                "$ref": "#/components/schemas/PlannedCurriculumUpdate"
               }
             }
           },
@@ -16128,7 +16128,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                  "$ref": "#/components/schemas/PlannedCurriculumRead"
                 }
               }
             },
@@ -16186,7 +16186,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                  "$ref": "#/components/schemas/PlannedCurriculumRead"
                 }
               }
             },
@@ -16243,7 +16243,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                  "$ref": "#/components/schemas/PlannedCurriculumRead"
                 }
               }
             },

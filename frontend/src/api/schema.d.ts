@@ -3191,6 +3191,24 @@ export interface components {
             /** Url */
             url: string | null;
         };
+        /** CurriculumCreate */
+        CurriculumCreate: {
+            /** Description */
+            description?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /**
+             * Sku
+             * @description ISBN or proprietary barcode so a later scan finds this book locally.
+             */
+            sku?: string | null;
+            /** @default manual */
+            source_type: components["schemas"]["CurriculumSource"];
+            /** Subject */
+            subject?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** CurriculumFromISBNRead */
         CurriculumFromISBNRead: {
             book_edition: components["schemas"]["BookEditionRead"];
@@ -3464,6 +3482,27 @@ export interface components {
              */
             total_weeks: number;
         };
+        /** CurriculumRead */
+        CurriculumRead: {
+            /** Description */
+            description: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Is Scheduled
+             * @default false
+             */
+            is_scheduled: boolean;
+            /** Publisher Id */
+            publisher_id: number | null;
+            /** Publisher Name */
+            publisher_name: string | null;
+            source_type: components["schemas"]["CurriculumSource"];
+            /** Subject */
+            subject: string | null;
+            /** Title */
+            title: string;
+        };
         /** CurriculumReadiness */
         CurriculumReadiness: {
             /** Missing */
@@ -3550,19 +3589,6 @@ export interface components {
             sort_order: number;
             /** Title */
             title: string;
-        };
-        /** CurriculumUpdate */
-        CurriculumUpdate: {
-            /** Days Per Week */
-            days_per_week?: number | null;
-            /** Grade */
-            grade?: string | null;
-            /** Name */
-            name?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Subject Code */
-            subject_code?: string | null;
         };
         /**
          * DashboardStatsRead
@@ -4577,6 +4603,61 @@ export interface components {
          * @enum {string}
          */
         ParentNotificationType: "homework_help_started" | "homework_help_redirect" | "curriculum_plan_ready" | "curriculum_plan_failed" | "catalog_update";
+        /**
+         * PlannedCurriculumCreate
+         * @description Start a curriculum, usually from a textbook (its subject and grade carry over).
+         */
+        PlannedCurriculumCreate: {
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Grade */
+            grade?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Textbook Id */
+            textbook_id?: number | null;
+        };
+        /** PlannedCurriculumRead */
+        PlannedCurriculumRead: {
+            /** Community Curriculum Id */
+            community_curriculum_id?: number | null;
+            /** Courses */
+            courses: components["schemas"]["CourseRead"][];
+            /** Days Per Week */
+            days_per_week: number | null;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Items */
+            items: components["schemas"]["CurriculumItemRead"][];
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            readiness: components["schemas"]["CurriculumReadiness"];
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+        };
+        /** PlannedCurriculumUpdate */
+        PlannedCurriculumUpdate: {
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Grade */
+            grade?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
         /** PortfolioBookRead */
         PortfolioBookRead: {
             /**
@@ -5647,87 +5728,6 @@ export interface components {
             subtitle: string | null;
             /** Title */
             title: string;
-        };
-        /** CurriculumCreate */
-        app__schemas__core__CurriculumCreate: {
-            /** Description */
-            description?: string | null;
-            /** Publisher */
-            publisher?: string | null;
-            /**
-             * Sku
-             * @description ISBN or proprietary barcode so a later scan finds this book locally.
-             */
-            sku?: string | null;
-            /** @default manual */
-            source_type: components["schemas"]["CurriculumSource"];
-            /** Subject */
-            subject?: string | null;
-            /** Title */
-            title?: string | null;
-        };
-        /** CurriculumRead */
-        app__schemas__core__CurriculumRead: {
-            /** Description */
-            description: string | null;
-            /** Id */
-            id: number;
-            /**
-             * Is Scheduled
-             * @default false
-             */
-            is_scheduled: boolean;
-            /** Publisher Id */
-            publisher_id: number | null;
-            /** Publisher Name */
-            publisher_name: string | null;
-            source_type: components["schemas"]["CurriculumSource"];
-            /** Subject */
-            subject: string | null;
-            /** Title */
-            title: string;
-        };
-        /**
-         * CurriculumCreate
-         * @description Start a curriculum, usually from a textbook (its subject and grade carry over).
-         */
-        app__schemas__planner__CurriculumCreate: {
-            /** Days Per Week */
-            days_per_week?: number | null;
-            /** Grade */
-            grade?: string | null;
-            /** Name */
-            name?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Subject Code */
-            subject_code?: string | null;
-            /** Textbook Id */
-            textbook_id?: number | null;
-        };
-        /** CurriculumRead */
-        app__schemas__planner__CurriculumRead: {
-            /** Community Curriculum Id */
-            community_curriculum_id?: number | null;
-            /** Courses */
-            courses: components["schemas"]["CourseRead"][];
-            /** Days Per Week */
-            days_per_week: number | null;
-            /** Grade */
-            grade: string | null;
-            /** Id */
-            id: number;
-            /** Items */
-            items: components["schemas"]["CurriculumItemRead"][];
-            /** Name */
-            name: string;
-            /** Notes */
-            notes: string | null;
-            readiness: components["schemas"]["CurriculumReadiness"];
-            /** Subject Code */
-            subject_code: string | null;
-            /** Subject Name */
-            subject_name: string | null;
         };
     };
     responses: never;
@@ -7109,7 +7109,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__core__CurriculumRead"][];
+                    "application/json": components["schemas"]["CurriculumRead"][];
                 };
             };
         };
@@ -7123,7 +7123,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["app__schemas__core__CurriculumCreate"];
+                "application/json": components["schemas"]["CurriculumCreate"];
             };
         };
         responses: {
@@ -7133,7 +7133,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__core__CurriculumRead"];
+                    "application/json": components["schemas"]["CurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -7225,7 +7225,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__core__CurriculumRead"];
+                    "application/json": components["schemas"]["CurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -9027,7 +9027,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"][];
+                    "application/json": components["schemas"]["PlannedCurriculumRead"][];
                 };
             };
         };
@@ -9041,7 +9041,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["app__schemas__planner__CurriculumCreate"];
+                "application/json": components["schemas"]["PlannedCurriculumCreate"];
             };
         };
         responses: {
@@ -9051,7 +9051,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                    "application/json": components["schemas"]["PlannedCurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -9084,7 +9084,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                    "application/json": components["schemas"]["PlannedCurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -9115,7 +9115,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                    "application/json": components["schemas"]["PlannedCurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -9169,7 +9169,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CurriculumUpdate"];
+                "application/json": components["schemas"]["PlannedCurriculumUpdate"];
             };
         };
         responses: {
@@ -9179,7 +9179,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                    "application/json": components["schemas"]["PlannedCurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -9214,7 +9214,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                    "application/json": components["schemas"]["PlannedCurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -9246,7 +9246,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                    "application/json": components["schemas"]["PlannedCurriculumRead"];
                 };
             };
             /** @description Validation Error */

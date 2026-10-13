@@ -7,6 +7,7 @@ import {
   expect,
   openRoute,
   seedSchoolWeek,
+  seedLibrary,
   startDemo,
   test,
   type Student,
@@ -20,8 +21,10 @@ test("the sign-in page offers every way in", async ({ page }) => {
   }
 });
 
-test("a demo household finishes onboarding and lands in the catalog", async ({ page }) => {
+test("a demo household finishes onboarding and lands in the Library", async ({ page }) => {
   await startDemo(page, "The Rivera family");
+  await expect(page.getByText("Start by adding what you teach from.")).toBeVisible();
+  await openRoute(page, "#/dashboard", "Home");
   await expect(page.locator("#household-label")).toHaveText("The Rivera family");
   await expect(page.locator("#health-pill")).toHaveText("API ok · DB ok");
 });
@@ -84,8 +87,9 @@ test("a parent adds an assignment and checks it off", async ({ page }) => {
   await expect(checklist.locator(".checklist-progress")).toHaveText("1 of 1 complete");
 });
 
-test("a parent adds a book to the library by hand", async ({ page }) => {
+test("the older catalog still saves a book", async ({ page }) => {
   await startDemo(page);
+  await openRoute(page, "#/curricula", "Curriculum catalog");
   const form = page.locator('form[data-form="curriculum"]');
   await form.getByLabel("Title").fill("Saxon Math 3");
   await form.getByLabel("Subject").fill("Math");
@@ -95,6 +99,7 @@ test("a parent adds a book to the library by hand", async ({ page }) => {
 
 test("a CSV pacing guide imports and applies to the calendar", async ({ page }) => {
   await startDemo(page);
+  await openRoute(page, "#/curricula", "Curriculum catalog");
   await page.getByRole("tab", { name: "Structured Pacing Guides" }).click();
   await page
     .locator("#curriculum-csv-input")
@@ -140,4 +145,61 @@ test("a parent opens a child's trail from the Kids page", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "This week" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hi Maya!" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Math sticker: Count by twos" })).toBeVisible();
+});
+
+test("a parent adds a textbook, plans it, and puts it on the calendar", async ({ page }) => {
+  await startDemo(page);
+
+  // The Library: add a textbook by hand, one step at a time.
+  await page.getByRole("button", { name: "Add to library" }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Add it yourself" }).click();
+  await dialog.getByLabel("Title").fill("Saxon Math 5/4");
+  await dialog.getByRole("button", { name: "Next: what is this?" }).click();
+  await dialog.getByText("Textbook", { exact: true }).click();
+  await dialog.getByRole("button", { name: "Next: the details" }).click();
+  await dialog.getByLabel("Publisher").fill("Saxon");
+  await dialog.getByLabel("Edition or year").fill("3rd");
+  await dialog.getByLabel("Subject").selectOption("math");
+  await dialog.getByLabel("Grade").selectOption("4");
+  await dialog.getByLabel("Total pages").fill("600");
+  await dialog.getByRole("button", { name: "Save, then add lessons" }).click();
+  await dialog.getByRole("button", { name: "Paste a lesson list" }).click();
+  await dialog.getByLabel("Paste a lesson list").fill("1 Adding 1-4\n2 Subtracting 5-8\nTest 1, 9-10");
+  await dialog.getByRole("button", { name: "Add these" }).click();
+  await expect(dialog.getByText("3 lessons, 3 with pages.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Save and finish" }).click();
+  await expect(dialog.getByText("Ready to schedule.")).toBeVisible();
+
+  // The Curriculum planner: build it around the textbook, then schedule it.
+  await dialog.getByRole("button", { name: "Plan a curriculum with it" }).click();
+  await page.getByRole("button", { name: "Start with Saxon Math 5/4" }).click();
+  await expect(page.getByRole("heading", { name: "Saxon Math 5/4", level: 1 })).toBeVisible();
+  await expect(page.getByText("Everything is ready. Put it on the calendar below.")).toBeVisible();
+  await page.getByRole("button", { name: "Preview the dates" }).click();
+  await expect(page.getByText(/Sam Rivera: 3 lessons/)).toBeVisible();
+  await page.getByRole("button", { name: "Put it on the calendar" }).click();
+  await expect(page.getByText(/Done: 3 lessons on the calendar/)).toBeVisible();
+
+  // The calendar opens on those lessons, with a short tour.
+  await page.getByRole("link", { name: "Go to the calendar" }).click();
+  await expect(page.locator("#page-title")).toHaveText("Calendar");
+  const tour = page.getByRole("region", { name: "Your new lessons are on the calendar" });
+  await expect(tour).toBeVisible();
+  await expect(page.locator(".cal-event", { hasText: "Saxon Math 5/4 · Lesson 1: Adding" })).toBeVisible();
+  await tour.getByRole("button", { name: "Got it" }).click();
+  await expect(tour).toBeHidden();
+  expect(page.url()).toMatch(/#\/assignments$/);
+});
+
+test("a family's library shows every kind on one shelf", async ({ page }) => {
+  await startDemo(page);
+  await seedLibrary(page);
+  await page.reload();
+  const shelf = page.getByRole("list", { name: "Your shelf" });
+  await expect(shelf.getByRole("listitem")).toHaveCount(4);
+  await page.getByRole("button", { name: /^Workbooks/ }).click();
+  await expect(shelf.getByRole("listitem")).toHaveCount(1);
+  await shelf.getByRole("button", { name: /BJU Reading 4 Worktext/ }).click();
+  await expect(page.getByRole("dialog", { name: "BJU Reading 4 Worktext" })).toBeVisible();
 });

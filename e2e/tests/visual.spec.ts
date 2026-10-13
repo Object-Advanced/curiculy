@@ -3,10 +3,12 @@ import type { Page } from "@playwright/test";
 import {
   FROZEN_NOW,
   HOUSEHOLD,
+  apiAs,
   expect,
   loadHouseholdState,
   openRoute,
   openSignIn,
+  seedLibrary,
   seedSchoolWeek,
   settle,
   startDemo,
@@ -44,7 +46,6 @@ test("parent screens", async ({ page }) => {
     ["home", "#/dashboard", "Home"],
     ["calendar-week", "#/assignments", "Calendar"],
     ["kids", "#/students", /'s day$/],
-    ["catalog", "#/curricula", "Curriculum catalog"],
     ["settings", "#/settings", "Settings"],
   ];
   for (const [name, hash, title] of screens) {
@@ -58,6 +59,28 @@ test("parent screens", async ({ page }) => {
   await expect(page.locator("#calendar-range-label")).toHaveText("October 2026");
   await settle(page);
   await expect.soft(page).toHaveScreenshot("calendar-month.png");
+});
+
+test("library and planner", async ({ page }) => {
+  await startDemo(page);
+  const { textbook, workbook, novel } = await seedLibrary(page);
+  const curriculum = await apiAs<{ id: number }>(page, "POST", "/planner/curricula", { textbook_id: textbook });
+  await apiAs(page, "POST", `/planner/curricula/${curriculum.id}/items`, { library_item_id: workbook, role: "workbook" });
+  await apiAs(page, "POST", `/planner/curricula/${curriculum.id}/items`, { library_item_id: novel, role: "reading" });
+
+  await page.goto("/next/library");
+  await expect(page.getByRole("list", { name: "Your shelf" }).getByRole("listitem")).toHaveCount(4);
+  await page.waitForLoadState("networkidle");
+  await expect.soft(page).toHaveScreenshot("library.png");
+
+  await page.goto("/next/library?add=1");
+  await expect(page.getByRole("dialog", { name: "Add to your library" })).toBeVisible();
+  await expect.soft(page).toHaveScreenshot("library-add.png");
+
+  await page.goto(`/next/planner/${curriculum.id}`);
+  await expect(page.getByText("Everything is ready. Put it on the calendar below.")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await expect.soft(page).toHaveScreenshot("curriculum.png", { fullPage: true });
 });
 
 test("kid's own work list", async ({ page }) => {

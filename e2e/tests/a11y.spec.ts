@@ -7,10 +7,12 @@ import type { Page } from "@playwright/test";
 import {
   FROZEN_NOW,
   HOUSEHOLD,
+  apiAs,
   expect,
   loadHouseholdState,
   openRoute,
   openSignIn,
+  seedLibrary,
   seedSchoolWeek,
   settle,
   startDemo,
@@ -61,7 +63,6 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
     ["home", "#/dashboard", "Home"],
     ["calendar", "#/assignments", "Calendar"],
     ["kids", "#/students", /'s day$/],
-    ["catalog", "#/curricula", "Curriculum catalog"],
     ["portfolios", "#/portfolios", "Portfolios"],
     ["settings", "#/settings", "Settings"],
   ];
@@ -71,6 +72,26 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
     const result = await scan(page, screen);
     report[screen] = { ...result.counts, rules: result.rules };
   }
+
+  // The React parent screens: the Library, its adding walkthrough, and the planner.
+  const { textbook } = await seedLibrary(page);
+  const curriculum = await apiAs<{ id: number }>(page, "POST", "/planner/curricula", { textbook_id: textbook });
+  const parentScreens: [string, string, string][] = [
+    ["library", "/next/library", "Library"],
+    ["planner", "/next/planner", "Curriculum planner"],
+    ["curriculum", `/next/planner/${curriculum.id}`, "BJU Reading 4"],
+  ];
+  for (const [screen, path, heading] of parentScreens) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    const result = await scan(page, screen);
+    report[screen] = { ...result.counts, rules: result.rules };
+  }
+  await page.goto("/next/library?add=1");
+  await expect(page.getByRole("dialog", { name: "Add to your library" })).toBeVisible();
+  const adding = await scan(page, "library-add");
+  report["library-add"] = { ...adding.counts, rules: adding.rules };
 
   // The child's own screen, signed in with the household's kid PIN.
   const { studentId, familyCode } = loadHouseholdState();

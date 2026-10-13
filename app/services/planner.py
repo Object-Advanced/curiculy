@@ -47,11 +47,11 @@ from app.schemas.planner import (
     ROLE_HINTS,
     ROLES,
     CourseRead,
-    CurriculumCreate,
+    PlannedCurriculumCreate,
     CurriculumItemRead,
-    CurriculumRead,
+    PlannedCurriculumRead,
     CurriculumReadiness,
-    CurriculumUpdate,
+    PlannedCurriculumUpdate,
     ScheduledItemPreview,
     SchedulePreview,
     ScheduleRequest,
@@ -160,9 +160,9 @@ def _course_read(db: Session, course: Course) -> CourseRead:
     )
 
 
-def curriculum_read(db: Session, curriculum: PlannedCurriculum) -> CurriculumRead:
+def curriculum_read(db: Session, curriculum: PlannedCurriculum) -> PlannedCurriculumRead:
     links = sorted(curriculum.items, key=lambda link: (ROLE_ORDER.get(link.role, 9), link.position, link.id))
-    return CurriculumRead(
+    return PlannedCurriculumRead(
         id=curriculum.id,
         name=curriculum.name,
         subject_code=curriculum.subject_code,
@@ -220,7 +220,7 @@ def remove_item(curriculum: PlannedCurriculum, library_item_id: int) -> None:
     curriculum.items.remove(link)
 
 
-def create_curriculum(db: Session, payload: CurriculumCreate) -> PlannedCurriculum:
+def create_curriculum(db: Session, payload: PlannedCurriculumCreate) -> PlannedCurriculum:
     textbook = get_item(db, payload.textbook_id) if payload.textbook_id else None
     name = payload.name or (textbook.title if textbook else None)
     if not name:
@@ -240,7 +240,7 @@ def create_curriculum(db: Session, payload: CurriculumCreate) -> PlannedCurricul
     return get_curriculum(db, curriculum.id)
 
 
-def update_curriculum(db: Session, curriculum: PlannedCurriculum, payload: CurriculumUpdate) -> None:
+def update_curriculum(db: Session, curriculum: PlannedCurriculum, payload: PlannedCurriculumUpdate) -> None:
     for name, value in payload.model_dump(exclude_unset=True).items():
         if name == "name" and not value:
             continue

@@ -14,13 +14,16 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 # Chart.js, app.js). Inline style attributes are used throughout the
 # templates, hence 'unsafe-inline' for styles only. blob: covers evidence
 # thumbnails and the weekly-checklist PDF the SPA opens in a new tab; object-src
-# allows blob: so the browser's PDF viewer can render it.
+# allows blob: so the browser's PDF viewer can render it. Book covers found by
+# the lookup load from Open Library (which redirects to archive.org) and Google
+# Books; images only, nothing else from those hosts.
 CONTENT_SECURITY_POLICY = "; ".join(
     [
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: blob:",
+        "img-src 'self' data: blob: https://covers.openlibrary.org https://archive.org https://*.archive.org "
+        "https://books.google.com https://books.googleusercontent.com",
         "font-src 'self'",
         "connect-src 'self'",
         "worker-src 'self'",

@@ -31,7 +31,8 @@ Everything about Curiculy for people to read: what it is, how each part works, h
 | [04 Calendar and lessons](2-features/04-calendar-and-lessons.md) | [10 Recalibrate](2-features/10-recalibrate.md) | [16 Offline and sync](2-features/16-offline-and-sync.md) |
 | [05 Kids page](2-features/05-kids-page.md) | [11 School year and days off](2-features/11-school-year-and-days-off.md) | [17 AI features](2-features/17-ai-features.md) |
 | [06 Kid's My work](2-features/06-kid-my-work.md) | [12 Attendance](2-features/12-attendance.md) | [18 Demo mode](2-features/18-demo-mode.md) |
-| | [20 Sticker journal](2-features/20-sticker-journal.md) | [19 My trail](2-features/19-my-trail.md) |
+| [21 Library](2-features/21-library.md) | [20 Sticker journal](2-features/20-sticker-journal.md) | [19 My trail](2-features/19-my-trail.md) |
+| [22 Curriculum planner](2-features/22-curriculum-planner.md) | [23 Community catalog and review](2-features/23-community-catalog.md) | |
 
 ### 3. Design
 - [Design system](3-design/design-system.md): tokens, the parent and kid looks, type, fonts, voice
