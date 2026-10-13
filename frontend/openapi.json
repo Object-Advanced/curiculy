@@ -1,6 +1,52 @@
 {
   "components": {
     "schemas": {
+      "AdoptEntry": {
+        "properties": {
+          "entry_id": {
+            "title": "Entry Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entry_id"
+        ],
+        "title": "AdoptEntry",
+        "type": "object"
+      },
+      "ApproveRequest": {
+        "properties": {
+          "edits": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CatalogEdits"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "include_cover": {
+            "default": true,
+            "title": "Include Cover",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "ApproveRequest",
+        "type": "object"
+      },
       "ApprovedLesson": {
         "description": "A lesson the parent accepted, which means its date is settled.",
         "properties": {
@@ -39,6 +85,21 @@
           "scheduled_date"
         ],
         "title": "ApprovedLesson",
+        "type": "object"
+      },
+      "AskRequest": {
+        "properties": {
+          "question": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "AskRequest",
         "type": "object"
       },
       "AssignmentCalendarRead": {
@@ -1496,6 +1557,259 @@
         "title": "CaptureTokenStatusRead",
         "type": "object"
       },
+      "CatalogEdits": {
+        "description": "Approve with edits: any field to change, and whole chapter or lesson lists.",
+        "properties": {
+          "answer_key_start_page": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Key Start Page"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "chapters": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChapterWrite"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapters"
+          },
+          "days_per_week": {
+            "anyOf": [
+              {
+                "maximum": 7.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "edition": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edition"
+          },
+          "for_parent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "For Parent"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "lesson_count": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Count"
+          },
+          "lessons": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LessonWrite"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lessons"
+          },
+          "measure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure"
+          },
+          "minutes_per_session": {
+            "anyOf": [
+              {
+                "maximum": 300.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes Per Session"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "reading_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reading Kind"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "total_pages": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Pages"
+          },
+          "website_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website Url"
+          }
+        },
+        "title": "CatalogEdits",
+        "type": "object"
+      },
       "ChapterRead": {
         "properties": {
           "id": {
@@ -1567,6 +1881,1108 @@
         "title": "ChapterWrite",
         "type": "object"
       },
+      "ChoiceOption": {
+        "description": "A choice with a one-line explanation under it (\"What is this?\").",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "hint": {
+            "title": "Hint",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "hint"
+        ],
+        "title": "ChoiceOption",
+        "type": "object"
+      },
+      "CommunityChapter": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "start_page": {
+            "title": "Start Page",
+            "type": "integer"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          }
+        },
+        "required": [
+          "name",
+          "start_page"
+        ],
+        "title": "CommunityChapter",
+        "type": "object"
+      },
+      "CommunityCurriculumRead": {
+        "properties": {
+          "days_per_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "families_count": {
+            "title": "Families Count",
+            "type": "integer"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestedItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "subject_code",
+          "subject_name",
+          "grade",
+          "days_per_week",
+          "families_count",
+          "items"
+        ],
+        "title": "CommunityCurriculumRead",
+        "type": "object"
+      },
+      "CommunityEntryRead": {
+        "description": "Everything a family sees before adding it: the details, chapters and lesson list.",
+        "properties": {
+          "answer_key_start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Key Start Page"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityChapter"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "chapters_count": {
+            "title": "Chapters Count",
+            "type": "integer"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "days_per_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "edition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edition"
+          },
+          "families_count": {
+            "title": "Families Count",
+            "type": "integer"
+          },
+          "for_parent": {
+            "title": "For Parent",
+            "type": "boolean"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "in_curricula": {
+            "title": "In Curricula",
+            "type": "integer"
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_label": {
+            "title": "Kind Label",
+            "type": "string"
+          },
+          "lesson_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Count"
+          },
+          "lessons": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityLesson"
+            },
+            "title": "Lessons",
+            "type": "array"
+          },
+          "lessons_count": {
+            "title": "Lessons Count",
+            "type": "integer"
+          },
+          "library_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Item Id"
+          },
+          "measure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure"
+          },
+          "minutes_per_session": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes Per Session"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "reading_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reading Kind"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "total_pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Pages"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "website_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website Url"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "kind_label",
+          "title",
+          "author",
+          "publisher",
+          "edition",
+          "isbn",
+          "subject_code",
+          "subject_name",
+          "grade",
+          "total_pages",
+          "chapters_count",
+          "lessons_count",
+          "cover_url",
+          "families_count",
+          "detail",
+          "version",
+          "series",
+          "reading_kind",
+          "answer_key_start_page",
+          "lesson_count",
+          "measure",
+          "minutes_per_session",
+          "days_per_week",
+          "for_parent",
+          "website_url",
+          "chapters",
+          "lessons",
+          "in_curricula",
+          "library_item_id"
+        ],
+        "title": "CommunityEntryRead",
+        "type": "object"
+      },
+      "CommunityEntrySummary": {
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "chapters_count": {
+            "title": "Chapters Count",
+            "type": "integer"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "edition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edition"
+          },
+          "families_count": {
+            "title": "Families Count",
+            "type": "integer"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_label": {
+            "title": "Kind Label",
+            "type": "string"
+          },
+          "lessons_count": {
+            "title": "Lessons Count",
+            "type": "integer"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "total_pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Pages"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "kind_label",
+          "title",
+          "author",
+          "publisher",
+          "edition",
+          "isbn",
+          "subject_code",
+          "subject_name",
+          "grade",
+          "total_pages",
+          "chapters_count",
+          "lessons_count",
+          "cover_url",
+          "families_count",
+          "detail"
+        ],
+        "title": "CommunityEntrySummary",
+        "type": "object"
+      },
+      "CommunityLesson": {
+        "properties": {
+          "end_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Page"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Page"
+          },
+          "type": {
+            "default": "lesson",
+            "title": "Type",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "title": "CommunityLesson",
+        "type": "object"
+      },
+      "CommunityLinkRead": {
+        "description": "How an item relates to the community catalog: in_catalog, in_review or not_shared.",
+        "properties": {
+          "entry_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
+          },
+          "families_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Families Count"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "label"
+        ],
+        "title": "CommunityLinkRead",
+        "type": "object"
+      },
+      "ContributionChanges": {
+        "description": "What a correction (or a duplicate) changes compared with the catalog's version.",
+        "properties": {
+          "chapters_after": {
+            "title": "Chapters After",
+            "type": "integer"
+          },
+          "chapters_before": {
+            "title": "Chapters Before",
+            "type": "integer"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "lessons_after": {
+            "title": "Lessons After",
+            "type": "integer"
+          },
+          "lessons_before": {
+            "title": "Lessons Before",
+            "type": "integer"
+          },
+          "lessons_changed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lessons Changed",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary",
+          "fields",
+          "chapters_before",
+          "chapters_after",
+          "lessons_before",
+          "lessons_after",
+          "lessons_changed"
+        ],
+        "title": "ContributionChanges",
+        "type": "object"
+      },
+      "ContributionDetail": {
+        "properties": {
+          "changes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContributionChanges"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compare_entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommunityEntrySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contributor": {
+            "$ref": "#/components/schemas/ContributorRead"
+          },
+          "contributor_label": {
+            "title": "Contributor Label",
+            "type": "string"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/FlagRead"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "has_cover": {
+            "title": "Has Cover",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_correction": {
+            "title": "Is Correction",
+            "type": "boolean"
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "item_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Kind"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_label": {
+            "title": "Kind Label",
+            "type": "string"
+          },
+          "lookup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookupBook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "boolean"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "integer"
+          },
+          "result_curriculum_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Curriculum Id"
+          },
+          "result_entry_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Entry Id"
+          },
+          "review_flags": {
+            "title": "Review Flags",
+            "type": "integer"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "item_kind",
+          "kind_label",
+          "title",
+          "isbn",
+          "status",
+          "needs_review",
+          "is_correction",
+          "has_cover",
+          "contributor_label",
+          "review_flags",
+          "notes",
+          "created_at",
+          "updated_at",
+          "data",
+          "flags",
+          "compare_entry",
+          "changes",
+          "lookup",
+          "cover_url",
+          "contributor",
+          "review_note",
+          "reviewed_by",
+          "reviewed_at",
+          "result_entry_id",
+          "result_curriculum_id"
+        ],
+        "title": "ContributionDetail",
+        "type": "object"
+      },
+      "ContributionSummary": {
+        "properties": {
+          "contributor_label": {
+            "title": "Contributor Label",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "has_cover": {
+            "title": "Has Cover",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_correction": {
+            "title": "Is Correction",
+            "type": "boolean"
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "item_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Kind"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_label": {
+            "title": "Kind Label",
+            "type": "string"
+          },
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "boolean"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "integer"
+          },
+          "review_flags": {
+            "title": "Review Flags",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "item_kind",
+          "kind_label",
+          "title",
+          "isbn",
+          "status",
+          "needs_review",
+          "is_correction",
+          "has_cover",
+          "contributor_label",
+          "review_flags",
+          "notes",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ContributionSummary",
+        "type": "object"
+      },
+      "ContributorRead": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "accepted",
+          "rejected",
+          "total"
+        ],
+        "title": "ContributorRead",
+        "type": "object"
+      },
       "ContributorRole": {
         "enum": [
           "author",
@@ -1578,6 +2994,66 @@
         ],
         "title": "ContributorRole",
         "type": "string"
+      },
+      "CourseRead": {
+        "properties": {
+          "curriculum_id": {
+            "title": "Curriculum Id",
+            "type": "integer"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lessons_scheduled": {
+            "title": "Lessons Scheduled",
+            "type": "integer"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "student_name": {
+            "title": "Student Name",
+            "type": "string"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "curriculum_id",
+          "student_id",
+          "student_name",
+          "start_date",
+          "end_date",
+          "weekdays",
+          "lessons_scheduled"
+        ],
+        "title": "CourseRead",
+        "type": "object"
       },
       "CoverRead": {
         "properties": {
@@ -1620,76 +3096,6 @@
           "source"
         ],
         "title": "CoverRead",
-        "type": "object"
-      },
-      "CurriculumCreate": {
-        "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "publisher": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publisher"
-          },
-          "sku": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "ISBN or proprietary barcode so a later scan finds this book locally.",
-            "title": "Sku"
-          },
-          "source_type": {
-            "$ref": "#/components/schemas/CurriculumSource",
-            "default": "manual"
-          },
-          "subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          }
-        },
-        "title": "CurriculumCreate",
         "type": "object"
       },
       "CurriculumFromISBNRead": {
@@ -1837,6 +3243,61 @@
           "isbn"
         ],
         "title": "CurriculumFromISBNRequest",
+        "type": "object"
+      },
+      "CurriculumItemRead": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "item": {
+            "$ref": "#/components/schemas/LibraryItemSummary"
+          },
+          "library_item_id": {
+            "title": "Library Item Id",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "role_hint": {
+            "title": "Role Hint",
+            "type": "string"
+          },
+          "role_label": {
+            "title": "Role Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "library_item_id",
+          "role",
+          "role_label",
+          "role_hint",
+          "item"
+        ],
+        "title": "CurriculumItemRead",
+        "type": "object"
+      },
+      "CurriculumItemWrite": {
+        "properties": {
+          "library_item_id": {
+            "title": "Library Item Id",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "library_item_id",
+          "role"
+        ],
+        "title": "CurriculumItemWrite",
         "type": "object"
       },
       "CurriculumLessonRead": {
@@ -2555,79 +4016,33 @@
         "title": "CurriculumPlanWrite",
         "type": "object"
       },
-      "CurriculumRead": {
+      "CurriculumReadiness": {
         "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MissingRead"
+            },
+            "title": "Missing",
+            "type": "array"
           },
-          "id": {
-            "title": "Id",
-            "type": "integer"
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/ProblemRead"
+            },
+            "title": "Problems",
+            "type": "array"
           },
-          "is_scheduled": {
-            "default": false,
-            "title": "Is Scheduled",
+          "ready": {
+            "title": "Ready",
             "type": "boolean"
-          },
-          "publisher_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publisher Id"
-          },
-          "publisher_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publisher Name"
-          },
-          "source_type": {
-            "$ref": "#/components/schemas/CurriculumSource"
-          },
-          "subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
           }
         },
         "required": [
-          "id",
-          "title",
-          "publisher_id",
-          "publisher_name",
-          "subject",
-          "description",
-          "source_type"
+          "ready",
+          "missing",
+          "problems"
         ],
-        "title": "CurriculumRead",
+        "title": "CurriculumReadiness",
         "type": "object"
       },
       "CurriculumResourceRead": {
@@ -2887,6 +4302,71 @@
         "title": "CurriculumUnitNode",
         "type": "object"
       },
+      "CurriculumUpdate": {
+        "properties": {
+          "days_per_week": {
+            "anyOf": [
+              {
+                "maximum": 7.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          }
+        },
+        "title": "CurriculumUpdate",
+        "type": "object"
+      },
       "DashboardStatsRead": {
         "description": "Family dashboard KPIs: today's progress and a seven-day completion trend.",
         "properties": {
@@ -3026,6 +4506,362 @@
           "end_date"
         ],
         "title": "EnrollmentRead",
+        "type": "object"
+      },
+      "EntryAdminRead": {
+        "properties": {
+          "answer_key_start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Key Start Page"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityChapter"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "chapters_count": {
+            "title": "Chapters Count",
+            "type": "integer"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "days_per_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "edition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edition"
+          },
+          "families_count": {
+            "title": "Families Count",
+            "type": "integer"
+          },
+          "for_parent": {
+            "title": "For Parent",
+            "type": "boolean"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "in_curricula": {
+            "title": "In Curricula",
+            "type": "integer"
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_label": {
+            "title": "Kind Label",
+            "type": "string"
+          },
+          "lesson_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Count"
+          },
+          "lessons": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityLesson"
+            },
+            "title": "Lessons",
+            "type": "array"
+          },
+          "lessons_count": {
+            "title": "Lessons Count",
+            "type": "integer"
+          },
+          "library_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Item Id"
+          },
+          "measure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure"
+          },
+          "minutes_per_session": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes Per Session"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "reading_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reading Kind"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "total_pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Pages"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/EntryVersionRead"
+            },
+            "title": "Versions",
+            "type": "array"
+          },
+          "website_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website Url"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "kind_label",
+          "title",
+          "author",
+          "publisher",
+          "edition",
+          "isbn",
+          "subject_code",
+          "subject_name",
+          "grade",
+          "total_pages",
+          "chapters_count",
+          "lessons_count",
+          "cover_url",
+          "families_count",
+          "detail",
+          "version",
+          "series",
+          "reading_kind",
+          "answer_key_start_page",
+          "lesson_count",
+          "measure",
+          "minutes_per_session",
+          "days_per_week",
+          "for_parent",
+          "website_url",
+          "chapters",
+          "lessons",
+          "in_curricula",
+          "library_item_id",
+          "status",
+          "versions"
+        ],
+        "title": "EntryAdminRead",
+        "type": "object"
+      },
+      "EntryVersionRead": {
+        "properties": {
+          "approved_by": {
+            "title": "Approved By",
+            "type": "string"
+          },
+          "contribution_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contribution Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "approved_by",
+          "note",
+          "contribution_id",
+          "created_at"
+        ],
+        "title": "EntryVersionRead",
         "type": "object"
       },
       "EvidenceLinkRequest": {
@@ -3197,6 +5033,99 @@
           "code"
         ],
         "title": "FamilyCodeRead",
+        "type": "object"
+      },
+      "FieldChange": {
+        "properties": {
+          "catalog": {
+            "title": "Catalog"
+          },
+          "contributed": {
+            "title": "Contributed"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "FieldChange",
+        "type": "object"
+      },
+      "FlagRead": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "where": {
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "group",
+          "level",
+          "where",
+          "message"
+        ],
+        "title": "FlagRead",
+        "type": "object"
+      },
+      "FromCommunityRequest": {
+        "description": "Start from a curriculum other families built; leave out anything you'll swap.",
+        "properties": {
+          "community_curriculum_id": {
+            "title": "Community Curriculum Id",
+            "type": "integer"
+          },
+          "entry_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Ids"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "community_curriculum_id"
+        ],
+        "title": "FromCommunityRequest",
         "type": "object"
       },
       "GradeConfirm": {
@@ -3921,62 +5850,19 @@
         "title": "LessonGenerate",
         "type": "object"
       },
-      "LessonPagesRead": {
-        "properties": {
-          "end_page": {
-            "maximum": 5000.0,
-            "minimum": 1.0,
-            "title": "End Page",
-            "type": "integer"
-          },
-          "material_id": {
-            "title": "Material Id",
-            "type": "integer"
-          },
-          "start_page": {
-            "maximum": 5000.0,
-            "minimum": 1.0,
-            "title": "Start Page",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "material_id",
-          "start_page",
-          "end_page"
-        ],
-        "title": "LessonPagesRead",
-        "type": "object"
-      },
-      "LessonPagesWrite": {
-        "properties": {
-          "end_page": {
-            "maximum": 5000.0,
-            "minimum": 1.0,
-            "title": "End Page",
-            "type": "integer"
-          },
-          "material_id": {
-            "title": "Material Id",
-            "type": "integer"
-          },
-          "start_page": {
-            "maximum": 5000.0,
-            "minimum": 1.0,
-            "title": "Start Page",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "material_id",
-          "start_page",
-          "end_page"
-        ],
-        "title": "LessonPagesWrite",
-        "type": "object"
-      },
       "LessonRead": {
         "properties": {
+          "end_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Page"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -4014,12 +5900,16 @@
             ],
             "title": "Number"
           },
-          "pages": {
-            "items": {
-              "$ref": "#/components/schemas/LessonPagesRead"
-            },
-            "title": "Pages",
-            "type": "array"
+          "start_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Page"
           },
           "type": {
             "title": "Type",
@@ -4044,13 +5934,27 @@
           "type",
           "unit",
           "minutes",
-          "pages"
+          "start_page",
+          "end_page"
         ],
         "title": "LessonRead",
         "type": "object"
       },
       "LessonWrite": {
         "properties": {
+          "end_page": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Page"
+          },
           "minutes": {
             "anyOf": [
               {
@@ -4089,12 +5993,18 @@
             ],
             "title": "Number"
           },
-          "pages": {
-            "items": {
-              "$ref": "#/components/schemas/LessonPagesWrite"
-            },
-            "title": "Pages",
-            "type": "array"
+          "start_page": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Page"
           },
           "type": {
             "default": "lesson",
@@ -4192,6 +6102,17 @@
               }
             ],
             "title": "Edition"
+          },
+          "for_parent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "For Parent"
           },
           "grade": {
             "anyOf": [
@@ -4409,12 +6330,29 @@
             "title": "Chapters",
             "type": "array"
           },
+          "community": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommunityLinkRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "consumable": {
             "title": "Consumable",
             "type": "boolean"
           },
           "cover": {
             "$ref": "#/components/schemas/CoverRead"
+          },
+          "curriculum_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Curriculum Ids",
+            "type": "array"
           },
           "days_per_week": {
             "anyOf": [
@@ -4437,6 +6375,10 @@
               }
             ],
             "title": "Edition"
+          },
+          "for_parent": {
+            "title": "For Parent",
+            "type": "boolean"
           },
           "grade": {
             "anyOf": [
@@ -4500,13 +6442,6 @@
               }
             ],
             "title": "Login Note"
-          },
-          "materials": {
-            "items": {
-              "$ref": "#/components/schemas/MaterialRead"
-            },
-            "title": "Materials",
-            "type": "array"
           },
           "measure": {
             "anyOf": [
@@ -4675,11 +6610,11 @@
           "days_per_week",
           "usual_pages_per_day",
           "consumable",
+          "for_parent",
           "website_url",
           "login_note",
           "notes",
           "chapters",
-          "materials",
           "lessons",
           "readiness"
         ],
@@ -4855,6 +6790,17 @@
               }
             ],
             "title": "Edition"
+          },
+          "for_parent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "For Parent"
           },
           "grade": {
             "anyOf": [
@@ -5051,6 +6997,39 @@
         "title": "LibraryItemUpdate",
         "type": "object"
       },
+      "LookupBook": {
+        "properties": {
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authors",
+            "type": "array"
+          },
+          "page_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Count"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "authors",
+          "page_count"
+        ],
+        "title": "LookupBook",
+        "type": "object"
+      },
       "MappingSource": {
         "enum": [
           "manual",
@@ -5060,118 +7039,40 @@
         "title": "MappingSource",
         "type": "string"
       },
-      "MaterialRead": {
+      "MergeRequest": {
+        "description": "Another family entered a book that's already in the catalog.",
         "properties": {
-          "audience": {
-            "title": "Audience",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
+          "entry_id": {
+            "title": "Entry Id",
             "type": "integer"
           },
-          "isbn": {
+          "include_cover": {
+            "default": true,
+            "title": "Include Cover",
+            "type": "boolean"
+          },
+          "note": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Isbn"
+            "title": "Note"
           },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "pages": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pages"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
+          "replace_details": {
+            "default": false,
+            "title": "Replace Details",
+            "type": "boolean"
           }
         },
         "required": [
-          "id",
-          "kind",
-          "title",
-          "isbn",
-          "pages",
-          "audience"
+          "entry_id"
         ],
-        "title": "MaterialRead",
-        "type": "object"
-      },
-      "MaterialWrite": {
-        "description": "Leave out ``id`` to add a material; include it to keep or edit one.",
-        "properties": {
-          "audience": {
-            "default": "student",
-            "title": "Audience",
-            "type": "string"
-          },
-          "id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
-          },
-          "isbn": {
-            "anyOf": [
-              {
-                "maxLength": 20,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Isbn"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "pages": {
-            "anyOf": [
-              {
-                "maximum": 5000.0,
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pages"
-          },
-          "title": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "title"
-        ],
-        "title": "MaterialWrite",
+        "title": "MergeRequest",
         "type": "object"
       },
       "MissingRead": {
@@ -5783,7 +7684,8 @@
           "homework_help_started",
           "homework_help_redirect",
           "curriculum_plan_ready",
-          "curriculum_plan_failed"
+          "curriculum_plan_failed",
+          "catalog_update"
         ],
         "title": "ParentNotificationType",
         "type": "string"
@@ -6560,11 +8462,32 @@
       "ReferenceRead": {
         "description": "The fixed lists every screen picks from.",
         "properties": {
+          "community_notice": {
+            "default": "",
+            "title": "Community Notice",
+            "type": "string"
+          },
+          "curriculum_roles": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ChoiceOption"
+            },
+            "title": "Curriculum Roles",
+            "type": "array"
+          },
           "grades": {
             "items": {
               "$ref": "#/components/schemas/GradeOption"
             },
             "title": "Grades",
+            "type": "array"
+          },
+          "library_kinds": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ChoiceOption"
+            },
+            "title": "Library Kinds",
             "type": "array"
           },
           "states": {
@@ -6619,6 +8542,21 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "RejectRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RejectRequest",
+        "type": "object"
+      },
       "RequiredSubject": {
         "properties": {
           "code": {
@@ -6664,6 +8602,255 @@
         ],
         "title": "ResourceKind",
         "type": "string"
+      },
+      "ReviewResult": {
+        "properties": {
+          "contribution": {
+            "$ref": "#/components/schemas/ContributionDetail"
+          },
+          "curriculum_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Curriculum Id"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
+          },
+          "left_out": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Left Out",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contribution"
+        ],
+        "title": "ReviewResult",
+        "type": "object"
+      },
+      "RollbackRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "RollbackRequest",
+        "type": "object"
+      },
+      "SchedulePreview": {
+        "properties": {
+          "school_year_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Year End"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/StudentPreview"
+            },
+            "title": "Students",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "weekday_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Weekday Names",
+            "type": "array"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "start_date",
+          "weekdays",
+          "weekday_names",
+          "school_year_end",
+          "students",
+          "warnings"
+        ],
+        "title": "SchedulePreview",
+        "type": "object"
+      },
+      "ScheduleRequest": {
+        "description": "Which children, starting when, and (optionally) which weekdays (Monday = 0).",
+        "properties": {
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "student_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Student Ids",
+            "type": "array"
+          },
+          "weekdays": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekdays"
+          }
+        },
+        "required": [
+          "student_ids",
+          "start_date"
+        ],
+        "title": "ScheduleRequest",
+        "type": "object"
+      },
+      "ScheduleResult": {
+        "properties": {
+          "calendar_url": {
+            "title": "Calendar Url",
+            "type": "string"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseRead"
+            },
+            "title": "Courses",
+            "type": "array"
+          },
+          "lessons_created": {
+            "title": "Lessons Created",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "courses",
+          "lessons_created",
+          "calendar_url"
+        ],
+        "title": "ScheduleResult",
+        "type": "object"
+      },
+      "ScheduledItemPreview": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "first_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          },
+          "library_item_id": {
+            "title": "Library Item Id",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "library_item_id",
+          "title",
+          "role",
+          "summary",
+          "count",
+          "first_date",
+          "last_date"
+        ],
+        "title": "ScheduledItemPreview",
+        "type": "object"
       },
       "SchoolYearCreate": {
         "properties": {
@@ -6858,6 +9045,17 @@
             "title": "Authors",
             "type": "array"
           },
+          "catalog_entry_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Entry Id"
+          },
           "cover_url": {
             "anyOf": [
               {
@@ -6868,6 +9066,28 @@
               }
             ],
             "title": "Cover Url"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "families_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Families Count"
           },
           "guessed_kind": {
             "title": "Guessed Kind",
@@ -7236,6 +9456,50 @@
           "pin"
         ],
         "title": "StudentPinUpsert",
+        "type": "object"
+      },
+      "StudentPreview": {
+        "properties": {
+          "finish_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish Date"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduledItemPreview"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "lessons": {
+            "title": "Lessons",
+            "type": "integer"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "student_name": {
+            "title": "Student Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "student_id",
+          "student_name",
+          "finish_date",
+          "lessons",
+          "items"
+        ],
+        "title": "StudentPreview",
         "type": "object"
       },
       "StudentRead": {
@@ -7827,6 +10091,91 @@
         "title": "SubjectTaxonomyRead",
         "type": "object"
       },
+      "SuggestedItem": {
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/CommunityEntrySummary"
+          },
+          "families_count": {
+            "title": "Families Count",
+            "type": "integer"
+          },
+          "library_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Item Id"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "role_label": {
+            "title": "Role Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "role_label",
+          "entry",
+          "library_item_id",
+          "families_count"
+        ],
+        "title": "SuggestedItem",
+        "type": "object"
+      },
+      "SuggestionsRead": {
+        "description": "'Other families built a similar curriculum using these\u2026'",
+        "properties": {
+          "curricula": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityCurriculumRead"
+            },
+            "title": "Curricula",
+            "type": "array"
+          },
+          "families_count": {
+            "title": "Families Count",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "often_used_with": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestedItem"
+            },
+            "title": "Often Used With",
+            "type": "array"
+          },
+          "textbook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommunityEntrySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "textbook",
+          "families_count",
+          "curricula",
+          "often_used_with",
+          "message"
+        ],
+        "title": "SuggestionsRead",
+        "type": "object"
+      },
       "SwitchUserRequest": {
         "properties": {
           "parent_password": {
@@ -8036,6 +10385,24 @@
         "title": "UnitKind",
         "type": "string"
       },
+      "UnscheduleResult": {
+        "properties": {
+          "lessons_kept": {
+            "title": "Lessons Kept",
+            "type": "integer"
+          },
+          "lessons_removed": {
+            "title": "Lessons Removed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lessons_removed",
+          "lessons_kept"
+        ],
+        "title": "UnscheduleResult",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -8180,6 +10547,337 @@
         ],
         "title": "WorkRead",
         "type": "object"
+      },
+      "app__schemas__core__CurriculumCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISBN or proprietary barcode so a later scan finds this book locally.",
+            "title": "Sku"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/CurriculumSource",
+            "default": "manual"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "CurriculumCreate",
+        "type": "object"
+      },
+      "app__schemas__core__CurriculumRead": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_scheduled": {
+            "default": false,
+            "title": "Is Scheduled",
+            "type": "boolean"
+          },
+          "publisher_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher Id"
+          },
+          "publisher_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/CurriculumSource"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "publisher_id",
+          "publisher_name",
+          "subject",
+          "description",
+          "source_type"
+        ],
+        "title": "CurriculumRead",
+        "type": "object"
+      },
+      "app__schemas__planner__CurriculumCreate": {
+        "description": "Start a curriculum, usually from a textbook (its subject and grade carry over).",
+        "properties": {
+          "days_per_week": {
+            "anyOf": [
+              {
+                "maximum": 7.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "textbook_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textbook Id"
+          }
+        },
+        "title": "CurriculumCreate",
+        "type": "object"
+      },
+      "app__schemas__planner__CurriculumRead": {
+        "properties": {
+          "community_curriculum_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Community Curriculum Id"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseRead"
+            },
+            "title": "Courses",
+            "type": "array"
+          },
+          "days_per_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Per Week"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CurriculumItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/CurriculumReadiness"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "subject_code",
+          "subject_name",
+          "grade",
+          "days_per_week",
+          "notes",
+          "items",
+          "readiness",
+          "courses"
+        ],
+        "title": "CurriculumRead",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -8201,6 +10899,684 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/admin/community/contributions": {
+      "get": {
+        "operationId": "list_contributions_api_admin_community_contributions_get",
+        "parameters": [
+          {
+            "description": "open (default), all, pending, asked, approved, merged, rejected, withdrawn",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "open (default), all, pending, asked, approved, merged, rejected, withdrawn",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "item or curriculum",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "item or curriculum",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContributionSummary"
+                  },
+                  "title": "Response List Contributions Api Admin Community Contributions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Contributions",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/contributions/{contribution_id}": {
+      "get": {
+        "operationId": "read_contribution_api_admin_community_contributions__contribution_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contribution_id",
+            "required": true,
+            "schema": {
+              "title": "Contribution Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Contribution",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/contributions/{contribution_id}/approve": {
+      "post": {
+        "description": "Approve, or approve with edits. Books become (or update) a catalog entry;\ncurricula become a suggestion for families with the same textbook.",
+        "operationId": "approve_api_admin_community_contributions__contribution_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contribution_id",
+            "required": true,
+            "schema": {
+              "title": "Contribution Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Approve",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/contributions/{contribution_id}/ask": {
+      "post": {
+        "description": "Ask the contributor; their next change brings it back to the queue.",
+        "operationId": "ask_api_admin_community_contributions__contribution_id__ask_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contribution_id",
+            "required": true,
+            "schema": {
+              "title": "Contribution Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Ask",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/contributions/{contribution_id}/cover": {
+      "get": {
+        "operationId": "read_contribution_cover_api_admin_community_contributions__contribution_id__cover_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contribution_id",
+            "required": true,
+            "schema": {
+              "title": "Contribution Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Contribution Cover",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/contributions/{contribution_id}/merge": {
+      "post": {
+        "operationId": "merge_api_admin_community_contributions__contribution_id__merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contribution_id",
+            "required": true,
+            "schema": {
+              "title": "Contribution Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Merge",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/contributions/{contribution_id}/reject": {
+      "post": {
+        "description": "Reject with a reason; the family is told, and their own copy is untouched.",
+        "operationId": "reject_api_admin_community_contributions__contribution_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contribution_id",
+            "required": true,
+            "schema": {
+              "title": "Contribution Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reject",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/entries": {
+      "get": {
+        "operationId": "list_entries_api_admin_community_entries_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "description": "published or retired",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "published or retired",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CommunityEntrySummary"
+                  },
+                  "title": "Response List Entries Api Admin Community Entries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Entries",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/entries/{entry_id}": {
+      "get": {
+        "operationId": "read_entry_api_admin_community_entries__entry_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryAdminRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Entry",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/entries/{entry_id}/publish": {
+      "post": {
+        "operationId": "publish_api_admin_community_entries__entry_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryAdminRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Publish",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/entries/{entry_id}/retire": {
+      "post": {
+        "description": "Hide it from search. Families who added it keep their copies.",
+        "operationId": "retire_api_admin_community_entries__entry_id__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryAdminRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Retire",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/community/entries/{entry_id}/rollback": {
+      "post": {
+        "description": "Go back to an older version (added as a new version, so history is kept).",
+        "operationId": "rollback_api_admin_community_entries__entry_id__rollback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryAdminRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Rollback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/invite": {
       "post": {
         "operationId": "create_invite_key_api_admin_invite_post",
@@ -9483,6 +12859,149 @@
         ]
       }
     },
+    "/api/community/entries/{entry_id}": {
+      "get": {
+        "description": "A catalog entry's details, chapters and lesson list, to look at before adding it.",
+        "operationId": "read_entry_api_community_entries__entry_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityEntryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Entry",
+        "tags": [
+          "community"
+        ]
+      }
+    },
+    "/api/community/entries/{entry_id}/cover": {
+      "get": {
+        "operationId": "read_entry_cover_api_community_entries__entry_id__cover_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Entry Cover",
+        "tags": [
+          "community"
+        ]
+      }
+    },
+    "/api/community/suggestions": {
+      "get": {
+        "description": "'Other families built a similar curriculum using these\u2026': every curriculum\nbuilt around this textbook, and what's most often used with it.",
+        "operationId": "read_suggestions_api_community_suggestions_get",
+        "parameters": [
+          {
+            "description": "A textbook in your library",
+            "in": "query",
+            "name": "library_item_id",
+            "required": true,
+            "schema": {
+              "description": "A textbook in your library",
+              "title": "Library Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Suggestions",
+        "tags": [
+          "community"
+        ]
+      }
+    },
     "/api/curricula": {
       "get": {
         "operationId": "list_curricula_api_curricula_get",
@@ -9492,7 +13011,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/CurriculumRead"
+                    "$ref": "#/components/schemas/app__schemas__core__CurriculumRead"
                   },
                   "title": "Response List Curricula Api Curricula Get",
                   "type": "array"
@@ -9518,7 +13037,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CurriculumCreate"
+                "$ref": "#/components/schemas/app__schemas__core__CurriculumCreate"
               }
             }
           },
@@ -9529,7 +13048,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CurriculumRead"
+                  "$ref": "#/components/schemas/app__schemas__core__CurriculumRead"
                 }
               }
             },
@@ -9700,7 +13219,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CurriculumRead"
+                  "$ref": "#/components/schemas/app__schemas__core__CurriculumRead"
                 }
               }
             },
@@ -11467,7 +14986,7 @@
         "operationId": "list_library_api_library_get",
         "parameters": [
           {
-            "description": "reading_book, workbook, curriculum or online_program",
+            "description": "reading_book, textbook, workbook or online_program",
             "in": "query",
             "name": "kind",
             "required": false,
@@ -11480,7 +14999,7 @@
                   "type": "null"
                 }
               ],
-              "description": "reading_book, workbook, curriculum or online_program",
+              "description": "reading_book, textbook, workbook or online_program",
               "title": "Kind"
             }
           }
@@ -11566,9 +15085,56 @@
         ]
       }
     },
+    "/api/library/from-community": {
+      "post": {
+        "description": "Add a community catalog entry to your library: its details, chapters and\nlesson list are copied in, ready to schedule. Returns your copy (200) if you\nalready added it.",
+        "operationId": "add_from_community_api_library_from_community_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdoptEntry"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Add From Community",
+        "tags": [
+          "library"
+        ]
+      }
+    },
     "/api/library/search": {
       "get": {
-        "description": "Your library, the shared book cache, then Open Library and Google Books; each with a guessed kind.",
+        "description": "Your library, the community catalog (ready to add), the shared book cache, then Open Library\nand Google Books; each with its kind (catalog entries) or a guessed kind.",
         "operationId": "search_library_api_library_search_get",
         "parameters": [
           {
@@ -11968,7 +15534,7 @@
     },
     "/api/library/{item_id}/lessons": {
       "put": {
-        "description": "Replace a curriculum's whole lesson list, in order.",
+        "description": "Replace a textbook's whole lesson list, in order.",
         "operationId": "put_lessons_api_library__item_id__lessons_put",
         "parameters": [
           {
@@ -12081,68 +15647,6 @@
           }
         ],
         "summary": "Post Generate Lessons",
-        "tags": [
-          "library"
-        ]
-      }
-    },
-    "/api/library/{item_id}/materials": {
-      "put": {
-        "description": "Replace a curriculum's materials; keep a material by sending its ``id``.",
-        "operationId": "put_materials_api_library__item_id__materials_put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "item_id",
-            "required": true,
-            "schema": {
-              "title": "Item Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "items": {
-                  "$ref": "#/components/schemas/MaterialWrite"
-                },
-                "title": "Payload",
-                "type": "array"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryItemRead"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "summary": "Put Materials",
         "tags": [
           "library"
         ]
@@ -12338,6 +15842,548 @@
         "summary": "Generate Preview",
         "tags": [
           "pacing"
+        ]
+      }
+    },
+    "/api/planner/courses/{course_id}": {
+      "delete": {
+        "description": "Take a course off the calendar. Finished lessons stay on the day they were done.",
+        "operationId": "unschedule_api_planner_courses__course_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "title": "Course Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnscheduleResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Unschedule",
+        "tags": [
+          "planner"
+        ]
+      }
+    },
+    "/api/planner/curricula": {
+      "get": {
+        "operationId": "list_curricula_api_planner_curricula_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                  },
+                  "title": "Response List Curricula Api Planner Curricula Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Curricula",
+        "tags": [
+          "planner"
+        ]
+      },
+      "post": {
+        "description": "Start a curriculum, usually from a textbook (its subject and grade carry over).",
+        "operationId": "create_curriculum_api_planner_curricula_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__schemas__planner__CurriculumCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Curriculum",
+        "tags": [
+          "planner"
+        ]
+      }
+    },
+    "/api/planner/curricula/from-community": {
+      "post": {
+        "description": "Start from a curriculum other families built. Its books are added to your\nlibrary (or your copies are used), and you can change anything after.",
+        "operationId": "create_from_community_api_planner_curricula_from_community_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FromCommunityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create From Community",
+        "tags": [
+          "planner"
+        ]
+      }
+    },
+    "/api/planner/curricula/{planned_curriculum_id}": {
+      "delete": {
+        "description": "Delete a curriculum that isn't on anyone's calendar (unschedule it first).",
+        "operationId": "delete_curriculum_api_planner_curricula__planned_curriculum_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "planned_curriculum_id",
+            "required": true,
+            "schema": {
+              "title": "Planned Curriculum Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Curriculum",
+        "tags": [
+          "planner"
+        ]
+      },
+      "get": {
+        "operationId": "read_curriculum_api_planner_curricula__planned_curriculum_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "planned_curriculum_id",
+            "required": true,
+            "schema": {
+              "title": "Planned Curriculum Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Curriculum",
+        "tags": [
+          "planner"
+        ]
+      },
+      "patch": {
+        "operationId": "update_curriculum_api_planner_curricula__planned_curriculum_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "planned_curriculum_id",
+            "required": true,
+            "schema": {
+              "title": "Planned Curriculum Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurriculumUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Curriculum",
+        "tags": [
+          "planner"
+        ]
+      }
+    },
+    "/api/planner/curricula/{planned_curriculum_id}/items": {
+      "post": {
+        "description": "Add a library item as the textbook, a workbook, an online site, a book to\nread, or something for the parent.",
+        "operationId": "add_item_api_planner_curricula__planned_curriculum_id__items_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "planned_curriculum_id",
+            "required": true,
+            "schema": {
+              "title": "Planned Curriculum Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurriculumItemWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Add Item",
+        "tags": [
+          "planner"
+        ]
+      }
+    },
+    "/api/planner/curricula/{planned_curriculum_id}/items/{item_id}": {
+      "delete": {
+        "description": "Take a library item out of the curriculum (it stays in your library).",
+        "operationId": "remove_item_api_planner_curricula__planned_curriculum_id__items__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "planned_curriculum_id",
+            "required": true,
+            "schema": {
+              "title": "Planned Curriculum Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__planner__CurriculumRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Remove Item",
+        "tags": [
+          "planner"
+        ]
+      }
+    },
+    "/api/planner/curricula/{planned_curriculum_id}/schedule": {
+      "post": {
+        "description": "Put it on the calendar: a course and dated lessons for each child.",
+        "operationId": "schedule_api_planner_curricula__planned_curriculum_id__schedule_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "planned_curriculum_id",
+            "required": true,
+            "schema": {
+              "title": "Planned Curriculum Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Schedule",
+        "tags": [
+          "planner"
+        ]
+      }
+    },
+    "/api/planner/curricula/{planned_curriculum_id}/schedule/preview": {
+      "post": {
+        "description": "What scheduling would put on the calendar, for each child. Nothing is saved.",
+        "operationId": "preview_schedule_api_planner_curricula__planned_curriculum_id__schedule_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "planned_curriculum_id",
+            "required": true,
+            "schema": {
+              "title": "Planned Curriculum Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Preview Schedule",
+        "tags": [
+          "planner"
         ]
       }
     },
@@ -12651,7 +16697,7 @@
     },
     "/api/reference": {
       "get": {
-        "description": "The fixed lists: states, grades and subjects. Public: nothing private in it.",
+        "description": "The fixed lists: states, grades, subjects, library kinds and curriculum roles. Public: nothing private in it.",
         "operationId": "reference_api_reference_get",
         "responses": {
           "200": {

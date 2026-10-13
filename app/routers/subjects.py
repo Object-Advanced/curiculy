@@ -9,7 +9,9 @@ from app.models import Student, StudentSubject
 from app.reference.grades import GRADES, normalize_grade
 from app.reference.states import STATES, normalize_state
 from app.reference.subjects import SUBJECTS
+from app.schemas.planner import ROLE_HINTS, ROLES
 from app.schemas.subjects import (
+    ChoiceOption,
     GradeOption,
     ReferenceRead,
     StateOption,
@@ -20,6 +22,8 @@ from app.schemas.subjects import (
     StudentSubjectUpdate,
     SubjectOption,
 )
+from app.services.community import NOTICE as COMMUNITY_NOTICE
+from app.services.library_rules import KIND_HINTS, KINDS
 from app.services.subjects import (
     OWN,
     REQUIRED,
@@ -35,13 +39,16 @@ router = APIRouter(tags=["subjects"], dependencies=[Depends(require_parent)])
 
 @reference_router.get("/reference", response_model=ReferenceRead)
 def reference() -> ReferenceRead:
-    """The fixed lists: states, grades and subjects. Public: nothing private in it."""
+    """The fixed lists: states, grades, subjects, library kinds and curriculum roles. Public: nothing private in it."""
     return ReferenceRead(
         states=[StateOption(code=code, name=name) for code, name in STATES.items()],
         grades=[GradeOption(code=code, label=label) for code, label in GRADES],
         subjects=[
             SubjectOption(code=s.code, name=s.name, group=s.group, covers=s.covers) for s in SUBJECTS
         ],
+        library_kinds=[ChoiceOption(code=code, label=label, hint=KIND_HINTS[code]) for code, label in KINDS.items()],
+        curriculum_roles=[ChoiceOption(code=code, label=label, hint=ROLE_HINTS[code]) for code, label in ROLES.items()],
+        community_notice=COMMUNITY_NOTICE,
     )
 
 

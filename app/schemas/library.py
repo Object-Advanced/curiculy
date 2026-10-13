@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.reference.grades import normalize_grade
 from app.reference.subjects import SUBJECTS_BY_CODE
-from app.services.library_rules import KINDS, LESSON_TYPES, MATERIAL_KINDS, MEASURES, READING_KINDS
+from app.services.library_rules import KINDS, LESSON_TYPES, MEASURES, READING_KINDS
 
 _PASSWORD = re.compile(r"\bpass(word|wd|code)?\s*[:=]", re.IGNORECASE)
 
@@ -40,6 +40,7 @@ class LibraryItemFields(BaseModel):
     days_per_week: int | None = Field(default=None, ge=1, le=7)
     usual_pages_per_day: int | None = Field(default=None, ge=1, le=200)
     consumable: bool | None = None
+    for_parent: bool | None = None
     website_url: str | None = Field(default=None, max_length=1024)
     login_note: str | None = Field(default=None, max_length=255)
     cover_url: str | None = Field(default=None, max_length=1024)
@@ -100,7 +101,7 @@ class LibraryItemCreate(LibraryItemFields):
     @field_validator("kind")
     @classmethod
     def _kind(cls, value: str) -> str:
-        return _one_of(value, KINDS, "Pick reading book, workbook, curriculum or online program.")
+        return _one_of(value, KINDS, "Pick book, textbook, workbook or online site.")
 
 
 class LibraryItemUpdate(LibraryItemFields):
@@ -109,7 +110,7 @@ class LibraryItemUpdate(LibraryItemFields):
     @field_validator("kind")
     @classmethod
     def _kind(cls, value: str | None) -> str | None:
-        return _one_of(value, KINDS, "Pick reading book, workbook, curriculum or online program.")
+        return _one_of(value, KINDS, "Pick book, textbook, workbook or online site.")
 
 
 class ChapterWrite(BaseModel):
@@ -128,54 +129,15 @@ class ChapterRead(ChapterWrite):
     id: int
 
 
-class MaterialWrite(BaseModel):
-    """Leave out ``id`` to add a material; include it to keep or edit one."""
-
-    id: int | None = None
-    kind: str
-    title: str = Field(min_length=1, max_length=255)
-    isbn: str | None = Field(default=None, max_length=20)
-    pages: int | None = Field(default=None, ge=1, le=5000)
-    audience: str = "student"
-
-    @field_validator("kind")
-    @classmethod
-    def _kind(cls, value: str) -> str:
-        return _one_of(value, MATERIAL_KINDS, "Pick a kind of material from the list.")
-
-    @field_validator("audience")
-    @classmethod
-    def _audience(cls, value: str) -> str:
-        return _one_of(value, {"student", "parent"}, "A material is for the student or the parent.")
-
-
-class MaterialRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    kind: str
-    title: str
-    isbn: str | None
-    pages: int | None
-    audience: str
-
-
-class LessonPagesWrite(BaseModel):
-    material_id: int
-    start_page: int = Field(ge=1, le=5000)
-    end_page: int = Field(ge=1, le=5000)
-
-
-class LessonPagesRead(LessonPagesWrite):
-    model_config = ConfigDict(from_attributes=True)
-
-
 class LessonWrite(BaseModel):
     number: int | None = Field(default=None, ge=1, le=10000)
     name: str | None = Field(default=None, max_length=255)
     type: str = "lesson"
     unit: str | None = Field(default=None, max_length=255)
     minutes: int | None = Field(default=None, ge=1, le=300)
-    pages: list[LessonPagesWrite] = Field(default_factory=list)
+    # The lesson's pages in the textbook, quizzes and tests included.
+    start_page: int | None = Field(default=None, ge=1, le=5000)
+    end_page: int | None = Field(default=None, ge=1, le=5000)
 
     @field_validator("type")
     @classmethod
@@ -198,7 +160,8 @@ class LessonRead(BaseModel):
     type: str
     unit: str | None
     minutes: int | None
-    pages: list[LessonPagesRead]
+    start_page: int | None
+    end_page: int | None
 
 
 class LessonGenerate(BaseModel):
@@ -243,6 +206,15 @@ class CoverRead(BaseModel):
     review: str | None = None  # uploaded covers: pending, approved, rejected
 
 
+class CommunityLinkRead(BaseModel):
+    """How an item relates to the community catalog: in_catalog, in_review or not_shared."""
+
+    status: str
+    label: str
+    entry_id: int | None = None
+    families_count: int | None = None
+
+
 class LibraryItemSummary(BaseModel):
     id: int
     kind: str
@@ -272,17 +244,23 @@ class LibraryItemRead(LibraryItemSummary):
     days_per_week: int | None
     usual_pages_per_day: int | None
     consumable: bool
+    for_parent: bool
     website_url: str | None
     login_note: str | None
     notes: str | None
     chapters: list[ChapterRead]
-    materials: list[MaterialRead]
     lessons: list[LessonRead]
     readiness: ReadinessRead
+    # The curricula (Curriculum planner) this item is part of.
+    curriculum_ids: list[int] = Field(default_factory=list)
+    # Its place in the community catalog, in plain words.
+    community: CommunityLinkRead | None = None
 
 
 class SearchResult(BaseModel):
-    source: str  # library (already yours), catalog, open_library, google_books
+    # library (already yours), community (the Curiculy catalog: ready to add),
+    # book_cache, open_library, google_books (book details to start from)
+    source: str
     title: str
     subtitle: str | None = None
     authors: list[str] = Field(default_factory=list)
@@ -294,6 +272,11 @@ class SearchResult(BaseModel):
     guessed_kind: str
     guessed_kind_label: str
     library_item_id: int | None = None
+    # Community catalog results: the entry to add, and how many families use it
+    catalog_entry_id: int | None = None
+    families_count: int | None = None
+    # "170 lessons, 640 pages, entered by 4 families"
+    detail: str | None = None
 
 
 class SearchResults(BaseModel):

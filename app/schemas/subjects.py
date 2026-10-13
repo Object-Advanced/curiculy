@@ -24,12 +24,26 @@ class SubjectOption(BaseModel):
     covers: str = ""
 
 
+class ChoiceOption(BaseModel):
+    """A choice with a one-line explanation under it ("What is this?")."""
+
+    code: str
+    label: str
+    hint: str
+
+
 class ReferenceRead(BaseModel):
     """The fixed lists every screen picks from."""
 
     states: list[StateOption]
     grades: list[GradeOption]
     subjects: list[SubjectOption]
+    # Book, Textbook, Workbook, Online site
+    library_kinds: list[ChoiceOption] = []
+    # What each library item does in a curriculum (textbook, workbook, ...)
+    curriculum_roles: list[ChoiceOption] = []
+    # Shown where books are added: what the community catalog shares, and what it never does.
+    community_notice: str = ""
 
 
 class RequiredSubject(BaseModel):

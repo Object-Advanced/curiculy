@@ -1,16 +1,16 @@
-"""The family's Library: reading books, workbooks, curricula and online programs.
+"""The family's Library: books, textbooks, workbooks and online sites.
 
-One ``LibraryItem`` per book or program, with its structure: ``LibraryChapter``
-rows (reading books and workbooks), and for curricula ``LibraryMaterial`` rows
-(student text, worktext, teacher's edition…) and the full lesson list
-(``LibraryLesson`` with ``LibraryLessonPages`` per material).
+One ``LibraryItem`` per book or site, with its structure: ``LibraryChapter``
+rows (books and workbooks) and, for textbooks, the lesson list
+(``LibraryLesson``: number, name, type and pages). A curriculum, built in the
+Curriculum planner, ties a textbook to workbooks, sites and books for a
+subject (``app.models.planner``).
 
 What each kind must have before it can be scheduled, and why, lives in
-``app.services.library_rules``. See docs/6-planning/product-spine.md
-("Library: one shelf, four kinds of book").
+``app.services.library_rules``. See docs/6-planning/product-spine.md.
 
 These replace the older ``curricula`` / ``curriculum_plans`` structures as the
-new screens are built; the older tables stay until then.
+new screens take over; the older tables stay until then.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import TenantBase
+from app.models.community import CatalogEntry
 from app.models.mixins import TimestampMixin
 
 
@@ -26,7 +27,7 @@ class LibraryItem(TimestampMixin, TenantBase):
     __tablename__ = "library_items"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # reading_book, workbook, curriculum, online_program
+    # reading_book ("Book"), textbook, workbook, online_program ("Online site")
     kind: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -53,6 +54,9 @@ class LibraryItem(TimestampMixin, TenantBase):
     days_per_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     usual_pages_per_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
     consumable: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
+    # A teacher's edition or answer key: for the parent; kids never see it,
+    # and it needs no lesson list of its own.
+    for_parent: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
     website_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # A hint for the parent ("log in as Ada"). Never a password.
     login_note: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -62,12 +66,17 @@ class LibraryItem(TimestampMixin, TenantBase):
     cover_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     cover_review: Mapped[str | None] = mapped_column(String(16), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Added from the community catalog (or linked to it once the family's own
+    # entry was approved): the entry and the version this copy matches. Edits
+    # after that are offered to the catalog as corrections.
+    # (A shared table, so it's referenced by its column, not by name.)
+    catalog_entry_id: Mapped[int | None] = mapped_column(
+        ForeignKey(CatalogEntry.id, ondelete="SET NULL"), nullable=True, index=True
+    )
+    catalog_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     chapters: Mapped[list[LibraryChapter]] = relationship(
         back_populates="item", cascade="all, delete-orphan", order_by="LibraryChapter.position"
-    )
-    materials: Mapped[list[LibraryMaterial]] = relationship(
-        back_populates="item", cascade="all, delete-orphan", order_by="LibraryMaterial.position"
     )
     lessons: Mapped[list[LibraryLesson]] = relationship(
         back_populates="item", cascade="all, delete-orphan", order_by="LibraryLesson.position"
@@ -90,26 +99,6 @@ class LibraryChapter(TimestampMixin, TenantBase):
     item: Mapped[LibraryItem] = relationship(back_populates="chapters")
 
 
-class LibraryMaterial(TimestampMixin, TenantBase):
-    __tablename__ = "library_materials"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    item_id: Mapped[int] = mapped_column(
-        ForeignKey("library_items.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    position: Mapped[int] = mapped_column(Integer, nullable=False)
-    # student_text, worktext, teachers_edition, answer_key, tests, reader,
-    # activity_book, video_online, other
-    kind: Mapped[str] = mapped_column(String(32), nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    isbn: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    pages: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # "student" materials are what kid screens point to; "parent" ones aren't shown to kids.
-    audience: Mapped[str] = mapped_column(String(16), nullable=False, default="student")
-
-    item: Mapped[LibraryItem] = relationship(back_populates="materials")
-
-
 class LibraryLesson(TimestampMixin, TenantBase):
     __tablename__ = "library_lessons"
 
@@ -124,27 +113,8 @@ class LibraryLesson(TimestampMixin, TenantBase):
     type: Mapped[str] = mapped_column(String(16), nullable=False, default="lesson")
     unit: Mapped[str | None] = mapped_column(String(255), nullable=True)
     minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # The lesson's pages in this textbook, quizzes and tests included.
+    start_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     item: Mapped[LibraryItem] = relationship(back_populates="lessons")
-    pages: Mapped[list[LibraryLessonPages]] = relationship(
-        back_populates="lesson", cascade="all, delete-orphan", order_by="LibraryLessonPages.id"
-    )
-
-
-class LibraryLessonPages(TimestampMixin, TenantBase):
-    """A lesson's pages in one material ("Text pp. 212-215")."""
-
-    __tablename__ = "library_lesson_pages"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    lesson_id: Mapped[int] = mapped_column(
-        ForeignKey("library_lessons.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    material_id: Mapped[int] = mapped_column(
-        ForeignKey("library_materials.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    start_page: Mapped[int] = mapped_column(Integer, nullable=False)
-    end_page: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    lesson: Mapped[LibraryLesson] = relationship(back_populates="pages")
-    material: Mapped[LibraryMaterial] = relationship()

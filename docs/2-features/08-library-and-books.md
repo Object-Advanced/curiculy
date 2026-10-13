@@ -8,7 +8,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 | **Where** | `#/curricula` ("Curriculum catalog") |
 | **Health** | **Works, needs a simpler list-first layout** |
 
-> **Planned (core loop, 2026-10-12):** one **Library** that looks like a bookshelf, with filters (All · Curricula · Workbooks · Reading books · Online); search-first adding by ISBN, title, author or series; four kinds of book, each with its own required fields; real cover images; and a community catalog built from every family's entries, reviewed by admins. See [Library: one shelf, four kinds of book](../6-planning/product-spine.md#library-one-shelf-four-kinds-of-book) and [Community catalog](../6-planning/product-spine.md#community-catalog-built-by-every-family).
+> **Replacing this page (core loop, 2026-10-12):** one **Library** that looks like a bookshelf, with filters (All · Books · Textbooks · Workbooks · Online sites); a step-by-step walkthrough for adding, search first (the community catalog, then ISBN lookups); four kinds of book, each with its own required fields; real cover images. Curricula move to their own page, the **Curriculum planner**: a textbook plus what goes with it, scheduled per child. The **community catalog** is built from every family's entries and reviewed by admins. **The backend for all three is built** (`/api/library`, `/api/planner`, `/api/community`); the screens are next. See [Library](../6-planning/product-spine.md#library-one-shelf-four-kinds-of-book), [Curriculum planner](../6-planning/product-spine.md#curriculum-planner-a-textbook-and-what-goes-with-it) and [Community catalog](../6-planning/product-spine.md#community-catalog-built-by-every-family).
 
 ## Scope
 

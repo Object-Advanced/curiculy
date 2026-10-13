@@ -43,13 +43,16 @@ from app.models.education import (
 )
 from app.models.evidence_staging import EvidenceStaging
 from app.models.homework import HomeworkHelpMessage, HomeworkHelpSession, ParentNotification
-from app.models.library import (
-    LibraryChapter,
-    LibraryItem,
-    LibraryLesson,
-    LibraryLessonPages,
-    LibraryMaterial,
+from app.models.community import (
+    CatalogContribution,
+    CatalogEntry,
+    CatalogEntryVersion,
+    CatalogFlag,
+    CommunityCurriculum,
+    CommunityCurriculumItem,
 )
+from app.models.library import LibraryChapter, LibraryItem, LibraryLesson
+from app.models.planner import Course, PlannedCurriculum, PlannedCurriculumItem
 from app.models.mixins import TimestampMixin
 
 DEFAULT_STUDENT_COLOR = "#356b46"
@@ -312,12 +315,19 @@ __all__ = [
     "Household",
     "HouseholdSettings",
     "HouseholdState",
+    "CatalogContribution",
+    "CatalogEntry",
+    "CatalogEntryVersion",
+    "CatalogFlag",
+    "CommunityCurriculum",
+    "CommunityCurriculumItem",
+    "Course",
     "LibraryChapter",
     "LibraryItem",
     "LibraryLesson",
-    "LibraryLessonPages",
-    "LibraryMaterial",
     "ParentNotification",
+    "PlannedCurriculum",
+    "PlannedCurriculumItem",
     "Publisher",
     "ReportingCategory",
     "SchoolYear",

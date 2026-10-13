@@ -21,7 +21,7 @@ curiculy/
 │   │   ├── idempotency.py    Retried writes are applied once
 │   │   └── rate_limit.py     Sign-in attempt limits
 │   ├── routers/              One file per area of the API (25 files, about 100 endpoints)
-│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…); family_data.py (export, delete, restore one family), demo_households.py, subjects.py, library.py (+ library_rules.py: what each kind needs and why), text_checks.py (keyboard mashing)
+│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…); family_data.py (export, delete, restore one family), demo_households.py, subjects.py, library.py (+ library_rules.py: what each kind needs and why), planner.py (the Curriculum planner and scheduling), community.py (the community catalog: contributing, adding from it, suggestions) + community_checks.py (the automatic checks) + community_review.py (the admin review queue), text_checks.py (keyboard mashing)
 │   │   └── providers/        ISBN lookups: Open Library, Google Books
 │   ├── models/               Database tables (SQLAlchemy 2)
 │   ├── schemas/              Request and response shapes (Pydantic)
@@ -70,6 +70,7 @@ curiculy/
 | `assignments.py`, `calendar.py` | [Calendar and lessons](../2-features/04-calendar-and-lessons.md) |
 | `homework_help.py` | [Stuck? nudges](../2-features/07-stuck-nudges.md) |
 | `curricula.py`, `catalog.py`, `books.py` | [Library and books](../2-features/08-library-and-books.md) |
+| `library.py`, `planner.py`, `community.py`, `community_admin.py` | [Product spine](../6-planning/product-spine.md): Library, Curriculum planner, Community catalog (screens next) |
 | `pacing.py`, `curriculum_plans.py` | [Pacing and lesson plans](../2-features/09-pacing-and-lesson-plans.md) |
 | `recalibration.py` | [Recalibrate](../2-features/10-recalibrate.md) |
 | `school_years.py`, `exceptions.py` | [School year and days off](../2-features/11-school-year-and-days-off.md) |

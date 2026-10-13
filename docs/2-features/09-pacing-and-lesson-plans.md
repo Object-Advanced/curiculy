@@ -8,7 +8,7 @@ Turning a book or a pacing guide into dated lessons on a child's calendar. There
 | **Where** | "Auto-schedule a book" (Catalog and Calendar); the **Lesson plans** list in the Catalog (import, builder, Apply) |
 | **Health** | **Works and well tested.** The PDF and photo imports depend on the local AI and are the least predictable part. |
 
-> **Planned (core loop, 2026-10-12):** scheduling follows each kind of book's structure: a curriculum's full lesson list, a workbook's chapters and total pages, a reading book's pages, minutes or chapters. "Auto-schedule" and "Apply" become one verb, **Schedule**. See [Library](../6-planning/product-spine.md#library-one-shelf-four-kinds-of-book).
+> **Replacing this page (core loop, 2026-10-12):** scheduling follows each kind of book's structure: a textbook's full lesson list (one lesson a course day), a workbook's chapters and total pages (never the answer key), an online site's days a week, a book's pages. A curriculum is scheduled from the **Curriculum planner**, with a preview first; "Auto-schedule" and "Apply" become one verb, **Schedule**. The planner's scheduling backend is built (`/api/planner`). See [Curriculum planner](../6-planning/product-spine.md#curriculum-planner-a-textbook-and-what-goes-with-it).
 
 ## Scope
 

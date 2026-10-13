@@ -4,6 +4,226 @@
  */
 
 export interface paths {
+    "/api/admin/community/contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contributions */
+        get: operations["list_contributions_api_admin_community_contributions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/contributions/{contribution_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Contribution */
+        get: operations["read_contribution_api_admin_community_contributions__contribution_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/contributions/{contribution_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve
+         * @description Approve, or approve with edits. Books become (or update) a catalog entry;
+         *     curricula become a suggestion for families with the same textbook.
+         */
+        post: operations["approve_api_admin_community_contributions__contribution_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/contributions/{contribution_id}/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask
+         * @description Ask the contributor; their next change brings it back to the queue.
+         */
+        post: operations["ask_api_admin_community_contributions__contribution_id__ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/contributions/{contribution_id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Contribution Cover */
+        get: operations["read_contribution_cover_api_admin_community_contributions__contribution_id__cover_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/contributions/{contribution_id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Merge */
+        post: operations["merge_api_admin_community_contributions__contribution_id__merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/contributions/{contribution_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject
+         * @description Reject with a reason; the family is told, and their own copy is untouched.
+         */
+        post: operations["reject_api_admin_community_contributions__contribution_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Entries */
+        get: operations["list_entries_api_admin_community_entries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Entry */
+        get: operations["read_entry_api_admin_community_entries__entry_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/entries/{entry_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish */
+        post: operations["publish_api_admin_community_entries__entry_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/entries/{entry_id}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire
+         * @description Hide it from search. Families who added it keep their copies.
+         */
+        post: operations["retire_api_admin_community_entries__entry_id__retire_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/community/entries/{entry_id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rollback
+         * @description Go back to an older version (added as a new version, so history is kept).
+         */
+        post: operations["rollback_api_admin_community_entries__entry_id__rollback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/invite": {
         parameters: {
             query?: never;
@@ -470,6 +690,64 @@ export interface paths {
         put?: never;
         /** Lookup Isbn */
         post: operations["lookup_isbn_api_catalog_lookup_isbn_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/community/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Entry
+         * @description A catalog entry's details, chapters and lesson list, to look at before adding it.
+         */
+        get: operations["read_entry_api_community_entries__entry_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/community/entries/{entry_id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Entry Cover */
+        get: operations["read_entry_cover_api_community_entries__entry_id__cover_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/community/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Suggestions
+         * @description 'Other families built a similar curriculum using these…': every curriculum
+         *     built around this textbook, and what's most often used with it.
+         */
+        get: operations["read_suggestions_api_community_suggestions_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1144,6 +1422,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/library/from-community": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add From Community
+         * @description Add a community catalog entry to your library: its details, chapters and
+         *     lesson list are copied in, ready to schedule. Returns your copy (200) if you
+         *     already added it.
+         */
+        post: operations["add_from_community_api_library_from_community_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/library/search": {
         parameters: {
             query?: never;
@@ -1153,7 +1453,8 @@ export interface paths {
         };
         /**
          * Search Library
-         * @description Your library, the shared book cache, then Open Library and Google Books; each with a guessed kind.
+         * @description Your library, the community catalog (ready to add), the shared book cache, then Open Library
+         *     and Google Books; each with its kind (catalog entries) or a guessed kind.
          */
         get: operations["search_library_api_library_search_get"];
         put?: never;
@@ -1235,7 +1536,7 @@ export interface paths {
         get?: never;
         /**
          * Put Lessons
-         * @description Replace a curriculum's whole lesson list, in order.
+         * @description Replace a textbook's whole lesson list, in order.
          */
         put: operations["put_lessons_api_library__item_id__lessons_put"];
         post?: never;
@@ -1259,26 +1560,6 @@ export interface paths {
          * @description Add numbered lessons to fill in ("make lessons 1-170").
          */
         post: operations["post_generate_lessons_api_library__item_id__lessons_generate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/library/{item_id}/materials": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Put Materials
-         * @description Replace a curriculum's materials; keep a material by sending its ``id``.
-         */
-        put: operations["put_materials_api_library__item_id__materials_put"];
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1370,6 +1651,171 @@ export interface paths {
          * @description Draft a syllabus for a page range, paced by a deadline or a daily page count.
          */
         post: operations["generate_preview_api_pacing_generate_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/courses/{course_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unschedule
+         * @description Take a course off the calendar. Finished lessons stay on the day they were done.
+         */
+        delete: operations["unschedule_api_planner_courses__course_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/curricula": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Curricula */
+        get: operations["list_curricula_api_planner_curricula_get"];
+        put?: never;
+        /**
+         * Create Curriculum
+         * @description Start a curriculum, usually from a textbook (its subject and grade carry over).
+         */
+        post: operations["create_curriculum_api_planner_curricula_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/curricula/from-community": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create From Community
+         * @description Start from a curriculum other families built. Its books are added to your
+         *     library (or your copies are used), and you can change anything after.
+         */
+        post: operations["create_from_community_api_planner_curricula_from_community_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/curricula/{planned_curriculum_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Curriculum */
+        get: operations["read_curriculum_api_planner_curricula__planned_curriculum_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Curriculum
+         * @description Delete a curriculum that isn't on anyone's calendar (unschedule it first).
+         */
+        delete: operations["delete_curriculum_api_planner_curricula__planned_curriculum_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Curriculum */
+        patch: operations["update_curriculum_api_planner_curricula__planned_curriculum_id__patch"];
+        trace?: never;
+    };
+    "/api/planner/curricula/{planned_curriculum_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Item
+         * @description Add a library item as the textbook, a workbook, an online site, a book to
+         *     read, or something for the parent.
+         */
+        post: operations["add_item_api_planner_curricula__planned_curriculum_id__items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/curricula/{planned_curriculum_id}/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Item
+         * @description Take a library item out of the curriculum (it stays in your library).
+         */
+        delete: operations["remove_item_api_planner_curricula__planned_curriculum_id__items__item_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/curricula/{planned_curriculum_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Schedule
+         * @description Put it on the calendar: a course and dated lessons for each child.
+         */
+        post: operations["schedule_api_planner_curricula__planned_curriculum_id__schedule_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/curricula/{planned_curriculum_id}/schedule/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Schedule
+         * @description What scheduling would put on the calendar, for each child. Nothing is saved.
+         */
+        post: operations["preview_schedule_api_planner_curricula__planned_curriculum_id__schedule_preview_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1493,7 +1939,7 @@ export interface paths {
         };
         /**
          * Reference
-         * @description The fixed lists: states, grades and subjects. Public: nothing private in it.
+         * @description The fixed lists: states, grades, subjects, library kinds and curriculum roles. Public: nothing private in it.
          */
         get: operations["reference_api_reference_get"];
         put?: never;
@@ -1794,6 +2240,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdoptEntry */
+        AdoptEntry: {
+            /** Entry Id */
+            entry_id: number;
+        };
+        /** ApproveRequest */
+        ApproveRequest: {
+            edits?: components["schemas"]["CatalogEdits"] | null;
+            /**
+             * Include Cover
+             * @default true
+             */
+            include_cover: boolean;
+            /** Note */
+            note?: string | null;
+        };
         /**
          * ApprovedLesson
          * @description A lesson the parent accepted, which means its date is settled.
@@ -1812,6 +2274,11 @@ export interface components {
             start_page: number;
             /** Title */
             title: string;
+        };
+        /** AskRequest */
+        AskRequest: {
+            /** Question */
+            question: string;
         };
         /**
          * AssignmentCalendarRead
@@ -2312,6 +2779,52 @@ export interface components {
             /** Expires At */
             expires_at?: string | null;
         };
+        /**
+         * CatalogEdits
+         * @description Approve with edits: any field to change, and whole chapter or lesson lists.
+         */
+        CatalogEdits: {
+            /** Answer Key Start Page */
+            answer_key_start_page?: number | null;
+            /** Author */
+            author?: string | null;
+            /** Chapters */
+            chapters?: components["schemas"]["ChapterWrite"][] | null;
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Edition */
+            edition?: string | null;
+            /** For Parent */
+            for_parent?: boolean | null;
+            /** Grade */
+            grade?: string | null;
+            /** Isbn */
+            isbn?: string | null;
+            /** Lesson Count */
+            lesson_count?: number | null;
+            /** Lessons */
+            lessons?: components["schemas"]["LessonWrite"][] | null;
+            /** Measure */
+            measure?: string | null;
+            /** Minutes Per Session */
+            minutes_per_session?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Reading Kind */
+            reading_kind?: string | null;
+            /** Series */
+            series?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Total Pages */
+            total_pages?: number | null;
+            /** Website Url */
+            website_url?: string | null;
+        };
         /** ChapterRead */
         ChapterRead: {
             /** Id */
@@ -2333,10 +2846,342 @@ export interface components {
             subject_code?: string | null;
         };
         /**
+         * ChoiceOption
+         * @description A choice with a one-line explanation under it ("What is this?").
+         */
+        ChoiceOption: {
+            /** Code */
+            code: string;
+            /** Hint */
+            hint: string;
+            /** Label */
+            label: string;
+        };
+        /** CommunityChapter */
+        CommunityChapter: {
+            /** Name */
+            name: string;
+            /** Start Page */
+            start_page: number;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
+        /** CommunityCurriculumRead */
+        CommunityCurriculumRead: {
+            /** Days Per Week */
+            days_per_week: number | null;
+            /** Families Count */
+            families_count: number;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Items */
+            items: components["schemas"]["SuggestedItem"][];
+            /** Name */
+            name: string;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+        };
+        /**
+         * CommunityEntryRead
+         * @description Everything a family sees before adding it: the details, chapters and lesson list.
+         */
+        CommunityEntryRead: {
+            /** Answer Key Start Page */
+            answer_key_start_page: number | null;
+            /** Author */
+            author: string | null;
+            /** Chapters */
+            chapters: components["schemas"]["CommunityChapter"][];
+            /** Chapters Count */
+            chapters_count: number;
+            /** Cover Url */
+            cover_url: string | null;
+            /** Days Per Week */
+            days_per_week: number | null;
+            /** Detail */
+            detail: string;
+            /** Edition */
+            edition: string | null;
+            /** Families Count */
+            families_count: number;
+            /** For Parent */
+            for_parent: boolean;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** In Curricula */
+            in_curricula: number;
+            /** Isbn */
+            isbn: string | null;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Lesson Count */
+            lesson_count: number | null;
+            /** Lessons */
+            lessons: components["schemas"]["CommunityLesson"][];
+            /** Lessons Count */
+            lessons_count: number;
+            /** Library Item Id */
+            library_item_id: number | null;
+            /** Measure */
+            measure: string | null;
+            /** Minutes Per Session */
+            minutes_per_session: number | null;
+            /** Publisher */
+            publisher: string | null;
+            /** Reading Kind */
+            reading_kind: string | null;
+            /** Series */
+            series: string | null;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages: number | null;
+            /** Version */
+            version: number;
+            /** Website Url */
+            website_url: string | null;
+        };
+        /** CommunityEntrySummary */
+        CommunityEntrySummary: {
+            /** Author */
+            author: string | null;
+            /** Chapters Count */
+            chapters_count: number;
+            /** Cover Url */
+            cover_url: string | null;
+            /** Detail */
+            detail: string;
+            /** Edition */
+            edition: string | null;
+            /** Families Count */
+            families_count: number;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Isbn */
+            isbn: string | null;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Lessons Count */
+            lessons_count: number;
+            /** Publisher */
+            publisher: string | null;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages: number | null;
+        };
+        /** CommunityLesson */
+        CommunityLesson: {
+            /** End Page */
+            end_page?: number | null;
+            /** Minutes */
+            minutes?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Number */
+            number?: number | null;
+            /** Start Page */
+            start_page?: number | null;
+            /**
+             * Type
+             * @default lesson
+             */
+            type: string;
+            /** Unit */
+            unit?: string | null;
+        };
+        /**
+         * CommunityLinkRead
+         * @description How an item relates to the community catalog: in_catalog, in_review or not_shared.
+         */
+        CommunityLinkRead: {
+            /** Entry Id */
+            entry_id?: number | null;
+            /** Families Count */
+            families_count?: number | null;
+            /** Label */
+            label: string;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ContributionChanges
+         * @description What a correction (or a duplicate) changes compared with the catalog's version.
+         */
+        ContributionChanges: {
+            /** Chapters After */
+            chapters_after: number;
+            /** Chapters Before */
+            chapters_before: number;
+            /** Fields */
+            fields: components["schemas"]["FieldChange"][];
+            /** Lessons After */
+            lessons_after: number;
+            /** Lessons Before */
+            lessons_before: number;
+            /** Lessons Changed */
+            lessons_changed: string[];
+            /** Summary */
+            summary: string;
+        };
+        /** ContributionDetail */
+        ContributionDetail: {
+            changes: components["schemas"]["ContributionChanges"] | null;
+            compare_entry: components["schemas"]["CommunityEntrySummary"] | null;
+            contributor: components["schemas"]["ContributorRead"];
+            /** Contributor Label */
+            contributor_label: string;
+            /** Cover Url */
+            cover_url: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            /** Flags */
+            flags: components["schemas"]["FlagRead"][];
+            /** Has Cover */
+            has_cover: boolean;
+            /** Id */
+            id: number;
+            /** Is Correction */
+            is_correction: boolean;
+            /** Isbn */
+            isbn: string | null;
+            /** Item Kind */
+            item_kind: string | null;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            lookup: components["schemas"]["LookupBook"] | null;
+            /** Needs Review */
+            needs_review: boolean;
+            /** Notes */
+            notes: number;
+            /** Result Curriculum Id */
+            result_curriculum_id: number | null;
+            /** Result Entry Id */
+            result_entry_id: number | null;
+            /** Review Flags */
+            review_flags: number;
+            /** Review Note */
+            review_note: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ContributionSummary */
+        ContributionSummary: {
+            /** Contributor Label */
+            contributor_label: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Has Cover */
+            has_cover: boolean;
+            /** Id */
+            id: number;
+            /** Is Correction */
+            is_correction: boolean;
+            /** Isbn */
+            isbn: string | null;
+            /** Item Kind */
+            item_kind: string | null;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Needs Review */
+            needs_review: boolean;
+            /** Notes */
+            notes: number;
+            /** Review Flags */
+            review_flags: number;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ContributorRead */
+        ContributorRead: {
+            /** Accepted */
+            accepted: number;
+            /** Label */
+            label: string;
+            /** Rejected */
+            rejected: number;
+            /** Total */
+            total: number;
+        };
+        /**
          * ContributorRole
          * @enum {string}
          */
         ContributorRole: "author" | "co_author" | "editor" | "illustrator" | "translator" | "contributor";
+        /** CourseRead */
+        CourseRead: {
+            /** Curriculum Id */
+            curriculum_id: number;
+            /** End Date */
+            end_date: string | null;
+            /** Id */
+            id: number;
+            /** Lessons Scheduled */
+            lessons_scheduled: number;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Student Id */
+            student_id: number;
+            /** Student Name */
+            student_name: string;
+            /** Weekdays */
+            weekdays: number[];
+        };
         /** CoverRead */
         CoverRead: {
             /** Review */
@@ -2345,24 +3190,6 @@ export interface components {
             source: string | null;
             /** Url */
             url: string | null;
-        };
-        /** CurriculumCreate */
-        CurriculumCreate: {
-            /** Description */
-            description?: string | null;
-            /** Publisher */
-            publisher?: string | null;
-            /**
-             * Sku
-             * @description ISBN or proprietary barcode so a later scan finds this book locally.
-             */
-            sku?: string | null;
-            /** @default manual */
-            source_type: components["schemas"]["CurriculumSource"];
-            /** Subject */
-            subject?: string | null;
-            /** Title */
-            title?: string | null;
         };
         /** CurriculumFromISBNRead */
         CurriculumFromISBNRead: {
@@ -2400,6 +3227,27 @@ export interface components {
             subject?: string | null;
             /** Title */
             title?: string | null;
+        };
+        /** CurriculumItemRead */
+        CurriculumItemRead: {
+            /** Id */
+            id: number;
+            item: components["schemas"]["LibraryItemSummary"];
+            /** Library Item Id */
+            library_item_id: number;
+            /** Role */
+            role: string;
+            /** Role Hint */
+            role_hint: string;
+            /** Role Label */
+            role_label: string;
+        };
+        /** CurriculumItemWrite */
+        CurriculumItemWrite: {
+            /** Library Item Id */
+            library_item_id: number;
+            /** Role */
+            role: string;
         };
         /** CurriculumLessonRead */
         CurriculumLessonRead: {
@@ -2616,26 +3464,14 @@ export interface components {
              */
             total_weeks: number;
         };
-        /** CurriculumRead */
-        CurriculumRead: {
-            /** Description */
-            description: string | null;
-            /** Id */
-            id: number;
-            /**
-             * Is Scheduled
-             * @default false
-             */
-            is_scheduled: boolean;
-            /** Publisher Id */
-            publisher_id: number | null;
-            /** Publisher Name */
-            publisher_name: string | null;
-            source_type: components["schemas"]["CurriculumSource"];
-            /** Subject */
-            subject: string | null;
-            /** Title */
-            title: string;
+        /** CurriculumReadiness */
+        CurriculumReadiness: {
+            /** Missing */
+            missing: components["schemas"]["MissingRead"][];
+            /** Problems */
+            problems: components["schemas"]["ProblemRead"][];
+            /** Ready */
+            ready: boolean;
         };
         /** CurriculumResourceRead */
         CurriculumResourceRead: {
@@ -2715,6 +3551,19 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** CurriculumUpdate */
+        CurriculumUpdate: {
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Grade */
+            grade?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+        };
         /**
          * DashboardStatsRead
          * @description Family dashboard KPIs: today's progress and a seven-day completion trend.
@@ -2759,6 +3608,91 @@ export interface components {
             start_date: string | null;
             /** Student Id */
             student_id: number;
+        };
+        /** EntryAdminRead */
+        EntryAdminRead: {
+            /** Answer Key Start Page */
+            answer_key_start_page: number | null;
+            /** Author */
+            author: string | null;
+            /** Chapters */
+            chapters: components["schemas"]["CommunityChapter"][];
+            /** Chapters Count */
+            chapters_count: number;
+            /** Cover Url */
+            cover_url: string | null;
+            /** Days Per Week */
+            days_per_week: number | null;
+            /** Detail */
+            detail: string;
+            /** Edition */
+            edition: string | null;
+            /** Families Count */
+            families_count: number;
+            /** For Parent */
+            for_parent: boolean;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** In Curricula */
+            in_curricula: number;
+            /** Isbn */
+            isbn: string | null;
+            /** Kind */
+            kind: string;
+            /** Kind Label */
+            kind_label: string;
+            /** Lesson Count */
+            lesson_count: number | null;
+            /** Lessons */
+            lessons: components["schemas"]["CommunityLesson"][];
+            /** Lessons Count */
+            lessons_count: number;
+            /** Library Item Id */
+            library_item_id: number | null;
+            /** Measure */
+            measure: string | null;
+            /** Minutes Per Session */
+            minutes_per_session: number | null;
+            /** Publisher */
+            publisher: string | null;
+            /** Reading Kind */
+            reading_kind: string | null;
+            /** Series */
+            series: string | null;
+            /** Status */
+            status: string;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+            /** Total Pages */
+            total_pages: number | null;
+            /** Version */
+            version: number;
+            /** Versions */
+            versions: components["schemas"]["EntryVersionRead"][];
+            /** Website Url */
+            website_url: string | null;
+        };
+        /** EntryVersionRead */
+        EntryVersionRead: {
+            /** Approved By */
+            approved_by: string;
+            /** Contribution Id */
+            contribution_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Note */
+            note: string | null;
+            /** Version */
+            version: number;
         };
         /**
          * EvidenceLinkRequest
@@ -2821,6 +3755,40 @@ export interface components {
         FamilyCodeRead: {
             /** Code */
             code: string;
+        };
+        /** FieldChange */
+        FieldChange: {
+            /** Catalog */
+            catalog?: unknown;
+            /** Contributed */
+            contributed?: unknown;
+            /** Field */
+            field: string;
+        };
+        /** FlagRead */
+        FlagRead: {
+            /** Code */
+            code: string;
+            /** Group */
+            group: string;
+            /** Level */
+            level: string;
+            /** Message */
+            message: string;
+            /** Where */
+            where: string;
+        };
+        /**
+         * FromCommunityRequest
+         * @description Start from a curriculum other families built; leave out anything you'll swap.
+         */
+        FromCommunityRequest: {
+            /** Community Curriculum Id */
+            community_curriculum_id: number;
+            /** Entry Ids */
+            entry_ids?: number[] | null;
+            /** Name */
+            name?: string | null;
         };
         /**
          * GradeConfirm
@@ -3102,26 +4070,10 @@ export interface components {
              */
             type: string;
         };
-        /** LessonPagesRead */
-        LessonPagesRead: {
-            /** End Page */
-            end_page: number;
-            /** Material Id */
-            material_id: number;
-            /** Start Page */
-            start_page: number;
-        };
-        /** LessonPagesWrite */
-        LessonPagesWrite: {
-            /** End Page */
-            end_page: number;
-            /** Material Id */
-            material_id: number;
-            /** Start Page */
-            start_page: number;
-        };
         /** LessonRead */
         LessonRead: {
+            /** End Page */
+            end_page: number | null;
             /** Id */
             id: number;
             /** Minutes */
@@ -3130,8 +4082,8 @@ export interface components {
             name: string | null;
             /** Number */
             number: number | null;
-            /** Pages */
-            pages: components["schemas"]["LessonPagesRead"][];
+            /** Start Page */
+            start_page: number | null;
             /** Type */
             type: string;
             /** Unit */
@@ -3139,14 +4091,16 @@ export interface components {
         };
         /** LessonWrite */
         LessonWrite: {
+            /** End Page */
+            end_page?: number | null;
             /** Minutes */
             minutes?: number | null;
             /** Name */
             name?: string | null;
             /** Number */
             number?: number | null;
-            /** Pages */
-            pages?: components["schemas"]["LessonPagesWrite"][];
+            /** Start Page */
+            start_page?: number | null;
             /**
              * Type
              * @default lesson
@@ -3172,6 +4126,8 @@ export interface components {
             days_per_week?: number | null;
             /** Edition */
             edition?: string | null;
+            /** For Parent */
+            for_parent?: boolean | null;
             /** Grade */
             grade?: string | null;
             /** Isbn */
@@ -3213,13 +4169,18 @@ export interface components {
             author: string | null;
             /** Chapters */
             chapters: components["schemas"]["ChapterRead"][];
+            community?: components["schemas"]["CommunityLinkRead"] | null;
             /** Consumable */
             consumable: boolean;
             cover: components["schemas"]["CoverRead"];
+            /** Curriculum Ids */
+            curriculum_ids?: number[];
             /** Days Per Week */
             days_per_week: number | null;
             /** Edition */
             edition: string | null;
+            /** For Parent */
+            for_parent: boolean;
             /** Grade */
             grade: string | null;
             /** Id */
@@ -3236,8 +4197,6 @@ export interface components {
             lessons: components["schemas"]["LessonRead"][];
             /** Login Note */
             login_note: string | null;
-            /** Materials */
-            materials: components["schemas"]["MaterialRead"][];
             /** Measure */
             measure: string | null;
             /** Minutes Per Session */
@@ -3310,6 +4269,8 @@ export interface components {
             days_per_week?: number | null;
             /** Edition */
             edition?: string | null;
+            /** For Parent */
+            for_parent?: boolean | null;
             /** Grade */
             grade?: string | null;
             /** Isbn */
@@ -3343,46 +4304,39 @@ export interface components {
             /** Website Url */
             website_url?: string | null;
         };
+        /** LookupBook */
+        LookupBook: {
+            /** Authors */
+            authors: string[];
+            /** Page Count */
+            page_count: number | null;
+            /** Title */
+            title: string;
+        };
         /**
          * MappingSource
          * @enum {string}
          */
         MappingSource: "manual" | "imported" | "ai_parsed";
-        /** MaterialRead */
-        MaterialRead: {
-            /** Audience */
-            audience: string;
-            /** Id */
-            id: number;
-            /** Isbn */
-            isbn: string | null;
-            /** Kind */
-            kind: string;
-            /** Pages */
-            pages: number | null;
-            /** Title */
-            title: string;
-        };
         /**
-         * MaterialWrite
-         * @description Leave out ``id`` to add a material; include it to keep or edit one.
+         * MergeRequest
+         * @description Another family entered a book that's already in the catalog.
          */
-        MaterialWrite: {
+        MergeRequest: {
+            /** Entry Id */
+            entry_id: number;
             /**
-             * Audience
-             * @default student
+             * Include Cover
+             * @default true
              */
-            audience: string;
-            /** Id */
-            id?: number | null;
-            /** Isbn */
-            isbn?: string | null;
-            /** Kind */
-            kind: string;
-            /** Pages */
-            pages?: number | null;
-            /** Title */
-            title: string;
+            include_cover: boolean;
+            /** Note */
+            note?: string | null;
+            /**
+             * Replace Details
+             * @default false
+             */
+            replace_details: boolean;
         };
         /** MissingRead */
         MissingRead: {
@@ -3622,7 +4576,7 @@ export interface components {
          * ParentNotificationType
          * @enum {string}
          */
-        ParentNotificationType: "homework_help_started" | "homework_help_redirect" | "curriculum_plan_ready" | "curriculum_plan_failed";
+        ParentNotificationType: "homework_help_started" | "homework_help_redirect" | "curriculum_plan_ready" | "curriculum_plan_failed" | "catalog_update";
         /** PortfolioBookRead */
         PortfolioBookRead: {
             /**
@@ -3994,8 +4948,23 @@ export interface components {
          * @description The fixed lists every screen picks from.
          */
         ReferenceRead: {
+            /**
+             * Community Notice
+             * @default
+             */
+            community_notice: string;
+            /**
+             * Curriculum Roles
+             * @default []
+             */
+            curriculum_roles: components["schemas"]["ChoiceOption"][];
             /** Grades */
             grades: components["schemas"]["GradeOption"][];
+            /**
+             * Library Kinds
+             * @default []
+             */
+            library_kinds: components["schemas"]["ChoiceOption"][];
             /** States */
             states: components["schemas"]["StateOption"][];
             /** Subjects */
@@ -4009,6 +4978,11 @@ export interface components {
             invite_key: string;
             /** Password */
             password: string;
+        };
+        /** RejectRequest */
+        RejectRequest: {
+            /** Reason */
+            reason: string;
         };
         /** RequiredSubject */
         RequiredSubject: {
@@ -4029,6 +5003,82 @@ export interface components {
          * @enum {string}
          */
         ResourceKind: "student_text" | "student_workbook" | "teacher_guide" | "answer_key" | "solutions_manual" | "test_book" | "reader" | "manipulative" | "video" | "audio" | "software" | "other";
+        /** ReviewResult */
+        ReviewResult: {
+            contribution: components["schemas"]["ContributionDetail"];
+            /** Curriculum Id */
+            curriculum_id?: number | null;
+            /** Entry Id */
+            entry_id?: number | null;
+            /** Left Out */
+            left_out?: string[];
+        };
+        /** RollbackRequest */
+        RollbackRequest: {
+            /** Note */
+            note?: string | null;
+            /** Version */
+            version: number;
+        };
+        /** SchedulePreview */
+        SchedulePreview: {
+            /** School Year End */
+            school_year_end: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Students */
+            students: components["schemas"]["StudentPreview"][];
+            /** Warnings */
+            warnings: string[];
+            /** Weekday Names */
+            weekday_names: string[];
+            /** Weekdays */
+            weekdays: number[];
+        };
+        /**
+         * ScheduleRequest
+         * @description Which children, starting when, and (optionally) which weekdays (Monday = 0).
+         */
+        ScheduleRequest: {
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Student Ids */
+            student_ids: number[];
+            /** Weekdays */
+            weekdays?: number[] | null;
+        };
+        /** ScheduleResult */
+        ScheduleResult: {
+            /** Calendar Url */
+            calendar_url: string;
+            /** Courses */
+            courses: components["schemas"]["CourseRead"][];
+            /** Lessons Created */
+            lessons_created: number;
+        };
+        /** ScheduledItemPreview */
+        ScheduledItemPreview: {
+            /** Count */
+            count: number;
+            /** First Date */
+            first_date: string | null;
+            /** Last Date */
+            last_date: string | null;
+            /** Library Item Id */
+            library_item_id: number;
+            /** Role */
+            role: string;
+            /** Summary */
+            summary: string;
+            /** Title */
+            title: string;
+        };
         /** SchoolYearCreate */
         SchoolYearCreate: {
             /**
@@ -4114,8 +5164,14 @@ export interface components {
         SearchResult: {
             /** Authors */
             authors?: string[];
+            /** Catalog Entry Id */
+            catalog_entry_id?: number | null;
             /** Cover Url */
             cover_url?: string | null;
+            /** Detail */
+            detail?: string | null;
+            /** Families Count */
+            families_count?: number | null;
             /** Guessed Kind */
             guessed_kind: string;
             /** Guessed Kind Label */
@@ -4226,6 +5282,19 @@ export interface components {
         StudentPinUpsert: {
             /** Pin */
             pin: string;
+        };
+        /** StudentPreview */
+        StudentPreview: {
+            /** Finish Date */
+            finish_date: string | null;
+            /** Items */
+            items: components["schemas"]["ScheduledItemPreview"][];
+            /** Lessons */
+            lessons: number;
+            /** Student Id */
+            student_id: number;
+            /** Student Name */
+            student_name: string;
         };
         /** StudentRead */
         StudentRead: {
@@ -4423,6 +5492,33 @@ export interface components {
             /** Parent Id */
             parent_id: number | null;
         };
+        /** SuggestedItem */
+        SuggestedItem: {
+            entry: components["schemas"]["CommunityEntrySummary"];
+            /** Families Count */
+            families_count: number;
+            /** Library Item Id */
+            library_item_id: number | null;
+            /** Role */
+            role: string;
+            /** Role Label */
+            role_label: string;
+        };
+        /**
+         * SuggestionsRead
+         * @description 'Other families built a similar curriculum using these…'
+         */
+        SuggestionsRead: {
+            /** Curricula */
+            curricula: components["schemas"]["CommunityCurriculumRead"][];
+            /** Families Count */
+            families_count: number;
+            /** Message */
+            message: string;
+            /** Often Used With */
+            often_used_with: components["schemas"]["SuggestedItem"][];
+            textbook: components["schemas"]["CommunityEntrySummary"] | null;
+        };
         /** SwitchUserRequest */
         SwitchUserRequest: {
             /** Parent Password */
@@ -4508,6 +5604,13 @@ export interface components {
          * @enum {string}
          */
         UnitKind: "course" | "semester" | "quarter" | "module" | "unit" | "chapter" | "section" | "lesson" | "activity" | "assessment" | "review";
+        /** UnscheduleResult */
+        UnscheduleResult: {
+            /** Lessons Kept */
+            lessons_kept: number;
+            /** Lessons Removed */
+            lessons_removed: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -4545,6 +5648,87 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** CurriculumCreate */
+        app__schemas__core__CurriculumCreate: {
+            /** Description */
+            description?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /**
+             * Sku
+             * @description ISBN or proprietary barcode so a later scan finds this book locally.
+             */
+            sku?: string | null;
+            /** @default manual */
+            source_type: components["schemas"]["CurriculumSource"];
+            /** Subject */
+            subject?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** CurriculumRead */
+        app__schemas__core__CurriculumRead: {
+            /** Description */
+            description: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Is Scheduled
+             * @default false
+             */
+            is_scheduled: boolean;
+            /** Publisher Id */
+            publisher_id: number | null;
+            /** Publisher Name */
+            publisher_name: string | null;
+            source_type: components["schemas"]["CurriculumSource"];
+            /** Subject */
+            subject: string | null;
+            /** Title */
+            title: string;
+        };
+        /**
+         * CurriculumCreate
+         * @description Start a curriculum, usually from a textbook (its subject and grade carry over).
+         */
+        app__schemas__planner__CurriculumCreate: {
+            /** Days Per Week */
+            days_per_week?: number | null;
+            /** Grade */
+            grade?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Textbook Id */
+            textbook_id?: number | null;
+        };
+        /** CurriculumRead */
+        app__schemas__planner__CurriculumRead: {
+            /** Community Curriculum Id */
+            community_curriculum_id?: number | null;
+            /** Courses */
+            courses: components["schemas"]["CourseRead"][];
+            /** Days Per Week */
+            days_per_week: number | null;
+            /** Grade */
+            grade: string | null;
+            /** Id */
+            id: number;
+            /** Items */
+            items: components["schemas"]["CurriculumItemRead"][];
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            readiness: components["schemas"]["CurriculumReadiness"];
+            /** Subject Code */
+            subject_code: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -4554,6 +5738,403 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_contributions_api_admin_community_contributions_get: {
+        parameters: {
+            query?: {
+                /** @description open (default), all, pending, asked, approved, merged, rejected, withdrawn */
+                status?: string | null;
+                /** @description item or curriculum */
+                kind?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContributionSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_contribution_api_admin_community_contributions__contribution_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contribution_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContributionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_api_admin_community_contributions__contribution_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contribution_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_api_admin_community_contributions__contribution_id__ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contribution_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_contribution_cover_api_admin_community_contributions__contribution_id__cover_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contribution_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    merge_api_admin_community_contributions__contribution_id__merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contribution_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_api_admin_community_contributions__contribution_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contribution_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_entries_api_admin_community_entries_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                /** @description published or retired */
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunityEntrySummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_entry_api_admin_community_entries__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryAdminRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_api_admin_community_entries__entry_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryAdminRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retire_api_admin_community_entries__entry_id__retire_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryAdminRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollback_api_admin_community_entries__entry_id__rollback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RollbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryAdminRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_invite_key_api_admin_invite_post: {
         parameters: {
             query?: never;
@@ -5419,6 +7000,100 @@ export interface operations {
             };
         };
     };
+    read_entry_api_community_entries__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunityEntryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_entry_cover_api_community_entries__entry_id__cover_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_suggestions_api_community_suggestions_get: {
+        parameters: {
+            query: {
+                /** @description A textbook in your library */
+                library_item_id: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_curricula_api_curricula_get: {
         parameters: {
             query?: never;
@@ -5434,7 +7109,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CurriculumRead"][];
+                    "application/json": components["schemas"]["app__schemas__core__CurriculumRead"][];
                 };
             };
         };
@@ -5448,7 +7123,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CurriculumCreate"];
+                "application/json": components["schemas"]["app__schemas__core__CurriculumCreate"];
             };
         };
         responses: {
@@ -5458,7 +7133,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CurriculumRead"];
+                    "application/json": components["schemas"]["app__schemas__core__CurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -5550,7 +7225,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CurriculumRead"];
+                    "application/json": components["schemas"]["app__schemas__core__CurriculumRead"];
                 };
             };
             /** @description Validation Error */
@@ -6745,7 +8420,7 @@ export interface operations {
     list_library_api_library_get: {
         parameters: {
             query?: {
-                /** @description reading_book, workbook, curriculum or online_program */
+                /** @description reading_book, textbook, workbook or online_program */
                 kind?: string | null;
             };
             header?: never;
@@ -6784,6 +8459,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LibraryItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_from_community_api_library_from_community_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdoptEntry"];
             };
         };
         responses: {
@@ -7136,41 +8844,6 @@ export interface operations {
             };
         };
     };
-    put_materials_api_library__item_id__materials_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MaterialWrite"][];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LibraryItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_notifications_api_notifications_get: {
         parameters: {
             query?: never;
@@ -7295,6 +8968,355 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PacingPreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unschedule_api_planner_courses__course_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnscheduleResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_curricula_api_planner_curricula_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"][];
+                };
+            };
+        };
+    };
+    create_curriculum_api_planner_curricula_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["app__schemas__planner__CurriculumCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_from_community_api_planner_curricula_from_community_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FromCommunityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_curriculum_api_planner_curricula__planned_curriculum_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planned_curriculum_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_curriculum_api_planner_curricula__planned_curriculum_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planned_curriculum_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_curriculum_api_planner_curricula__planned_curriculum_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planned_curriculum_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CurriculumUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_item_api_planner_curricula__planned_curriculum_id__items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planned_curriculum_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CurriculumItemWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_item_api_planner_curricula__planned_curriculum_id__items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planned_curriculum_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__planner__CurriculumRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    schedule_api_planner_curricula__planned_curriculum_id__schedule_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planned_curriculum_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_schedule_api_planner_curricula__planned_curriculum_id__schedule_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planned_curriculum_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulePreview"];
                 };
             };
             /** @description Validation Error */

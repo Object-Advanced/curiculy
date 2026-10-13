@@ -163,3 +163,5 @@ class ParentNotificationType(StrEnum):
     HOMEWORK_HELP_REDIRECT = "homework_help_redirect"
     CURRICULUM_PLAN_READY = "curriculum_plan_ready"
     CURRICULUM_PLAN_FAILED = "curriculum_plan_failed"
+    # The community catalog: thanks, a question, or why something wasn't added
+    CATALOG_UPDATE = "catalog_update"
