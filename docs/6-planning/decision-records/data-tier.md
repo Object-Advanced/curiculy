@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Question** | Keep one SQLite file per family, or move to Postgres? |
-| **Status** | **Decided 2026-10-11: option B, Postgres with row-level security. Built 2026-10-12** (not yet deployed) |
+| **Status** | **Decided 2026-10-11: option B, Postgres with row-level security. Built and deployed 2026-10-12** |
 | **Recommendation** | **Postgres: one database, every family's rows walled off by the database itself (row-level security)** |
 | **Decide by** | Now: before the backend spine (subjects, curricula, courses) is built |
 
