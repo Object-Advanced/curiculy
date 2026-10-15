@@ -64,17 +64,17 @@ test("the calendar renders day, week, and month", async ({ page }) => {
   for (const period of ["Day", "Week", "Month"]) {
     await page.getByRole("button", { name: period, exact: true }).click();
     await expect(label).not.toHaveText("Loading…");
-    await expect(page.locator("#calendar-range-count")).toHaveText(/\d+ assignments?/);
+    await expect(page.locator("#calendar-range-count")).toHaveText(/\d+ lessons?/);
   }
 });
 
-test("a parent adds an assignment and checks it off", async ({ page }) => {
+test("a parent adds a lesson and checks it off", async ({ page }) => {
   await startDemo(page);
   await openRoute(page, "#/assignments", "Calendar");
-  await page.getByRole("button", { name: "+ Add assignment" }).click();
+  await page.getByRole("button", { name: "+ Add lesson" }).click();
   const form = page.locator("#assignment-form");
   await form.getByLabel("Title").fill("Lesson 12 problem set");
-  await form.getByRole("button", { name: "Save assignment" }).click();
+  await form.getByRole("button", { name: "Save lesson" }).click();
   await expect(page.locator(".cal-event", { hasText: "Lesson 12 problem set" })).toBeVisible();
 
   await openRoute(page, "#/students", /'s day$/);
@@ -223,4 +223,75 @@ test("a parent schedules one book on its own, without a curriculum", async ({ pa
   expect(curricula).toEqual([]);
   await panel.getByRole("link", { name: "Go to the calendar" }).click();
   await expect(page.locator(".cal-event", { hasText: "Read Charlotte's Web, pp. 1–46" })).toBeVisible();
+
+  // Its reading put it on Sam's reading list, where it moves along as it's checked off.
+  await page.goto("/next/reading");
+  const upNext = page.getByRole("region", { name: "Up next" });
+  await expect(upNext.getByRole("heading", { name: "Charlotte's Web" })).toBeVisible();
+  await expect(upNext.getByText("On the calendar: 0 of 4 readings done")).toBeVisible();
+});
+
+test("a parent tracks a book on a reading list", async ({ page }) => {
+  await startDemo(page);
+  await seedLibrary(page);
+  await page.goto("/next/reading");
+  await expect(page.getByRole("heading", { name: "Nothing on Sam Rivera's list yet" })).toBeVisible();
+  await page.getByRole("button", { name: "Add a book" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Add a book to Sam Rivera's list" });
+  await dialog.getByRole("combobox", { name: "Book", exact: true }).selectOption({ label: "Charlotte's Web (E. B. White)" });
+  await dialog.getByRole("button", { name: "Reading now" }).click();
+  await dialog.getByRole("button", { name: "Add it" }).click();
+  const reading = page.getByRole("region", { name: "Reading now" });
+  await expect(reading.getByRole("heading", { name: "Charlotte's Web" })).toBeVisible();
+  await reading.getByRole("button", { name: "Finished it" }).click();
+  await expect(page.getByRole("region", { name: "Finished" }).getByRole("heading", { name: "Charlotte's Web" })).toBeVisible();
+});
+
+test("a parent logs an activity with a photo", async ({ page }) => {
+  await startDemo(page);
+  await page.goto("/next/activities");
+  await expect(page.getByRole("heading", { name: "Nothing logged yet" })).toBeVisible();
+  await page.getByRole("button", { name: "Log an activity" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Log an activity" });
+  await dialog.getByLabel(/What did you do/).fill("5K race");
+  await dialog.getByRole("button", { name: "Physical education" }).click();
+  await dialog.getByLabel("Minutes", { exact: true }).fill("40");
+  // A 1×1 photo: stored as a work sample like any other.
+  await dialog.getByLabel("Photos").setInputFiles({
+    name: "finish-line.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+  });
+  await dialog.getByRole("button", { name: "Log it" }).click();
+  await expect(dialog).toBeHidden();
+  const card = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "5K race" }) });
+  await expect(card.getByText("Sam Rivera · 40 min")).toBeVisible();
+  await expect(card.getByText("Physical education")).toBeVisible();
+  await expect(card.getByRole("link", { name: "Open the photo from 5K race" })).toBeVisible();
+});
+
+test("a parent counts the year in hours and sets their own terms", async ({ page }) => {
+  await startDemo(page);
+  await openRoute(page, "#/settings", "Settings");
+  const counting = page.getByRole("group", { name: "Count the school year in" });
+  await counting.getByRole("button", { name: "Hours" }).click();
+  await expect(counting.getByRole("button", { name: "Hours" })).toHaveAttribute("aria-pressed", "true");
+  const household = await apiAs<{ count_by: string }>(page, "GET", "/household");
+  expect(household.count_by).toBe("hours");
+
+  await page.getByRole("tab", { name: "School Years" }).click();
+  await expect(page.getByText("4 terms: even quarters, which follow the year's dates")).toBeVisible();
+  await page.getByRole("button", { name: "Change terms" }).click();
+  for (const index of [3, 2]) {
+    await page.getByRole("button", { name: `Remove Quarter ${index + 1}` }).click();
+  }
+  const names = page.locator('form[data-form="year-terms"]').getByLabel("Name", { exact: true });
+  await names.first().fill("Fall");
+  await names.nth(1).fill("Spring");
+  await page.getByRole("button", { name: "Save terms" }).click();
+  await expect(page.getByText("2 terms, set by you")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back to even quarters" })).toBeVisible();
 });

@@ -4,7 +4,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { server } from "../test/server";
-import { item, renderAt, summary, serveParentBasics } from "../test/parent";
+import { item, readingEntry, renderAt, student, summary, serveParentBasics } from "../test/parent";
 
 describe("Library", () => {
   beforeEach(() => serveParentBasics());
@@ -165,8 +165,8 @@ describe("Library", () => {
     await user.click(within(panel).getByRole("button", { name: "Save the lesson list" }));
     await waitFor(() =>
       expect(saved).toEqual([
-        { number: 1, name: "Adding", type: "lesson", start_page: 1, end_page: 4 },
-        { number: 2, name: "Subtracting", type: "lesson", start_page: 5, end_page: 8 },
+        { number: 1, name: "Adding", type: "lesson", start_page: 1, end_page: 4, minutes: null },
+        { number: 2, name: "Subtracting", type: "lesson", start_page: 5, end_page: 8, minutes: null },
       ]),
     );
     expect(await within(panel).findByText("Ready to schedule.")).toBeInTheDocument();
@@ -265,5 +265,34 @@ describe("Library", () => {
     // The item refreshes with its new course; the "Done" message stays.
     expect(await within(panel).findByRole("region", { name: "On the calendar" })).toHaveTextContent("Ada: Oct 19 to Oct 30, 10 lessons");
     expect(within(panel).getByText(/Done: 10 lessons on the calendar/)).toBeInTheDocument();
+  });
+
+  it("puts a book on a child's reading list", async () => {
+    let added: unknown = null;
+    server.use(
+      http.get("*/api/library", () => HttpResponse.json([summary(9, "reading_book", "Charlotte's Web")])),
+      http.get("*/api/library/9", () => HttpResponse.json(item(9, "reading_book", "Charlotte's Web"))),
+      http.get("*/api/students", () => HttpResponse.json([student(3, "Ada"), student(4, "Ben")])),
+      http.get("*/api/reading-list", () =>
+        HttpResponse.json(
+          added
+            ? [readingEntry(1, 3, "Charlotte's Web"), readingEntry(2, 4, "Charlotte's Web", { student_name: "Ben" })]
+            : [readingEntry(1, 3, "Charlotte's Web")],
+        ),
+      ),
+      http.post("*/api/reading-list", async ({ request }) => {
+        added = await request.json();
+        return HttpResponse.json(readingEntry(2, 4, "Charlotte's Web", { student_name: "Ben" }), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt("/next/library?item=9");
+    const panel = await screen.findByRole("dialog", { name: "Charlotte's Web" });
+    await user.click(within(panel).getByRole("tab", { name: "Reading list" }));
+    const readers = await within(panel).findByRole("list", { name: "Who's reading it" });
+    expect(await within(readers).findByRole("link", { name: "Open Ada's list" })).toHaveAttribute("href", "/next/reading?child=3");
+    await user.click(within(readers).getByRole("button", { name: "Add to Ben's list" }));
+    await waitFor(() => expect(added).toEqual({ student_id: 4, library_item_id: 9, status: "up_next" }));
+    expect(await within(readers).findByRole("link", { name: "Open Ben's list" })).toBeInTheDocument();
   });
 });

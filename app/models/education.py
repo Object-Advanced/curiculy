@@ -191,6 +191,10 @@ class Assignment(TimestampMixin, TenantBase):
     library_lesson_id: Mapped[int | None] = mapped_column(
         ForeignKey("library_lessons.id", ondelete="SET NULL"), nullable=True
     )
+    # Minutes spent: an estimate when scheduled (the lesson list's or the
+    # course's default), confirmed or changed when checked off. Hours-mode
+    # families count these toward the state's hours.
+    minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     shared_group_uuid: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,

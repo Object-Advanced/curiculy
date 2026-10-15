@@ -13,7 +13,7 @@ import {
 import { useStudents } from "../../api/queries";
 import { shortDate, todayISO } from "../../lib/dates";
 import { nextMonday } from "../../lib/structure";
-import { ErrorLine, TextField } from "../ui/Fields";
+import { ErrorLine, NumberField, TextField } from "../ui/Fields";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -69,6 +69,7 @@ export function ScheduleStep({ target }: { target: ScheduleTarget }) {
   const [pagesPerDay, setPagesPerDay] = useState<number | null>(pace?.usual_pages_per_day ?? 5);
   const [chaptersPerDay, setChaptersPerDay] = useState<number | null>(1);
   const [finishBy, setFinishBy] = useState("");
+  const [minutes, setMinutes] = useState<number | null>(null);
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -88,6 +89,7 @@ export function ScheduleStep({ target }: { target: ScheduleTarget }) {
     ...(pace && choice === "pages" ? { pages_per_day: pagesPerDay } : {}),
     ...(pace && choice === "chapters" ? { chapters_per_day: chaptersPerDay } : {}),
     ...(pace && choice === "finish" ? { finish_by: finishBy } : {}),
+    ...(minutes ? { minutes_per_lesson: minutes } : {}),
   });
 
   const runPreview = async () => {
@@ -187,6 +189,13 @@ export function ScheduleStep({ target }: { target: ScheduleTarget }) {
             setStart(value);
           }}
           hint="The first lesson lands on the first school day on or after this date."
+        />
+        <NumberField
+          label="About how many minutes a lesson?"
+          max={600}
+          value={minutes}
+          onChange={setMinutes}
+          hint="Optional. Families who count hours add these up. A lesson list's own times, and an online site's session length, come first."
         />
       </div>
 

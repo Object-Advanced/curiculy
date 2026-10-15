@@ -88,14 +88,14 @@
         {% endfor %}
       </ol>
       {% else %}
-      <p class="empty">No completed assignments in this period.</p>
+      <p class="empty">No completed lessons in this period.</p>
       {% endif %}
     </section>
     {% endif %}
 
     {% if report.include_assignments %}
     <section class="block">
-      <h2>Assignments</h2>
+      <h2>Lessons</h2>
       {% if section.assignments %}
       <ol class="entries">
         {% for item in section.assignments %}
@@ -112,7 +112,7 @@
         {% endfor %}
       </ol>
       {% else %}
-      <p class="empty">No assignments in this period.</p>
+      <p class="empty">No lessons in this period.</p>
       {% endif %}
     </section>
     {% endif %}
@@ -181,7 +181,7 @@
 
     {% if report.include_notes %}
     <section class="block">
-      <h2>Lesson &amp; Assignment Notes</h2>
+      <h2>Lesson notes</h2>
       {% if section.notes %}
       <ol class="entries">
         {% for item in section.notes %}

@@ -37,6 +37,12 @@ export type Pace = Schemas["PaceRead"];
 export type Course = Schemas["CourseRead"];
 export type BarcodeReading = Schemas["BarcodeRead"];
 export type PageReading = Schemas["PageReadingRead"];
+export type ReadingEntry = Schemas["ReadingEntryRead"];
+export type ReadingCreate = Schemas["ReadingEntryCreate"];
+export type ReadingUpdate = Schemas["ReadingEntryUpdate"];
+export type Activity = Schemas["ActivityRead"];
+export type ActivityCreate = Schemas["ActivityCreate"];
+export type ActivityUpdate = Schemas["ActivityUpdate"];
 
 export const parentKeys = {
   reference: ["reference"] as const,
@@ -51,6 +57,10 @@ export const parentKeys = {
   contribution: (id: number) => ["admin", "contribution", id] as const,
   entries: (q: string) => ["admin", "entries", q] as const,
   entryAdmin: (id: number) => ["admin", "entry", id] as const,
+  reading: ["reading"] as const,
+  readingFor: (studentId: number) => ["reading", "student", studentId] as const,
+  readersOf: (itemId: number) => ["reading", "item", itemId] as const,
+  activities: ["activities"] as const,
 };
 
 /** Unwrap an openapi-fetch result, or throw the server's message. */
@@ -336,7 +346,11 @@ export function useSchedule(id: number) {
           body,
         }),
       ),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.curricula }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: parentKeys.curricula });
+      // Its books to read go on the children's reading lists.
+      void queryClient.invalidateQueries({ queryKey: parentKeys.reading });
+    },
   });
 }
 
@@ -349,6 +363,7 @@ export function useUnschedule() {
       void queryClient.invalidateQueries({ queryKey: parentKeys.curricula });
       // A book scheduled on its own shows its courses in the Library.
       void queryClient.invalidateQueries({ queryKey: parentKeys.library });
+      void queryClient.invalidateQueries({ queryKey: parentKeys.reading });
     },
   });
 }
@@ -366,7 +381,11 @@ export function useScheduleItem(itemId: number) {
   return useMutation({
     mutationFn: async (body: ScheduleRequest) =>
       unwrap(await api.POST("/api/library/{item_id}/schedule", { params: { path: { item_id: itemId } }, body })),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.library }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: parentKeys.library });
+      // A book scheduled on its own goes on the child's reading list.
+      void queryClient.invalidateQueries({ queryKey: parentKeys.reading });
+    },
   });
 }
 
@@ -478,5 +497,102 @@ export function useEntryAction(id: number) {
       queryClient.setQueryData(parentKeys.entryAdmin(id), entry);
       void queryClient.invalidateQueries({ queryKey: ["admin", "entries"] });
     },
+  });
+}
+
+// ---- Reading lists ------------------------------------------------------------------
+
+/** One child's reading list: reading now, up next, then finished (most recent first). */
+export function useReadingList(studentId: number | null) {
+  return useQuery({
+    queryKey: parentKeys.readingFor(studentId ?? 0),
+    queryFn: async () =>
+      unwrap(await api.GET("/api/reading-list", { params: { query: { student_id: studentId as number } } })),
+    enabled: studentId !== null,
+  });
+}
+
+/** Who has a book on their list (the Library item panel). */
+export function useReadersOf(itemId: number | null) {
+  return useQuery({
+    queryKey: parentKeys.readersOf(itemId ?? 0),
+    queryFn: async () =>
+      unwrap(await api.GET("/api/reading-list", { params: { query: { library_item_id: itemId as number } } })),
+    enabled: itemId !== null,
+  });
+}
+
+function useReadingChanged() {
+  const queryClient = useQueryClient();
+  return () => void queryClient.invalidateQueries({ queryKey: parentKeys.reading });
+}
+
+export function useAddReading() {
+  const changed = useReadingChanged();
+  return useMutation({
+    mutationFn: async (body: ReadingCreate) => unwrap(await api.POST("/api/reading-list", { body })),
+    onSuccess: changed,
+  });
+}
+
+export function useUpdateReading() {
+  const changed = useReadingChanged();
+  return useMutation({
+    mutationFn: async ({ id, body }: { id: number; body: ReadingUpdate }) =>
+      unwrap(await api.PATCH("/api/reading-list/{reading_id}", { params: { path: { reading_id: id } }, body })),
+    onSuccess: changed,
+  });
+}
+
+export function useRemoveReading() {
+  const changed = useReadingChanged();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      unwrap(await api.DELETE("/api/reading-list/{reading_id}", { params: { path: { reading_id: id } } })),
+    onSuccess: changed,
+  });
+}
+
+// ---- Activities ---------------------------------------------------------------------
+
+/** Every activity, newest first; the page filters by child. */
+export function useActivities() {
+  return useQuery({
+    queryKey: parentKeys.activities,
+    queryFn: async () => unwrap(await api.GET("/api/activities")),
+  });
+}
+
+export async function createActivity(body: ActivityCreate): Promise<Activity> {
+  return unwrap(await api.POST("/api/activities", { body }));
+}
+
+export async function updateActivity(id: number, body: ActivityUpdate): Promise<Activity> {
+  return unwrap(await api.PATCH("/api/activities/{activity_id}", { params: { path: { activity_id: id } }, body }));
+}
+
+export async function addActivityPhoto(id: number, file: File) {
+  return unwrap(
+    await api.POST("/api/activities/{activity_id}/evidence", {
+      params: { path: { activity_id: id } },
+      ...photoBody(file),
+    }),
+  );
+}
+
+export async function removeActivityPhoto(id: number, evidenceId: number) {
+  return unwrap(
+    await api.DELETE("/api/activities/{activity_id}/evidence/{activity_evidence_id}", {
+      params: { path: { activity_id: id, activity_evidence_id: evidenceId } },
+    }),
+  );
+}
+
+export function useDeleteActivity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      unwrap(await api.DELETE("/api/activities/{activity_id}", { params: { path: { activity_id: id } } })),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.activities }),
   });
 }

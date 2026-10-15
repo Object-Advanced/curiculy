@@ -63,7 +63,7 @@ from app.schemas.planner import (
     ScheduleResult,
     StudentPreview,
 )
-from app.services import community
+from app.services import community, reading
 from app.services.courses import course_read, solo_curriculum_id
 from app.services.library import get_item, item_summary
 from app.services.library_rules import ONLINE_PROGRAM, READING_BOOK, TEXTBOOK, WORKBOOK, readiness
@@ -371,6 +371,8 @@ class Planned:
     item: LibraryItem
     role: str
     library_lesson_id: int | None = None
+    # The lesson list's minutes, or an online site's session length
+    minutes: int | None = None
 
 
 def _course_weekdays(curriculum: PlannedCurriculum, school_weekdays: list[int], requested: list[int] | None) -> list[int]:
@@ -600,7 +602,7 @@ def plan_lessons(curriculum: PlannedCurriculum, days: list[date], chapters_per_d
     textbook = textbook_of(curriculum)
     if textbook is not None:
         for day, lesson in zip(days, textbook.lessons):
-            planned.append(Planned(day, _lesson_title(textbook, lesson), textbook, "textbook", lesson.id))
+            planned.append(Planned(day, _lesson_title(textbook, lesson), textbook, "textbook", lesson.id, lesson.minutes))
     lead = lead_item(curriculum) if textbook is None and chapters_per_day else None
 
     def pages_of(item: LibraryItem, item_days: list[date]):
@@ -628,7 +630,7 @@ def plan_lessons(curriculum: PlannedCurriculum, days: list[date], chapters_per_d
             else:
                 minutes = item.minutes_per_session or 0
                 for day in sessions:
-                    planned.append(Planned(day, f"{item.title} · {minutes} minutes"[:255], item, "online"))
+                    planned.append(Planned(day, f"{item.title} · {minutes} minutes"[:255], item, "online", None, minutes or None))
 
     if readers:
         # Books are read one after another, each over a share of the days.
@@ -730,10 +732,18 @@ def schedule(db: Session, curriculum: PlannedCurriculum, request: ScheduleReques
             start_date=request.start_date,
             end_date=days[-1] if days else None,
             weekdays=encode_weekdays(weekdays),
+            default_minutes=request.minutes_per_lesson,
         )
         db.add(course)
         db.flush()
-        for row in plan_lessons(curriculum, days, request.chapters_per_day):
+        rows = plan_lessons(curriculum, days, request.chapters_per_day)
+        books = {row.item.id: row.item for row in rows if row.item.kind == READING_BOOK}
+        for book in books.values():
+            reading.on_scheduled(
+                db, student_id, book, course.school_year_id,
+                None if curriculum.solo else curriculum.subject_code,
+            )
+        for row in rows:
             db.add(Assignment(
                 student_id=student_id,
                 title=row.title,
@@ -742,6 +752,7 @@ def schedule(db: Session, curriculum: PlannedCurriculum, request: ScheduleReques
                 course_id=course.id,
                 library_item_id=row.item.id,
                 library_lesson_id=row.library_lesson_id,
+                minutes=row.minutes or request.minutes_per_lesson,
             ))
             created += 1
         courses.append(course)
@@ -764,6 +775,7 @@ def unschedule(db: Session, course: Course) -> tuple[int, int]:
     """Take a course off the calendar. Finished lessons stay where they were done."""
     lessons = list(db.scalars(select(Assignment).where(Assignment.course_id == course.id)))
     finished = [lesson for lesson in lessons if lesson.status == AssignmentStatus.COMPLETED]
+    reading.on_unscheduled(db, course, lessons)
     for lesson in lessons:
         if lesson.status != AssignmentStatus.COMPLETED:
             db.delete(lesson)

@@ -16,3 +16,4 @@ class CourseRead(BaseModel):
     end_date: date | None
     weekdays: list[int]
     lessons_scheduled: int
+    default_minutes: int | None = None

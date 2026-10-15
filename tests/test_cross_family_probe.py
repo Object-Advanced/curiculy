@@ -28,6 +28,9 @@ from app.db import open_family_session
 from app.enums import AttendanceStatus, CurriculumPlanStatus, ExceptionKind, ParentNotificationType
 from app.main import create_app
 from app.models import (
+    Activity,
+    ActivityEvidence,
+    ActivityStudent,
     Assignment,
     AssignmentEvidence,
     AssignmentGrade,
@@ -47,6 +50,7 @@ from app.models import (
     ParentNotification,
     PlannedCurriculum,
     PlannedCurriculumItem,
+    ReadingListEntry,
     SchoolYear,
     Student,
     StudentSubject,
@@ -72,6 +76,9 @@ ID_PARAMS = {
     "planned_curriculum_id": "planned_curriculum",
     "course_id": "course",
     "file_path": "file_path",
+    "reading_id": "reading",
+    "activity_id": "activity",
+    "activity_evidence_id": "activity_evidence",
 }
 # Path parameters that aren't a family's record (shared book cache and
 # community catalog, static files).
@@ -96,6 +103,10 @@ BODIES = {
         "student_ids": [1], "start_date": "2026-10-13"},
     ("POST", "/api/library/{item_id}/schedule/preview"): {"student_ids": [1], "start_date": "2026-10-13"},
     ("POST", "/api/library/{item_id}/schedule"): {"student_ids": [1], "start_date": "2026-10-13"},
+    ("PUT", "/api/school-years/{school_year_id}/terms"): [
+        {"name": "Hacked", "start_date": "2026-08-01", "end_date": "2026-12-31"}],
+    ("PATCH", "/api/reading-list/{reading_id}"): {"status": "finished"},
+    ("PATCH", "/api/activities/{activity_id}"): {"title": "Hacked"},
 }
 
 
@@ -168,6 +179,17 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             student_id=student.id, title=f"{prefix} course lesson", scheduled_date=date(2026, 10, 12),
             course_id=course.id, library_item_id=textbook.id,
         ))
+        session.add(library_item)
+        session.flush()
+        reading = ReadingListEntry(student_id=student.id, library_item_id=library_item.id, school_year_id=year.id)
+        activity = Activity(
+            title=f"{prefix} activity", on_date=date(2026, 10, 10), notes=f"{prefix} activity notes",
+            subject_codes=["pe"], students=[ActivityStudent(student_id=student.id)],
+        )
+        activity.evidence.append(ActivityEvidence(
+            file_path=file_path, captured_at=datetime(2026, 10, 10, tzinfo=timezone.utc)))
+        session.add_all([reading, activity])
+        session.flush()
         session.add_all(
             [
                 library_item,
@@ -210,6 +232,9 @@ def _seed(tenant_id: str, prefix: str, evidence_dir: Path) -> dict:
             "planned_curriculum": planned.id,
             "course": course.id,
             "file_path": file_path,
+            "reading": reading.id,
+            "activity": activity.id,
+            "activity_evidence": activity.evidence[0].id,
         }
     finally:
         session.close()
@@ -324,6 +349,15 @@ def test_ids_inside_request_bodies_refuse_another_familys_records(probe: dict) -
          {"student_ids": [b["student"]], "start_date": "2026-10-13"}),
         ("POST", f"/api/library/{a['library_item']}/schedule",
          {"student_ids": [b["student"]], "start_date": "2026-10-13"}),
+        ("POST", "/api/reading-list", {"student_id": b["student"], "library_item_id": a["library_item"]}),
+        ("POST", "/api/reading-list", {"student_id": a["student"], "library_item_id": b["library_item"]}),
+        ("GET", f"/api/reading-list?student_id={b['student']}", None),
+        ("GET", f"/api/reading-list?library_item_id={b['library_item']}", None),
+        ("POST", "/api/activities", {"title": "x", "on_date": "2026-10-13", "student_ids": [b["student"]]}),
+        ("POST", "/api/activities", {"title": "x", "on_date": "2026-10-13",
+                                     "student_ids": [a["student"], b["student"]]}),
+        ("PATCH", f"/api/activities/{a['activity']}", {"student_ids": [b["student"]]}),
+        ("GET", f"/api/activities?student_id={b['student']}", None),
     ]
     for method, url, body in attempts:
         response = client.request(method, url, headers=headers, json=body)

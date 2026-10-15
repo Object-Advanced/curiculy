@@ -114,7 +114,7 @@ class TestWeeklyManifestHtml:
         assert "Weekend catch-up" not in html
         assert html.count('class="checkbox"') == 3
         assert html.count('class="day-header"') == 5
-        assert "No assignments" in html
+        assert "No lessons" in html
         assert "@page { size: letter; margin: 0.5in; }" in html
         assert "font-family: 'Times New Roman', serif" in html
         assert "background: #fff" in html

@@ -4,6 +4,83 @@
  */
 
 export interface paths {
+    "/api/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Activities
+         * @description Newest first. ``from`` and ``to`` include the days given.
+         */
+        get: operations["list_activities_api_activities_get"];
+        put?: never;
+        /** Create Activity */
+        post: operations["create_activity_api_activities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/activities/{activity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Activity */
+        get: operations["get_activity_api_activities__activity_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Activity */
+        delete: operations["delete_activity_api_activities__activity_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Activity */
+        patch: operations["update_activity_api_activities__activity_id__patch"];
+        trace?: never;
+    };
+    "/api/activities/{activity_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Activity Evidence
+         * @description A photo or PDF from the activity: a work sample for each of its subjects.
+         */
+        post: operations["upload_activity_evidence_api_activities__activity_id__evidence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/activities/{activity_id}/evidence/{activity_evidence_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Activity Evidence */
+        delete: operations["delete_activity_evidence_api_activities__activity_id__evidence__activity_evidence_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/community/contributions": {
         parameters: {
             query?: never;
@@ -1974,6 +2051,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reading
+         * @description Reading first, then up next, then finished (most recent first).
+         */
+        get: operations["list_reading_api_reading_list_get"];
+        put?: never;
+        /**
+         * Add Reading
+         * @description Put a book on a child's list for this school year ("just track it").
+         */
+        post: operations["add_reading_api_reading_list_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading-list/{reading_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Reading
+         * @description Take a book off a child's list. Lessons on the calendar stay.
+         */
+        delete: operations["delete_reading_api_reading_list__reading_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Reading
+         * @description Started, finished, or what it counts toward. Dates fill in with today when left out.
+         */
+        patch: operations["update_reading_api_reading_list__reading_id__patch"];
+        trace?: never;
+    };
     "/api/recalibrate/{student_id}/execute": {
         parameters: {
             query?: never;
@@ -2085,6 +2210,46 @@ export interface paths {
         head?: never;
         /** Update School Year */
         patch: operations["update_school_year_api_school_years__school_year_id__patch"];
+        trace?: never;
+    };
+    "/api/school-years/{school_year_id}/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Terms
+         * @description The parent's own terms (semesters, uneven quarters): in order, inside the year, not overlapping.
+         */
+        put: operations["set_terms_api_school_years__school_year_id__terms_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/school-years/{school_year_id}/terms/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Year Terms
+         * @description Back to four even quarters that follow the year's dates.
+         */
+        post: operations["reset_year_terms_api_school_years__school_year_id__terms_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/settings/exception-colors": {
@@ -2304,6 +2469,99 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityChild */
+        ActivityChild: {
+            /** Name */
+            name: string;
+            /** Student Id */
+            student_id: number;
+        };
+        /**
+         * ActivityCreate
+         * @description "5K race, PE, 40 minutes", for one child or several.
+         */
+        ActivityCreate: {
+            /** Link Url */
+            link_url?: string | null;
+            /** Minutes */
+            minutes?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * On Date
+             * Format: date
+             */
+            on_date: string;
+            /** Student Ids */
+            student_ids: number[];
+            /** Subject Codes */
+            subject_codes?: string[];
+            /** Title */
+            title: string;
+        };
+        /** ActivityEvidenceRead */
+        ActivityEvidenceRead: {
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /** File Path */
+            file_path: string;
+            /** Id */
+            id: number;
+        };
+        /** ActivityRead */
+        ActivityRead: {
+            /** Evidence */
+            evidence: components["schemas"]["ActivityEvidenceRead"][];
+            /** Id */
+            id: number;
+            /** Link Url */
+            link_url: string | null;
+            /** Minutes */
+            minutes: number | null;
+            /** Notes */
+            notes: string | null;
+            /**
+             * On Date
+             * Format: date
+             */
+            on_date: string;
+            /** Students */
+            students: components["schemas"]["ActivityChild"][];
+            /** Subjects */
+            subjects: components["schemas"]["ActivitySubject"][];
+            /** Title */
+            title: string;
+        };
+        /** ActivitySubject */
+        ActivitySubject: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * ActivityUpdate
+         * @description Only the fields sent are changed; null clears minutes, notes or the link.
+         */
+        ActivityUpdate: {
+            /** Link Url */
+            link_url?: string | null;
+            /** Minutes */
+            minutes?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** On Date */
+            on_date?: string | null;
+            /** Student Ids */
+            student_ids?: number[] | null;
+            /** Subject Codes */
+            subject_codes?: string[] | null;
+            /** Title */
+            title?: string | null;
+        };
         /** AdoptEntry */
         AdoptEntry: {
             /** Entry Id */
@@ -2376,6 +2634,8 @@ export interface components {
             curriculum_resource_id?: number | null;
             /** Curriculum Unit Id */
             curriculum_unit_id?: number | null;
+            /** Minutes */
+            minutes?: number | null;
             /** Notes */
             notes?: string | null;
             /**
@@ -2411,6 +2671,8 @@ export interface components {
             grade: components["schemas"]["AssignmentGradeRead"] | null;
             /** Id */
             id: number;
+            /** Minutes */
+            minutes?: number | null;
             /** Notes */
             notes: string | null;
             /** Resource Title */
@@ -2498,6 +2760,8 @@ export interface components {
             grade: components["schemas"]["AssignmentGradeRead"] | null;
             /** Id */
             id: number;
+            /** Minutes */
+            minutes?: number | null;
             /** Notes */
             notes: string | null;
             /** Resource Title */
@@ -2528,9 +2792,12 @@ export interface components {
         AssignmentStatus: "assigned" | "in_progress" | "completed" | "skipped" | "excused";
         /**
          * AssignmentStatusUpdate
-         * @description A status-only write, used by the student dashboard checklist.
+         * @description A status write, used by checklists. ``minutes`` records how long it took,
+         *     when the parent says (hours-mode families are asked at check-off).
          */
         AssignmentStatusUpdate: {
+            /** Minutes */
+            minutes?: number | null;
             status: components["schemas"]["AssignmentStatus"];
         };
         /**
@@ -2546,6 +2813,8 @@ export interface components {
         AssignmentUpdate: {
             /** Completion Date */
             completion_date?: string | null;
+            /** Minutes */
+            minutes?: number | null;
             /** Scheduled Date */
             scheduled_date?: string | null;
             status?: components["schemas"]["AssignmentStatus"] | null;
@@ -2703,6 +2972,14 @@ export interface components {
              * @default chrome_extension
              */
             source: string;
+        };
+        /** Body_upload_activity_evidence_api_activities__activity_id__evidence_post */
+        Body_upload_activity_evidence_api_activities__activity_id__evidence_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
         };
         /** Body_upload_assignment_evidence_api_assignments__assignment_id__evidence_post */
         Body_upload_assignment_evidence_api_assignments__assignment_id__evidence_post: {
@@ -3254,6 +3531,8 @@ export interface components {
         CourseRead: {
             /** Curriculum Id */
             curriculum_id: number;
+            /** Default Minutes */
+            default_minutes?: number | null;
             /** End Date */
             end_date: string | null;
             /** Id */
@@ -4001,6 +4280,11 @@ export interface components {
         HomeworkHelpStatus: "active" | "helped" | "redirected" | "closed";
         /** HouseholdRead */
         HouseholdRead: {
+            /**
+             * Count By
+             * @default days
+             */
+            count_by: string;
             /** Icon */
             icon?: string | null;
             /** Id */
@@ -4058,6 +4342,8 @@ export interface components {
         };
         /** HouseholdUpdate */
         HouseholdUpdate: {
+            /** Count By */
+            count_by?: ("days" | "hours") | null;
             /** Icon */
             icon?: string | null;
             /** Name */
@@ -5088,6 +5374,85 @@ export interface components {
             /** Ready */
             ready: boolean;
         };
+        /** ReadingEntryCreate */
+        ReadingEntryCreate: {
+            /** Counts Toward */
+            counts_toward?: string | null;
+            /** Finished On */
+            finished_on?: string | null;
+            /** Library Item Id */
+            library_item_id: number;
+            /** Started On */
+            started_on?: string | null;
+            /**
+             * Status
+             * @default up_next
+             * @enum {string}
+             */
+            status: "up_next" | "reading" | "finished";
+            /** Student Id */
+            student_id: number;
+        };
+        /** ReadingEntryRead */
+        ReadingEntryRead: {
+            book: components["schemas"]["LibraryItemSummary"];
+            /** Counts Toward */
+            counts_toward: string;
+            /** Counts Toward Name */
+            counts_toward_name: string;
+            /** Finished On */
+            finished_on: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Lessons Done
+             * @default 0
+             */
+            lessons_done: number;
+            /**
+             * Lessons Total
+             * @default 0
+             */
+            lessons_total: number;
+            /**
+             * Pages
+             * @description The book's total pages, when known
+             */
+            pages?: number | null;
+            /** Scheduled */
+            scheduled: boolean;
+            /** School Year Id */
+            school_year_id: number | null;
+            /** Source */
+            source: string;
+            /** Started On */
+            started_on: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "up_next" | "reading" | "finished";
+            /** Status Label */
+            status_label: string;
+            /** Student Id */
+            student_id: number;
+            /** Student Name */
+            student_name: string;
+        };
+        /**
+         * ReadingEntryUpdate
+         * @description Only the fields sent are changed; null clears a date.
+         */
+        ReadingEntryUpdate: {
+            /** Counts Toward */
+            counts_toward?: string | null;
+            /** Finished On */
+            finished_on?: string | null;
+            /** Started On */
+            started_on?: string | null;
+            /** Status */
+            status?: ("up_next" | "reading" | "finished") | null;
+        };
         /** RecalibrateExecuteRead */
         RecalibrateExecuteRead: {
             /** Assignments Moved */
@@ -5268,6 +5633,8 @@ export interface components {
             chapters_per_day?: number | null;
             /** Finish By */
             finish_by?: string | null;
+            /** Minutes Per Lesson */
+            minutes_per_lesson?: number | null;
             /** Pages Per Day */
             pages_per_day?: number | null;
             /**
@@ -5339,6 +5706,13 @@ export interface components {
              * Format: date
              */
             start_date: string;
+            /** Terms */
+            terms?: components["schemas"]["TermRead"][];
+            /**
+             * Terms By Parent
+             * @default false
+             */
+            terms_by_parent: boolean;
         };
         /** SchoolYearSettingsRead */
         SchoolYearSettingsRead: {
@@ -5771,6 +6145,38 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** TermRead */
+        TermRead: {
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
+        /** TermWrite */
+        TermWrite: {
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Name */
+            name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
         /** Token */
         Token: {
             /** Access Token */
@@ -5870,6 +6276,232 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_activities_api_activities_get: {
+        parameters: {
+            query?: {
+                student_id?: number | null;
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_activity_api_activities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_activity_api_activities__activity_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_activity_api_activities__activity_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_activity_api_activities__activity_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_activity_evidence_api_activities__activity_id__evidence_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_activity_evidence_api_activities__activity_id__evidence_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityEvidenceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_activity_evidence_api_activities__activity_id__evidence__activity_evidence_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: number;
+                activity_evidence_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_contributions_api_admin_community_contributions_get: {
         parameters: {
             query?: {
@@ -9726,6 +10358,136 @@ export interface operations {
             };
         };
     };
+    list_reading_api_reading_list_get: {
+        parameters: {
+            query?: {
+                student_id?: number | null;
+                library_item_id?: number | null;
+                school_year_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingEntryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_reading_api_reading_list_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingEntryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_reading_api_reading_list__reading_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reading_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_reading_api_reading_list__reading_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reading_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingEntryUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingEntryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     recalibrate_execute_api_recalibrate__student_id__execute_post: {
         parameters: {
             query?: never;
@@ -9944,6 +10706,72 @@ export interface operations {
                 "application/json": components["schemas"]["SchoolYearUpdate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolYearRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_terms_api_school_years__school_year_id__terms_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_year_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TermWrite"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolYearRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_year_terms_api_school_years__school_year_id__terms_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_year_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

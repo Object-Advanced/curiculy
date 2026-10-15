@@ -252,6 +252,8 @@ def update_assignment_status(
     _require_assignment_access(user, assignment)
     today = household_today(tenant_db)
     assignment.status = payload.status
+    if payload.minutes is not None and not is_child(user):
+        assignment.minutes = payload.minutes
     _record_completion(assignment, today)
     if not is_child(user):
         _sync_shared_group(tenant_db, assignment, sync_status=True, record_completion_on=today)

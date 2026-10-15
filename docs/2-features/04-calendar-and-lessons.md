@@ -22,8 +22,10 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 - **Lesson status:** assigned, in progress, completed, skipped or excused. A parent can change any lesson. A child can change only their own.
 - **Completion date:** checking a lesson off records the household's today as its `completion_date` (a lesson already dated keeps its date); unchecking it, or any other status, clears it. A lesson done ahead of schedule keeps the day it was really done, and the lesson editor can still save it as long as neither date is moved.
 - **Shared lessons:** one lesson done by several kids (a "shared group"). When a parent checks it off, every child's copy is checked and dated; a child who finished their copy earlier keeps their own date.
+- **Minutes:** each lesson can say how long it took (1–600). Scheduling fills in an estimate (the lesson list's own minutes, the "about how many minutes a lesson?" answer, or an online site's session length); the lesson editor changes it. Families who count hours add these up.
+- **Words:** every screen says **lesson**. The code and the API still say `assignment` until the legacy screens are retired ([decided 2026-10-15](../6-planning/decisions.md)).
 - **Lesson details dialog:**
-  - edit the lesson
+  - edit the lesson (status, dates, minutes)
   - grade it
   - attach work samples (photos or PDFs)
   - see the "Stuck?" nudge history
@@ -43,13 +45,13 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 | GET | `/api/students/{id}/courses` | parent | Progress per book for one child |
 | GET / PUT / DELETE | `/api/assignments/{id}` | parent (GET also the child) | Details, edit, delete |
 | POST | `/api/assignments` | parent | New lesson |
-| PATCH | `/api/assignments/{id}/status` | parent; the child for their own | Check off or change status; sets or clears `completion_date` |
+| PATCH | `/api/assignments/{id}/status` | parent; the child for their own | Check off or change status; sets or clears `completion_date`. A parent can send `minutes` too |
 | PUT | `/api/assignments/{id}/grade` | parent | Grade |
 | POST | `/api/assignments/{id}/evidence` | parent | Attach a photo or PDF (20 MB cap; images shrunk to 1600 px) |
 
 ### Data
 The household database holds:
-- `assignments`: student, title, `scheduled_date`, `completion_date`, `status`, `notes`, links to the book, unit and resource, and an optional `shared_group_uuid`
+- `assignments` (lessons): student, title, `scheduled_date`, `completion_date`, `status`, `minutes`, `notes`, links to the book, unit and resource (or the course, library item and textbook lesson), and an optional `shared_group_uuid`
 - `assignment_grades`
 - `assignment_evidence`
 

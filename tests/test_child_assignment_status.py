@@ -252,3 +252,24 @@ def test_wrong_tenant_cannot_patch_assignment_status(auth_client: TestClient) ->
         headers=bearer(alpha),
     )
     assert original.json()["status"] == AssignmentStatus.ASSIGNED.value
+
+
+def test_a_child_checking_off_cant_set_minutes(auth_client: TestClient) -> None:
+    """Minutes are the parent's record (hours-mode families are asked at check-off)."""
+    token, student = _parent_ready(auth_client)
+    _set_pin(auth_client, token, student["id"])
+    assignment = _add_assignment(auth_client, token, student["id"], "Spelling")
+    child = _child_token(auth_client, student["id"])
+    response = auth_client.patch(
+        f"/api/assignments/{assignment['id']}/status",
+        headers=bearer(child),
+        json={"status": AssignmentStatus.COMPLETED.value, "minutes": 300},
+    )
+    assert response.status_code == 200
+    assert response.json()["minutes"] is None
+    parent = auth_client.patch(
+        f"/api/assignments/{assignment['id']}/status",
+        headers=bearer(token),
+        json={"status": AssignmentStatus.COMPLETED.value, "minutes": 20},
+    )
+    assert parent.json()["minutes"] == 20

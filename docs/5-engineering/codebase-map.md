@@ -21,7 +21,7 @@ curiculy/
 │   │   ├── idempotency.py    Retried writes are applied once
 │   │   └── rate_limit.py     Sign-in attempt limits
 │   ├── routers/              One file per area of the API (25 files, about 100 endpoints)
-│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…); family_data.py (export, delete, restore one family), demo_households.py, subjects.py, library.py (+ library_rules.py: what each kind needs and why), planner.py (the Curriculum planner and scheduling), community.py (the community catalog: contributing, adding from it, suggestions) + community_checks.py (the automatic checks) + community_review.py (the admin review queue), text_checks.py (keyboard mashing)
+│   ├── services/             The rules behind the routers (pacing, recalibrate, portfolios, AI…); family_data.py (export, delete, restore one family), demo_households.py, subjects.py, library.py (+ library_rules.py: what each kind needs and why), planner.py (the Curriculum planner and scheduling), reading.py (reading lists), activities.py, terms.py (school-year terms), community.py (the community catalog: contributing, adding from it, suggestions) + community_checks.py (the automatic checks) + community_review.py (the admin review queue), text_checks.py (keyboard mashing)
 │   │   └── providers/        ISBN lookups: Open Library, Google Books
 │   ├── models/               Database tables (SQLAlchemy 2)
 │   ├── schemas/              Request and response shapes (Pydantic)

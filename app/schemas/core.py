@@ -1,3 +1,4 @@
+from typing import Literal
 from datetime import date
 from re import fullmatch
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -87,6 +88,8 @@ class HouseholdRead(ORMModel):
     name: str
     icon: str | None = None
     timezone: str | None = None
+    # "days" (attendance) or "hours" (lesson and activity minutes)
+    count_by: str = "days"
     # The state today, and every period (a move adds one).
     state_code: str | None = None
     states: list[HouseholdStatePeriod] = Field(default_factory=list)
@@ -106,6 +109,8 @@ class HouseholdUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     icon: str | None = Field(default=None, max_length=32)
     timezone: str | None = Field(default=None, max_length=64)
+    # Count the school year in days or in hours, where the state allows either.
+    count_by: Literal["days", "hours"] | None = None
 
     @field_validator("name")
     @classmethod
@@ -145,7 +150,7 @@ class HouseholdUpdate(BaseModel):
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> "HouseholdUpdate":
-        if self.name is None and self.icon is None and self.timezone is None:
+        if self.name is None and self.icon is None and self.timezone is None and self.count_by is None:
             raise ValueError("at least one field is required")
         return self
 
@@ -270,12 +275,41 @@ class SchoolYearUpdate(BaseModel):
         return self
 
 
+class TermWrite(BaseModel):
+    name: str = Field(min_length=1, max_length=32)
+    start_date: date
+    end_date: date
+
+    @field_validator("name")
+    @classmethod
+    def _named(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Give each term a name.")
+        return value.strip()
+
+    @model_validator(mode="after")
+    def _in_order(self) -> "TermWrite":
+        if self.end_date < self.start_date:
+            raise ValueError(f"{self.name} ends before it starts.")
+        return self
+
+
+class TermRead(ORMModel):
+    id: int
+    name: str
+    start_date: date
+    end_date: date
+
+
 class SchoolYearRead(ORMModel):
     id: int
     household_id: int
     name: str
     start_date: date
     end_date: date
+    # Quarters by default; terms_by_parent once the parent set their own.
+    terms: list[TermRead] = Field(default_factory=list)
+    terms_by_parent: bool = False
 
 
 def _normalize_class_weekdays(value: list[int]) -> list[int]:

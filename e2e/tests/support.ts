@@ -176,6 +176,49 @@ export async function seedLibrary(page: Page): Promise<{ textbook: number; workb
   return { textbook: textbook.id, workbook: workbook.id, novel: novel.id };
 }
 
+/**
+ * A reading list and activities for the first child, with fixed dates so
+ * screenshots don't drift: one book being read, one finished, two activities.
+ */
+export async function seedRecords(page: Page, novel: number): Promise<void> {
+  const [sam] = await apiAs<Student[]>(page, "GET", "/students");
+  const hobbit = await apiAs<{ id: number }>(page, "POST", "/library", {
+    kind: "reading_book",
+    title: "The Hobbit",
+    author: "J. R. R. Tolkien",
+    total_pages: 300,
+  });
+  await apiAs(page, "POST", "/reading-list", {
+    student_id: sam.id,
+    library_item_id: novel,
+    status: "reading",
+    started_on: "2026-10-05",
+  });
+  await apiAs(page, "POST", "/reading-list", {
+    student_id: sam.id,
+    library_item_id: hobbit.id,
+    status: "finished",
+    started_on: "2026-09-01",
+    finished_on: "2026-09-26",
+    counts_toward: "world_history",
+  });
+  await apiAs(page, "POST", "/activities", {
+    title: "5K race",
+    on_date: "2026-10-10",
+    student_ids: [sam.id],
+    subject_codes: ["pe", "health"],
+    minutes: 40,
+    notes: "Ran the whole way.",
+  });
+  await apiAs(page, "POST", "/activities", {
+    title: "Fire station visit",
+    on_date: "2026-09-18",
+    student_ids: [sam.id],
+    subject_codes: ["safety"],
+    minutes: 90,
+  });
+}
+
 /** Calls the API with the signed-in user's token. Throws on any non-2xx. */
 export async function apiAs<T = unknown>(
   page: Page,

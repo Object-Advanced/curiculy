@@ -52,6 +52,8 @@ const STUDENT_COLOR_PALETTE = [
   "#6bbf8a",
 ];
 const studentEditor = { id: null };
+// The school year whose terms are being changed, and the rows on screen.
+const yearTermsEditor = { id: null, rows: [] };
 const lessonBuilder = {
   planId: null,
   tab: "assignments",
@@ -2033,7 +2035,7 @@ function renderDashboard() {
             <p id="weekly-trend-meta" class="meta"></p>
           </header>
           <div class="kpi-chart" id="weekly-trend-wrap">
-            <canvas id="weeklyTrendChart" aria-label="Completed assignments over the last 7 days"></canvas>
+            <canvas id="weeklyTrendChart" aria-label="Completed lessons over the last 7 days"></canvas>
             <p id="weekly-trend-empty" class="empty" hidden>Add a student to see weekly progress.</p>
           </div>
         </article>
@@ -3211,7 +3213,7 @@ function hydrateLessonBuilder(plan) {
   ensureBuilderGrid();
   if (!(plan.lessons || []).length) {
     lessonBuilderError(
-      "No assignments were extracted from this PDF. If it is a scanned schedule, re-import it, or stack subjects on Week 1, Day 1 and replicate them."
+      "No lessons were found in this PDF. If it is a scanned schedule, re-import it, or stack subjects on Week 1, Day 1 and replicate them."
     );
   }
 }
@@ -3278,7 +3280,7 @@ function renderAssignmentsTab() {
         </td>
         <td>
           <input name="line-title" maxlength="255" value="${escapeHtml(line.title)}"
-                 data-uid="${line.uid}" aria-label="Assignment title for week ${line.week} day ${line.day}">
+                 data-uid="${line.uid}" aria-label="Lesson title for week ${line.week} day ${line.day}">
           ${lineResourceChips(line)}
         </td>
         <td>
@@ -3291,7 +3293,7 @@ function renderAssignmentsTab() {
           <select data-action="lesson-line-menu" data-uid="${line.uid}" aria-label="Row options">
             <option value="">Options</option>
             <option value="resource">Add resource link</option>
-            <option value="extra">Add extra assignment</option>
+            <option value="extra">Add another lesson</option>
             <option value="delete">Delete</option>
           </select>
         </td>
@@ -3322,7 +3324,7 @@ function renderAssignmentsTab() {
     <div class="lesson-builder-scroll">
       <table class="builder-table">
         <thead>
-          <tr><th>Day</th><th>Time</th><th>Assignment</th><th>Category</th><th>Row</th></tr>
+          <tr><th>Day</th><th>Time</th><th>Lesson</th><th>Category</th><th>Row</th></tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
@@ -3346,11 +3348,11 @@ function renderNotesTab() {
     )
     .join("");
   return `
-    <p class="muted">Instructions for each day. These copy onto the student’s assignment when you apply the plan.</p>
+    <p class="muted">Instructions for each day. These copy onto the student’s lesson when you apply the plan.</p>
     <div class="lesson-builder-scroll">
       <table class="builder-table">
         <thead>
-          <tr><th>Day</th><th>Assignment</th><th>Notes</th></tr>
+          <tr><th>Day</th><th>Lesson</th><th>Notes</th></tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
@@ -3607,7 +3609,7 @@ function replicateDay1ToAllDays() {
   ensureBuilderGrid();
   const template = slotTemplate(1, 1);
   if (!template.length) {
-    lessonBuilderError("Add assignments on Week 1, Day 1 first, then replicate that day’s stack.");
+    lessonBuilderError("Add lessons on Week 1, Day 1 first, then replicate that day’s stack.");
     return;
   }
   const days = builderFrequency();
@@ -4098,6 +4100,60 @@ function renderCurricula() {
   `;
 }
 
+function termRange(term) {
+  return `${formatISODate(term.start_date)} to ${formatISODate(term.end_date)}`;
+}
+
+function renderYearTermsForm(item) {
+  const rows = yearTermsEditor.rows;
+  return `
+    <form class="year-terms-form" data-form="year-terms" data-year-id="${item.id}">
+      <p class="muted">Quarters, semesters, or your co-op's terms. They run in order inside the school year
+        (${escapeHtml(termRange(item))}) and can't overlap. Progress and work samples are counted per term.</p>
+      ${rows
+        .map(
+          (row, index) => `
+        <div class="field-row year-term-row">
+          <label>Name<input name="term-name-${index}" required maxlength="32" value="${escapeHtml(row.name)}"></label>
+          <label>Starts<input type="date" name="term-start-${index}" required value="${escapeHtml(row.start_date)}"
+                              min="${item.start_date}" max="${item.end_date}"></label>
+          <label>Ends<input type="date" name="term-end-${index}" required value="${escapeHtml(row.end_date)}"
+                            min="${item.start_date}" max="${item.end_date}"></label>
+          <button type="button" class="ghost small" data-action="remove-year-term" data-index="${index}"
+                  aria-label="Remove ${escapeHtml(row.name || `term ${index + 1}`)}" ${rows.length === 1 ? "disabled" : ""}>Remove</button>
+        </div>`
+        )
+        .join("")}
+      <div class="form-actions">
+        <button type="button" class="ghost small" data-action="add-year-term">Add a term</button>
+        <button type="submit">Save terms</button>
+        <button type="button" class="ghost" data-action="cancel-year-terms">Cancel</button>
+      </div>
+    </form>`;
+}
+
+function renderYearTerms(item) {
+  if (yearTermsEditor.id === item.id) return renderYearTermsForm(item);
+  const terms = item.terms || [];
+  return `
+    <div class="year-terms">
+      <p class="meta">${terms.length} term${terms.length === 1 ? "" : "s"}${
+        item.terms_by_parent ? ", set by you" : ": even quarters, which follow the year's dates"
+      }</p>
+      <ul class="year-term-list">${terms
+        .map((term) => `<li><strong>${escapeHtml(term.name)}</strong> ${escapeHtml(termRange(term))}</li>`)
+        .join("")}</ul>
+      <div class="form-actions">
+        <button type="button" class="ghost small" data-action="edit-year-terms" data-year-id="${item.id}">Change terms</button>
+        ${
+          item.terms_by_parent
+            ? `<button type="button" class="ghost small" data-action="reset-year-terms" data-year-id="${item.id}">Back to even quarters</button>`
+            : ""
+        }
+      </div>
+    </div>`;
+}
+
 function renderYears() {
   return `
     <div class="layout">
@@ -4118,6 +4174,7 @@ function renderYears() {
               <div class="list-row">
                 <strong>${escapeHtml(item.name)}</strong>
                 <p class="meta">${escapeHtml(item.start_date)} → ${escapeHtml(item.end_date)}</p>
+                ${renderYearTerms(item)}
               </div>`
                 )
                 .join("")}</div>`
@@ -4126,6 +4183,74 @@ function renderYears() {
       </section>
     </div>
   `;
+}
+
+/** The term rows as typed, so adding or removing a row keeps what's on screen. */
+function readYearTermRows() {
+  const form = document.querySelector('form[data-form="year-terms"]');
+  if (!form) return yearTermsEditor.rows;
+  const data = formValues(form);
+  return yearTermsEditor.rows.map((row, index) => ({
+    name: data[`term-name-${index}`] ?? row.name,
+    start_date: data[`term-start-${index}`] ?? row.start_date,
+    end_date: data[`term-end-${index}`] ?? row.end_date,
+  }));
+}
+
+function editYearTerms(yearId) {
+  const year = state.years.find((item) => item.id === yearId);
+  if (!year) return;
+  yearTermsEditor.id = yearId;
+  yearTermsEditor.rows = (year.terms || []).map((term) => ({
+    name: term.name,
+    start_date: term.start_date,
+    end_date: term.end_date,
+  }));
+  if (!yearTermsEditor.rows.length) {
+    yearTermsEditor.rows = [{ name: "Term 1", start_date: year.start_date, end_date: year.end_date }];
+  }
+  render();
+}
+
+function addYearTerm() {
+  const rows = readYearTermRows();
+  const year = state.years.find((item) => item.id === yearTermsEditor.id);
+  const last = rows[rows.length - 1];
+  const start = last?.end_date ? toISODate(new Date(parseISODate(last.end_date).getTime() + 86400000)) : year?.start_date || "";
+  rows.push({ name: `Term ${rows.length + 1}`, start_date: start, end_date: year?.end_date || "" });
+  yearTermsEditor.rows = rows;
+  render();
+}
+
+function removeYearTerm(index) {
+  yearTermsEditor.rows = readYearTermRows().filter((_, i) => i !== index);
+  render();
+}
+
+async function resetYearTerms(yearId) {
+  try {
+    await api(`/school-years/${yearId}/terms/reset`, { method: "POST" });
+    yearTermsEditor.id = null;
+    await loadYears();
+    render();
+    flash("Back to even quarters.");
+  } catch (error) {
+    flash(error.message, true);
+  }
+}
+
+async function setCountBy(value) {
+  try {
+    const updated = await api("/household", {
+      method: "PATCH",
+      body: JSON.stringify({ count_by: value }),
+    });
+    if (!isOfflineQueued(updated)) paintHouseholdChrome(updated);
+    render();
+    flash(value === "hours" ? "Counting the year in hours." : "Counting the year in school days.");
+  } catch (error) {
+    flash(error.message, true);
+  }
 }
 
 function renderEnrollments() {
@@ -4224,6 +4349,25 @@ function renderAdminSettings() {
       </section>
     </div>
   `;
+}
+
+function renderCountBySettings() {
+  const countBy = state.household?.count_by === "hours" ? "hours" : "days";
+  const choice = (value, label) => `
+    <button type="button" data-action="set-count-by" data-value="${value}"
+            class="${countBy === value ? "active" : ""}" aria-pressed="${countBy === value}">${label}</button>`;
+  return `
+    <section class="card count-by-pref">
+      <div>
+        <h2>Count the school year in</h2>
+        <p class="muted">Some states count school days, some hours, and some let you choose. Days come from attendance.
+          Hours add up the minutes on finished lessons and activities.</p>
+      </div>
+      <div class="segmented" role="group" aria-label="Count the school year in">
+        ${choice("days", "School days")}
+        ${choice("hours", "Hours")}
+      </div>
+    </section>`;
 }
 
 function renderExceptionColorSettings() {
@@ -4332,6 +4476,7 @@ function renderSettings() {
           <span class="theme-toggle-label">${dark ? "Light mode" : "Dark mode"}</span>
         </button>
       </section>
+      ${renderCountBySettings()}
       ${renderExceptionColorSettings()}
       <div class="segmented settings-tabs" role="tablist" aria-label="Settings sections">
         ${tabs
@@ -4442,7 +4587,7 @@ function assignmentEventLabel(item, { showStudent = false } = {}) {
   if (subject && curriculum) {
     label = `${subject} - ${curriculum}`;
   } else {
-    label = subject || curriculum || item.title || "Assignment";
+    label = subject || curriculum || item.title || "Lesson";
   }
   if (showStudent) {
     label = `${studentName(item.student_id)}: ${label}`;
@@ -4714,7 +4859,7 @@ function renderAssignments() {
           allStudents
             ? ""
             : `<button type="button" class="add-assignment" data-action="toggle-assignment-form"
-                aria-controls="assignment-form" aria-expanded="false">+ Add assignment</button>`
+                aria-controls="assignment-form" aria-expanded="false">+ Add lesson</button>`
         }
         ${
           allStudents
@@ -4729,7 +4874,7 @@ function renderAssignments() {
         allStudents
           ? ""
           : `<form id="assignment-form" class="assignment-form" data-form="assignment" hidden>
-        <h3>New assignment for ${escapeHtml(studentName(studentId))}</h3>
+        <h3>New lesson for ${escapeHtml(studentName(studentId))}</h3>
         <div class="field-row">
           <label>Title<input name="title" required maxlength="255" placeholder="Lesson 12 problem set"></label>
           <label>Scheduled<input name="scheduled_date" type="date" required value="${anchorDate()}"></label>
@@ -4740,7 +4885,7 @@ function renderAssignments() {
         </div>
         <label>Notes<textarea name="notes"></textarea></label>
         <div class="form-actions">
-          <button type="submit">Save assignment</button>
+          <button type="submit">Save lesson</button>
           <button type="button" class="ghost" data-action="toggle-assignment-form">Cancel</button>
         </div>
       </form>`
@@ -4763,7 +4908,7 @@ function renderAssignments() {
       }">
         ${period === "month" ? "" : evidenceInboxPanelHtml()}
         <div id="calendar-body" class="calendar-body" aria-live="polite">
-          <p class="empty">Loading assignments…</p>
+          <p class="empty">Loading lessons…</p>
         </div>
       </div>
     </section>`;
@@ -4802,7 +4947,7 @@ async function loadCalendar() {
     if (Array.isArray(exceptions)) state.exceptions = exceptions;
     $("calendar-range-label").textContent = rangeLabel(period, data.start_date, data.end_date);
     $("calendar-range-count").textContent =
-      data.count === 1 ? "1 assignment" : `${data.count} assignments`;
+      data.count === 1 ? "1 lesson" : `${data.count} lessons`;
     if (studentId === ALL_STUDENTS) {
       $("calendar-body").innerHTML = isDispatchView()
         ? dispatchBoard(data)
@@ -5211,11 +5356,11 @@ function paintRecalibrateOptions(data) {
   const labelEl = $("recalibrate-overdue-label");
   const next = $("recalibrate-next");
   if (countEl) countEl.textContent = String(overdue);
-  if (labelEl) labelEl.textContent = overdue === 1 ? "overdue assignment" : "overdue assignments";
+  if (labelEl) labelEl.textContent = overdue === 1 ? "overdue lesson" : "overdue lessons";
   if (stat) stat.hidden = false;
   if (copy) {
     copy.textContent = overdue
-      ? `${name} has ${countLabel(overdue, "assignment", "assignments")} overdue across ${countLabel(schoolDays, "school day", "school days")}.`
+      ? `${name} has ${countLabel(overdue, "lesson", "lessons")} overdue across ${countLabel(schoolDays, "school day", "school days")}.`
       : `${name} is caught up — nothing is overdue.`;
   }
   if (next) next.disabled = overdue < 1;
@@ -5388,7 +5533,7 @@ async function confirmRecalibrate() {
       "success",
       "Schedule recalibrated",
       moved
-        ? `${countLabel(moved, "assignment", "assignments")} moved. Completed work was left in place.`
+        ? `${countLabel(moved, "lesson", "lessons")} moved. Completed work was left in place.`
         : "Nothing needed to move."
     );
     render();
@@ -5462,7 +5607,7 @@ async function createAssignment(data) {
   const outside =
     window_ &&
     (item.scheduled_date < window_.start_date || item.scheduled_date > window_.end_date);
-  flash(outside ? "Assignment added outside the dates on screen." : "Assignment added.");
+  flash(outside ? "Lesson added outside the dates on screen." : "Lesson added.");
 }
 
 /** Repaint one tile after an edit, or the whole view when the tile has moved. */
@@ -6007,6 +6152,7 @@ function detailRows(item) {
       "Completed",
       item.completion_date ? MEDIUM_DATE.format(parseISODate(item.completion_date)) : "Not yet",
     ],
+    ["Minutes", item.minutes ? `${item.minutes} min` : "Not recorded"],
     ["Subject", item.subject_taxonomy ? item.subject_taxonomy.full_name : "Unfiled"],
     ["Curriculum", curriculum || "Not linked to the catalog"],
     [
@@ -6149,7 +6295,10 @@ function detailForm(item) {
         <label>Status<select name="status">${enumOptions(STATUSES, item.status)}</select></label>
         <label>Scheduled<input type="date" name="scheduled_date" required value="${item.scheduled_date}"></label>
         <label>Completed<input type="date" name="completion_date" value="${item.completion_date || ""}"></label>
+        <label>Minutes<input type="number" name="minutes" min="1" max="600" inputmode="numeric"
+                             placeholder="30" value="${item.minutes || ""}"></label>
       </div>
+      <p class="muted">Minutes are how long it took. Families who count hours add these up.</p>
       <fieldset class="detail-fieldset">
         <legend>Grade</legend>
         <div class="field-row">
@@ -6174,7 +6323,7 @@ function detailActions() {
   }
   return `
     <button type="button" data-action="edit-assignment">Edit</button>
-    <button type="button" class="danger" data-action="delete-assignment">Delete assignment</button>`;
+    <button type="button" class="danger" data-action="delete-assignment">Delete lesson</button>`;
 }
 
 function renderDetail() {
@@ -6246,7 +6395,7 @@ async function openAssignment(assignmentId) {
   detail.helpSessions = [];
   $("detail-eyebrow").textContent = "";
   $("detail-title").textContent = "Loading…";
-  $("detail-body").innerHTML = `<p class="empty">Loading assignment…</p>`;
+  $("detail-body").innerHTML = `<p class="empty">Loading lesson…</p>`;
   $("detail-actions").hidden = true;
   openModal();
   try {
@@ -6258,7 +6407,7 @@ async function openAssignment(assignmentId) {
     }
     renderDetail();
   } catch (error) {
-    $("detail-title").textContent = "Could not load assignment";
+    $("detail-title").textContent = "Could not load lesson";
     $("detail-body").innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
   }
 }
@@ -6276,6 +6425,7 @@ async function saveAssignment() {
         status: data.status,
         scheduled_date: data.scheduled_date,
         completion_date: emptyToNull(data.completion_date),
+        minutes: data.minutes ? Number(data.minutes) : null,
       }),
     });
     // The grade is a separate record with its own upsert, and an empty score
@@ -6302,6 +6452,7 @@ async function saveAssignment() {
         status: data.status,
         scheduled_date: data.scheduled_date,
         completion_date: emptyToNull(data.completion_date),
+        minutes: data.minutes ? Number(data.minutes) : null,
       };
       if (score) {
         detail.item.grade = {
@@ -6320,7 +6471,7 @@ async function saveAssignment() {
     detail.editing = false;
     renderDetail();
     await syncCalendarTile(previous, item);
-    flash("Assignment saved.");
+    flash("Lesson saved.");
   } catch (error) {
     flash(error.message, true);
   }
@@ -6579,7 +6730,7 @@ async function deleteAssignment() {
     closeModal();
     if (isOfflineQueued(result)) return;
     await refreshVisibleAssignmentBoard();
-    flash("Assignment deleted.");
+    flash("Lesson deleted.");
   } catch (error) {
     flash(error.message, true);
   }
@@ -6612,7 +6763,7 @@ async function deleteStudent(studentId) {
   const name = student ? student.name : "this student";
   if (
     !window.confirm(
-      `Delete “${name}”? Their assignments and work samples will be removed too.`
+      `Delete “${name}”? Their lessons and work samples will be removed too.`
     )
   ) {
     return;
@@ -6803,7 +6954,7 @@ function portfolioCustomPanel() {
         <legend>Include in report</legend>
         <label><input type="checkbox" data-control="portfolio-module" data-module="includeAttendance" ${custom.includeAttendance ? "checked" : ""}> Attendance (Presents, Absences, Sick, Vacation)</label>
         <label><input type="checkbox" data-control="portfolio-module" data-module="includeLessons" ${custom.includeLessons ? "checked" : ""}> Lessons &amp; Completed Activity Log</label>
-        <label><input type="checkbox" data-control="portfolio-module" data-module="includeAssignments" ${custom.includeAssignments ? "checked" : ""}> Assignments (with completion status)</label>
+        <label><input type="checkbox" data-control="portfolio-module" data-module="includeAssignments" ${custom.includeAssignments ? "checked" : ""}> Lessons (with completion status)</label>
         <label><input type="checkbox" data-control="portfolio-module" data-module="includeBooks" ${booksOpen ? "checked" : ""}> Books / Reading Log</label>
         <div class="portfolio-books-sub"${booksOpen ? "" : " hidden"}>
           <label><input type="checkbox" data-control="portfolio-module" data-module="includeBooksCompleted" ${custom.includeBooksCompleted ? "checked" : ""}> Completed</label>
@@ -6811,7 +6962,7 @@ function portfolioCustomPanel() {
           <label><input type="checkbox" data-control="portfolio-module" data-module="includeBooksIncomplete" ${custom.includeBooksIncomplete ? "checked" : ""}> Incomplete</label>
         </div>
         <label><input type="checkbox" data-control="portfolio-module" data-module="includeAttachments" ${custom.includeAttachments ? "checked" : ""}> Photos / Attachments</label>
-        <label><input type="checkbox" data-control="portfolio-module" data-module="includeNotes" ${custom.includeNotes ? "checked" : ""}> Lesson &amp; Assignment Notes</label>
+        <label><input type="checkbox" data-control="portfolio-module" data-module="includeNotes" ${custom.includeNotes ? "checked" : ""}> Lesson notes</label>
       </fieldset>
     </div>`;
 }
@@ -7537,7 +7688,7 @@ function parentNoteText(notes) {
 
 function renderKidAssignment(item, assignmentId) {
   if (!item) {
-    return `<section class="card"><p class="empty">Loading assignment…</p>
+    return `<section class="card"><p class="empty">Loading lesson…</p>
       <p><a href="#/my-work">Back to my work</a></p></section>`;
   }
   const done = isCompleteStatus(item.status);
@@ -7875,6 +8026,25 @@ async function handleClick(event) {
       break;
     case "use-device-timezone":
       await useDeviceTimeZone();
+      break;
+    case "set-count-by":
+      await setCountBy(control.dataset.value);
+      break;
+    case "edit-year-terms":
+      editYearTerms(Number(control.dataset.yearId));
+      break;
+    case "add-year-term":
+      addYearTerm();
+      break;
+    case "remove-year-term":
+      removeYearTerm(Number(control.dataset.index));
+      break;
+    case "cancel-year-terms":
+      yearTermsEditor.id = null;
+      render();
+      break;
+    case "reset-year-terms":
+      await resetYearTerms(Number(control.dataset.yearId));
       break;
     case "rotate-family-code":
       await rotateFamilyCode();
@@ -8294,6 +8464,13 @@ async function handleSubmit(event) {
           sku,
         }),
       });
+    } else if (kind === "year-terms") {
+      const rows = readYearTermRows();
+      result = await api(`/school-years/${form.dataset.yearId}/terms`, {
+        method: "PUT",
+        body: JSON.stringify(rows.map((row) => ({ name: String(row.name).trim(), start_date: row.start_date, end_date: row.end_date }))),
+      });
+      yearTermsEditor.id = null;
     } else if (kind === "year") {
       result = await api("/school-years", {
         method: "POST",

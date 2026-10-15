@@ -1,6 +1,327 @@
 {
   "components": {
     "schemas": {
+      "ActivityChild": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "student_id",
+          "name"
+        ],
+        "title": "ActivityChild",
+        "type": "object"
+      },
+      "ActivityCreate": {
+        "description": "\"5K race, PE, 40 minutes\", for one child or several.",
+        "properties": {
+          "link_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Url"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "maximum": 720.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "on_date": {
+            "format": "date",
+            "title": "On Date",
+            "type": "string"
+          },
+          "student_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Student Ids",
+            "type": "array"
+          },
+          "subject_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Subject Codes",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "on_date",
+          "student_ids"
+        ],
+        "title": "ActivityCreate",
+        "type": "object"
+      },
+      "ActivityEvidenceRead": {
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "file_path",
+          "captured_at"
+        ],
+        "title": "ActivityEvidenceRead",
+        "type": "object"
+      },
+      "ActivityRead": {
+        "properties": {
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityEvidenceRead"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "link_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Url"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "on_date": {
+            "format": "date",
+            "title": "On Date",
+            "type": "string"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityChild"
+            },
+            "title": "Students",
+            "type": "array"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/ActivitySubject"
+            },
+            "title": "Subjects",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "on_date",
+          "minutes",
+          "notes",
+          "link_url",
+          "subjects",
+          "students",
+          "evidence"
+        ],
+        "title": "ActivityRead",
+        "type": "object"
+      },
+      "ActivitySubject": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "ActivitySubject",
+        "type": "object"
+      },
+      "ActivityUpdate": {
+        "description": "Only the fields sent are changed; null clears minutes, notes or the link.",
+        "properties": {
+          "link_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Url"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "maximum": 720.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "on_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Date"
+          },
+          "student_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Ids"
+          },
+          "subject_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 6,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Codes"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ActivityUpdate",
+        "type": "object"
+      },
       "AdoptEntry": {
         "properties": {
           "entry_id": {
@@ -209,6 +530,19 @@
             ],
             "title": "Curriculum Unit Id"
           },
+          "minutes": {
+            "anyOf": [
+              {
+                "maximum": 600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
           "notes": {
             "anyOf": [
               {
@@ -341,6 +675,17 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
           },
           "notes": {
             "anyOf": [
@@ -686,6 +1031,17 @@
             "title": "Id",
             "type": "integer"
           },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
           "notes": {
             "anyOf": [
               {
@@ -802,8 +1158,21 @@
         "type": "string"
       },
       "AssignmentStatusUpdate": {
-        "description": "A status-only write, used by the student dashboard checklist.",
+        "description": "A status write, used by checklists. ``minutes`` records how long it took,\nwhen the parent says (hours-mode families are asked at check-off).",
         "properties": {
+          "minutes": {
+            "anyOf": [
+              {
+                "maximum": 600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
           "status": {
             "$ref": "#/components/schemas/AssignmentStatus"
           }
@@ -828,6 +1197,19 @@
               }
             ],
             "title": "Completion Date"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "maximum": 600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
           },
           "scheduled_date": {
             "anyOf": [
@@ -1141,6 +1523,20 @@
           "file"
         ],
         "title": "Body_stage_evidence_api_evidence_staging_post",
+        "type": "object"
+      },
+      "Body_upload_activity_evidence_api_activities__activity_id__evidence_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_activity_evidence_api_activities__activity_id__evidence_post",
         "type": "object"
       },
       "Body_upload_assignment_evidence_api_assignments__assignment_id__evidence_post": {
@@ -3054,6 +3450,17 @@
           "curriculum_id": {
             "title": "Curriculum Id",
             "type": "integer"
+          },
+          "default_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Minutes"
           },
           "end_date": {
             "anyOf": [
@@ -5454,6 +5861,11 @@
       },
       "HouseholdRead": {
         "properties": {
+          "count_by": {
+            "default": "days",
+            "title": "Count By",
+            "type": "string"
+          },
           "icon": {
             "anyOf": [
               {
@@ -5603,6 +6015,21 @@
       },
       "HouseholdUpdate": {
         "properties": {
+          "count_by": {
+            "anyOf": [
+              {
+                "enum": [
+                  "days",
+                  "hours"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count By"
+          },
           "icon": {
             "anyOf": [
               {
@@ -8776,6 +9203,249 @@
         "title": "ReadinessRead",
         "type": "object"
       },
+      "ReadingEntryCreate": {
+        "properties": {
+          "counts_toward": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts Toward"
+          },
+          "finished_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished On"
+          },
+          "library_item_id": {
+            "title": "Library Item Id",
+            "type": "integer"
+          },
+          "started_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started On"
+          },
+          "status": {
+            "default": "up_next",
+            "enum": [
+              "up_next",
+              "reading",
+              "finished"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "student_id",
+          "library_item_id"
+        ],
+        "title": "ReadingEntryCreate",
+        "type": "object"
+      },
+      "ReadingEntryRead": {
+        "properties": {
+          "book": {
+            "$ref": "#/components/schemas/LibraryItemSummary"
+          },
+          "counts_toward": {
+            "title": "Counts Toward",
+            "type": "string"
+          },
+          "counts_toward_name": {
+            "title": "Counts Toward Name",
+            "type": "string"
+          },
+          "finished_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished On"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lessons_done": {
+            "default": 0,
+            "title": "Lessons Done",
+            "type": "integer"
+          },
+          "lessons_total": {
+            "default": 0,
+            "title": "Lessons Total",
+            "type": "integer"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The book's total pages, when known",
+            "title": "Pages"
+          },
+          "scheduled": {
+            "title": "Scheduled",
+            "type": "boolean"
+          },
+          "school_year_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Year Id"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "started_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started On"
+          },
+          "status": {
+            "enum": [
+              "up_next",
+              "reading",
+              "finished"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "title": "Status Label",
+            "type": "string"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "student_name": {
+            "title": "Student Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "student_id",
+          "student_name",
+          "school_year_id",
+          "book",
+          "status",
+          "status_label",
+          "started_on",
+          "finished_on",
+          "counts_toward",
+          "counts_toward_name",
+          "source",
+          "scheduled"
+        ],
+        "title": "ReadingEntryRead",
+        "type": "object"
+      },
+      "ReadingEntryUpdate": {
+        "description": "Only the fields sent are changed; null clears a date.",
+        "properties": {
+          "counts_toward": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts Toward"
+          },
+          "finished_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished On"
+          },
+          "started_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started On"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up_next",
+                  "reading",
+                  "finished"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "ReadingEntryUpdate",
+        "type": "object"
+      },
       "RecalibrateExecuteRead": {
         "properties": {
           "assignments_moved": {
@@ -9259,6 +9929,19 @@
             ],
             "title": "Finish By"
           },
+          "minutes_per_lesson": {
+            "anyOf": [
+              {
+                "maximum": 600.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes Per Lesson"
+          },
           "pages_per_day": {
             "anyOf": [
               {
@@ -9442,6 +10125,18 @@
             "format": "date",
             "title": "Start Date",
             "type": "string"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/TermRead"
+            },
+            "title": "Terms",
+            "type": "array"
+          },
+          "terms_by_parent": {
+            "default": false,
+            "title": "Terms By Parent",
+            "type": "boolean"
           }
         },
         "required": [
@@ -10789,6 +11484,63 @@
         "title": "SyllabusLesson",
         "type": "object"
       },
+      "TermRead": {
+        "properties": {
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "start_date",
+          "end_date"
+        ],
+        "title": "TermRead",
+        "type": "object"
+      },
+      "TermWrite": {
+        "properties": {
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "start_date",
+          "end_date"
+        ],
+        "title": "TermWrite",
+        "type": "object"
+      },
       "Token": {
         "properties": {
           "access_token": {
@@ -11067,6 +11819,390 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/activities": {
+      "get": {
+        "description": "Newest first. ``from`` and ``to`` include the days given.",
+        "operationId": "list_activities_api_activities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "student_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityRead"
+                  },
+                  "title": "Response List Activities Api Activities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Activities",
+        "tags": [
+          "activities"
+        ]
+      },
+      "post": {
+        "operationId": "create_activity_api_activities_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Activity",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/api/activities/{activity_id}": {
+      "delete": {
+        "operationId": "delete_activity_api_activities__activity_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Activity",
+        "tags": [
+          "activities"
+        ]
+      },
+      "get": {
+        "operationId": "get_activity_api_activities__activity_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Activity",
+        "tags": [
+          "activities"
+        ]
+      },
+      "patch": {
+        "operationId": "update_activity_api_activities__activity_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Activity",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/api/activities/{activity_id}/evidence": {
+      "post": {
+        "description": "A photo or PDF from the activity: a work sample for each of its subjects.",
+        "operationId": "upload_activity_evidence_api_activities__activity_id__evidence_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_activity_evidence_api_activities__activity_id__evidence_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityEvidenceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Upload Activity Evidence",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/api/activities/{activity_id}/evidence/{activity_evidence_id}": {
+      "delete": {
+        "operationId": "delete_activity_evidence_api_activities__activity_id__evidence__activity_evidence_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "activity_evidence_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Evidence Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Activity Evidence",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
     "/api/admin/community/contributions": {
       "get": {
         "operationId": "list_contributions_api_admin_community_contributions_get",
@@ -16957,6 +18093,239 @@
         ]
       }
     },
+    "/api/reading-list": {
+      "get": {
+        "description": "Reading first, then up next, then finished (most recent first).",
+        "operationId": "list_reading_api_reading_list_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "student_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "library_item_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Library Item Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "school_year_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "School Year Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReadingEntryRead"
+                  },
+                  "title": "Response List Reading Api Reading List Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Reading",
+        "tags": [
+          "reading"
+        ]
+      },
+      "post": {
+        "description": "Put a book on a child's list for this school year (\"just track it\").",
+        "operationId": "add_reading_api_reading_list_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadingEntryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingEntryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Add Reading",
+        "tags": [
+          "reading"
+        ]
+      }
+    },
+    "/api/reading-list/{reading_id}": {
+      "delete": {
+        "description": "Take a book off a child's list. Lessons on the calendar stay.",
+        "operationId": "delete_reading_api_reading_list__reading_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reading_id",
+            "required": true,
+            "schema": {
+              "title": "Reading Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Reading",
+        "tags": [
+          "reading"
+        ]
+      },
+      "patch": {
+        "description": "Started, finished, or what it counts toward. Dates fill in with today when left out.",
+        "operationId": "update_reading_api_reading_list__reading_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reading_id",
+            "required": true,
+            "schema": {
+              "title": "Reading Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadingEntryUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingEntryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Reading",
+        "tags": [
+          "reading"
+        ]
+      }
+    },
     "/api/recalibrate/{student_id}/execute": {
       "post": {
         "description": "Shift every uncompleted assignment according to the chosen strategy.",
@@ -17322,6 +18691,116 @@
           }
         ],
         "summary": "Update School Year",
+        "tags": [
+          "school-years"
+        ]
+      }
+    },
+    "/api/school-years/{school_year_id}/terms": {
+      "put": {
+        "description": "The parent's own terms (semesters, uneven quarters): in order, inside the year, not overlapping.",
+        "operationId": "set_terms_api_school_years__school_year_id__terms_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "school_year_id",
+            "required": true,
+            "schema": {
+              "title": "School Year Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/TermWrite"
+                },
+                "title": "Payload",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolYearRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Set Terms",
+        "tags": [
+          "school-years"
+        ]
+      }
+    },
+    "/api/school-years/{school_year_id}/terms/reset": {
+      "post": {
+        "description": "Back to four even quarters that follow the year's dates.",
+        "operationId": "reset_year_terms_api_school_years__school_year_id__terms_reset_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "school_year_id",
+            "required": true,
+            "schema": {
+              "title": "School Year Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolYearRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reset Year Terms",
         "tags": [
           "school-years"
         ]

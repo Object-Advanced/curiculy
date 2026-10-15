@@ -13,6 +13,7 @@ import {
   openRoute,
   openSignIn,
   seedLibrary,
+  seedRecords,
   seedSchoolWeek,
   settle,
   startDemo,
@@ -73,13 +74,17 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
     report[screen] = { ...result.counts, rules: result.rules };
   }
 
-  // The React parent screens: the Library, its adding walkthrough, and the planner.
-  const { textbook } = await seedLibrary(page);
+  // The React parent screens: the Library, its adding walkthrough, the planner,
+  // reading lists and activities.
+  const { textbook, novel } = await seedLibrary(page);
+  await seedRecords(page, novel);
   const curriculum = await apiAs<{ id: number }>(page, "POST", "/planner/curricula", { textbook_id: textbook });
   const parentScreens: [string, string, string][] = [
     ["library", "/next/library", "Library"],
     ["planner", "/next/planner", "Curriculum planner"],
     ["curriculum", `/next/planner/${curriculum.id}`, "BJU Reading 4"],
+    ["reading", "/next/reading", "Reading lists"],
+    ["activities", "/next/activities", "Activities"],
   ];
   for (const [screen, path, heading] of parentScreens) {
     await page.goto(path);
@@ -92,6 +97,11 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
   await expect(page.getByRole("dialog", { name: "Add to your library" })).toBeVisible();
   const adding = await scan(page, "library-add");
   report["library-add"] = { ...adding.counts, rules: adding.rules };
+  await page.goto("/next/activities");
+  await page.getByRole("button", { name: "Log an activity" }).click();
+  await expect(page.getByRole("dialog", { name: "Log an activity" })).toBeVisible();
+  const logging = await scan(page, "activity-log");
+  report["activity-log"] = { ...logging.counts, rules: logging.rules };
 
   // The child's own screen, signed in with the household's kid PIN.
   const { studentId, familyCode } = loadHouseholdState();

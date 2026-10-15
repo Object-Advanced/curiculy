@@ -177,6 +177,14 @@ A live preview shows the result as lessons go in: "170 lessons, 5 a week = 34 we
 - **A curriculum joins them:** a textbook plus its workbook, an online site and the novels read alongside it.
 - **Kid side:** lessons point to the right book and pages ("BJU Reading 4 Worktext, pp. 18–34"). **My books** shows the child's reading list with the same covers.
 
+### Reading lists
+**Built** (October 2026): [Reading lists](../2-features/24-reading-lists.md), at `/next/reading` and on a book's **Reading list** tab in the Library.
+- **Per child, per school year:** each book is **Up next**, **Reading now** or **Finished**, with the days they started and finished, and the subject it **counts toward** (the book's own subject, or Reading by default; a biography can count toward History).
+- **Two ways on:** the parent adds it ("just track it"), or its reading is **scheduled** (Schedule it in the Library, or a book in a curriculum), and it joins the list by itself.
+- **Scheduled books move along by themselves:** started when the first reading is checked off, finished when every reading is done, skipped or excused. The lessons only move a book forward, so a parent who marks it finished early (the child raced ahead) keeps that.
+- **Unscheduling** takes a book that was never started off the list; a started one stays, with how far it got.
+- **Not built yet:** the kid's **My books**; the reading list in the portfolio (the Records work).
+
 ### Covers: a library that looks like a library
 - **Automatic covers** come from Open Library or Google Books for most ISBNs.
 - **Uploaded cover images:** the parent can upload a **real cover image** (a PNG or JPG of the published cover, from the publisher's site, for example) for anything without one. **Not a photo of the book.** It shows in that family's library right away; **every uploaded cover is reviewed by an admin** before other families see it in the catalog.
@@ -220,6 +228,8 @@ A family who starts from a suggestion and changes it contributes a new combinati
 
 ## Activities: subjects without a curriculum
 Many required subjects (PE, music, art, health, safety education) rarely have a curriculum. They're recorded as **activities**.
+
+**Built** (October 2026): [Activities](../2-features/25-activities.md), at `/next/activities`: log one for one child or several, with subjects, the date, minutes, notes, photos or PDFs (work samples), and a link. **Not built yet:** repeating activities, logging from ＋ or a subject's slot, and counting activities on Records.
 - **Log an activity** from ＋ or from the subject's slot: which children, which subjects, the date, minutes, a note, and photos, a video or a link. Examples: "5K race, PE, 40 min" with a photo at the finish line; "Piano practice, Music, 20 min"; a drawing for Art.
 - **Repeating activities** ("Piano Mon/Wed/Fri, 20 min") appear on the calendar like light lessons, and one tap logs them.
 - **Activities count like lessons:** toward subjects, days and hours. Their photos and videos are work samples in the portfolio.
@@ -240,6 +250,8 @@ Today: one record per child per day (present, absent, sick, vacation), marked wi
 
 ## Lesson minutes
 States that count hours need minutes. Kept simple:
+
+**Built** (October 2026): **minutes on every lesson** (`assignments.minutes`), set three ways: a textbook's lesson list can give each lesson's minutes; scheduling asks **"About how many minutes a lesson?"** (kept as the course's `default_minutes`), and an online site's session length fills its sessions; and the lesson editor (and the check-off API, for parents) records how long it really took. The family picks **days or hours** in Settings ("Count the school year in", `households.count_by`). **Not built yet:** the one-tap time chips at check-off, the trail's start-to-done suggestion, "only asked in hours mode", and the catalog learning from real minutes.
 - **A default per course,** asked once at setup ("About how long is a math lesson? 45 min"). Once the catalog has data for that book, it suggests one ("Families say about 40 min").
 - **One tap at check-off:** time chips pre-filled with the default (30 · 45 · 60 · other). Also offered when adding work.
 - **From the kid's trail:** when a child taps Start and later Done, the time in between is suggested (capped, and editable).
@@ -481,17 +493,17 @@ The family's own copy works either way. Only the catalog waits for review.
 | `curriculum_resources` | **Dropped:** each book is its own library item, joined to others in a curriculum. (Materials were built first, then replaced, 2026-10-12.) |
 | `curriculum_plans`, `curriculum_lessons` (unconnected to books) | **Built:** the textbook's lesson list, `library_lessons` (number, name, type, unit, minutes, first and last page) |
 | none | **Built:** `planned_curricula` + `planned_curriculum_items`: a subject's textbook plus its workbooks, sites, books and teacher's edition, each in a role |
-| none | **Reading-list entry** (child, reading book, status, started and finished dates, counts toward, optional schedule) |
-| `enrollments` | **Course**, **built** as `courses` (child, curriculum, school year, start and end dates, weekdays). Still to add: pauses, default minutes, the **catch-up default**; credits and final grade in grades 9–12 |
-| `assignments` | **Lesson** (renamed in code and API): **built:** its course, library item and textbook lesson. Still to add: the rename, subject and minutes. A finished lesson's completion date is its calendar day. |
+| none | **Built:** `reading_list_entries` (child, reading book, school year, status, started and finished dates, counts toward, tracked or scheduled). A scheduled book's progress is read from its lessons. |
+| `enrollments` | **Course**, **built** as `courses` (child, curriculum, school year, start and end dates, weekdays, default minutes). Still to add: pauses, the **catch-up default**; credits and final grade in grades 9–12 |
+| `assignments` | **Lesson**: **built:** its course, library item, textbook lesson and minutes. Every screen says "lesson". The rename in code and the API waits until the legacy screens are retired ([decided 2026-10-15](decisions.md)). Still to add: subject. A finished lesson's completion date is its calendar day. |
 | none | **Subject** per child (required, common or own; counts toward a state subject) and **objective** per subject per year |
-| none | **Activity** (children, subjects, date, minutes, note, attachments or links); repeating activities |
+| none | **Built:** `activities` (title, date, minutes, notes, a link, subjects), `activity_students` (one or several children) and `activity_evidence` (photos and PDFs). Still to add: repeating activities |
 | `attendance` | adds how it was set (suggested or confirmed) and minutes |
-| `school_years` | adds terms (quarters) |
+| `school_years` | **Built:** `school_year_terms`: four even quarters by default, which follow the year's dates, or the parent's own (semesters, a co-op's terms) |
 | `assignment_evidence`, `evidence_staging` | **Work sample** (child, subject, date, optional lesson, pages, caption); inbox items carry suggestions |
 | `subject_taxonomies`, `reporting_categories`, `curriculum_classifications` (empty or unused) | one fixed **subject** list; each state pack maps its subjects onto it |
 | `jurisdictions`, `compliance_packets` (placeholders) | **Requirement packs** (shared, versioned), the family's chosen pack with evaluator adjustments, and **Tasks** |
-| `household_settings` | adds a daily load limit and days-or-hours mode |
+| `household_settings` | adds a daily load limit. (Days or hours is **built**, as `households.count_by`.) |
 | `households` | adds the **state**, with the date it applies from (a move adds a new one) |
 | `students` | grade from a fixed list, re-confirmed each July 1; a yes/no IEP flag. **No birth date**: ages go into form blanks only ([Privacy](#privacy-keep-the-minimum)). |
 | the shared book cache (kept, for ISBN lookups) | **Built:** the **community catalog**: `catalog_entries` with their versions (`catalog_entry_versions`: details, chapters and lesson list) for all four kinds, and approved cover images |
@@ -503,8 +515,8 @@ The family's own copy works either way. Only the catalog waits for review.
 ## Order of work
 | When | Work |
 |---|---|
-| Oct–Dec 2026 | Data-tier decision; then the backend spine: ~~state and grades~~ → ~~subjects and objectives~~ → ~~the Library's four kinds (chapters, lesson lists, required-field rules, search-first adding, covers)~~ → ~~the Curriculum planner and Course~~ → ~~community catalog checks, the admin review queue's API and curriculum suggestions~~ (moved up, 2026-10-12) → reading lists → Lesson rename, minutes and terms → activities → attendance suggestions → move engine with previews, the **catch-up formulas** and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → transcript and credits → photo orientation fix and PDF metadata scrub |
-| Jan–Mar 2027 | The loop's screens, built **directly in React**: the **year-setup interview**, Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings, **Schedule from library**), the **catch-up sheet**, the **Library bookshelf** (search-first adding, four kinds, covers), the **Curriculum planner** and its calendar walkthrough, the **admin review queue**, lesson sheet (Add work), Log an activity, Records (Checklist, Portfolio, Your state), progress rings and course bars, kid's My books. Fillable state forms (filled in the browser). The community catalog, seeded with the most-used programs and their covers. Public state pages. |
+| Oct–Dec 2026 | Data-tier decision; then the backend spine: ~~state and grades~~ → ~~subjects and objectives~~ → ~~the Library's four kinds (chapters, lesson lists, required-field rules, search-first adding, covers)~~ → ~~the Curriculum planner and Course~~ → ~~community catalog checks, the admin review queue's API and curriculum suggestions~~ (moved up, 2026-10-12) → ~~reading lists~~ → ~~the Lesson wording, minutes and terms~~ (the code rename waits for the legacy screens) → ~~activities~~ → attendance suggestions → move engine with previews, the **catch-up formulas** and the plan checker → requirement packs and Tasks → the **Pennsylvania pack** (after its worksheet is reviewed) → the Records API, progress by course, subject and term, and the portfolio builder → inbox suggestions → transcript and credits → photo orientation fix and PDF metadata scrub |
+| Jan–Mar 2027 | The loop's screens, built **directly in React**: the **year-setup interview**, Today ("School today?", Tasks, overdue banner, "sample wanted"), Calendar (drag and Move to…, previews, warnings, **Schedule from library**), the **catch-up sheet**, the **Library bookshelf** (search-first adding, four kinds, covers), the **Curriculum planner** and its calendar walkthrough, the **admin review queue**, lesson sheet (Add work), ~~Log an activity~~ (built early, October 2026), Records (Checklist, Portfolio, Your state), progress rings and course bars, kid's My books. Fillable state forms (filled in the browser). The community catalog, seeded with the most-used programs and their covers. Public state pages. |
 | Mar–May 2027 | Second wave of states: New York on its own, then a base pack for states with similar light laws; the lifetime archive download; extension docs; launch work (Phase 8). Feature freeze mid-May. |
 | Jun 2027 | Launch with an honest "N states supported" claim and a seeded community catalog |
 
