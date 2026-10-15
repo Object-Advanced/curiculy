@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     # The React app (frontend/), built into the image; served under /next.
     frontend_dist_dir: Path = Path("frontend/dist")
 
+    # The interactive API docs (/docs, /redoc, /openapi.json). Off unless asked
+    # for: on the live site they'd map the whole API for strangers. DEV_MODE
+    # turns them on too. (frontend/openapi.json is generated from the code.)
+    api_docs: bool = False
+
     # Auth. DEV_MODE skips JWTs and uses one fixed development household.
     # JWT_SECRET is required in non-dev; see validate_runtime_configuration().
     dev_mode: bool = False

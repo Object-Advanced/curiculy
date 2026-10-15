@@ -78,11 +78,15 @@ async def lifespan(_app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    docs = settings.api_docs or settings.dev_mode
     application = FastAPI(
         title="Curiculy",
         description="Homeschool curriculum pacing, family calendar, and compliance foundation.",
         version="0.1.0",
         lifespan=lifespan,
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
     )
     application.state.rate_limiter = RateLimiter()
     # The last one added runs first: the size cap refuses oversized uploads

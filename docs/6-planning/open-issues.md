@@ -30,7 +30,7 @@ The gaps between the app and its purpose, found on 2026-10-11. Each is planned i
 |---|---|---|---|
 | 1 | **No off-site backup.** A fire or theft loses the server and its backups together. | [Backups](../4-operations/backups-and-restore.md) | Copy `/datalake/projects/curiculy/backups` off-site (restic, rclone or a drive). Owner task. |
 | 2 | **No outside uptime monitor or alerts** | [Monitoring](../4-operations/monitoring.md) | A free uptime check on `/api/health` |
-| 3 | **Public `/docs` and `/openapi.json`** on curiculy.com | [Security](../4-operations/security-and-privacy.md) | Turn them off in production |
+| 3 | ~~**Public `/docs` and `/openapi.json`** on curiculy.com~~ **Fixed 2026-10-15** | [Security](../4-operations/security-and-privacy.md) | Off unless `API_DOCS=true` |
 | 3a | **Paper lesson-plan import can't run in production** (found 2026-10-13): the server's Ollama has only `llama3.1`, not the vision model it needs (`llama3.2-vision`), and the GPU driver reports a version mismatch, so models run on the CPU | [AI features](../2-features/17-ai-features.md) | **Decided 2026-10-13: don't install the vision model.** Retire the paper (handwriting) import with the older catalog page; the Library's "Read a photo of the page" (Tesseract, no AI) covers printed pages. |
 
 ## Launch

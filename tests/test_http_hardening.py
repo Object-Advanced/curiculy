@@ -69,6 +69,20 @@ class TestSecurityHeaders:
         assert "https://books.google.com" in directives["img-src"]
         assert all("https://" not in sources for name, sources in directives.items() if name != "img-src")
 
+    def test_api_docs_are_off_unless_asked_for(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(settings, "api_docs", False)
+        monkeypatch.setattr(settings, "dev_mode", False)
+        hidden = TestClient(create_app())
+        for path in ("/docs", "/redoc", "/openapi.json"):
+            response = hidden.get(path)
+            assert response.status_code == 404, path
+            assert "swagger" not in response.text.lower() and '"openapi"' not in response.text
+        assert create_app().openapi()["info"]["title"] == "Curiculy"  # the typed client still builds
+        monkeypatch.setattr(settings, "api_docs", True)
+        shown = TestClient(create_app())
+        assert shown.get("/openapi.json").status_code == 200
+        assert shown.get("/docs").status_code == 200
+
     def test_api_responses_carry_the_headers_too(self, client: TestClient) -> None:
         response = client.get("/api/health")
         assert response.headers["x-content-type-options"] == "nosniff"
