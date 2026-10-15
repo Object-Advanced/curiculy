@@ -85,6 +85,7 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
     ["curriculum", `/next/planner/${curriculum.id}`, "BJU Reading 4"],
     ["reading", "/next/reading", "Reading lists"],
     ["activities", "/next/activities", "Activities"],
+    ["attendance", "/next/attendance", "Attendance"],
   ];
   for (const [screen, path, heading] of parentScreens) {
     await page.goto(path);

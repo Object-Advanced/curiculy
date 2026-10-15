@@ -22,7 +22,7 @@ Every major function of Curiculy has one page with two halves:
 | 09 | [Pacing and lesson plans](09-pacing-and-lesson-plans.md) | Parents | Works; AI imports least predictable | Auto-schedule books; import or build plans |
 | 10 | [Recalibrate](10-recalibrate.md) | Parents | Solid | Catch up after falling behind |
 | 11 | [School year and days off](11-school-year-and-days-off.md) | Parents | Works; editors need merging | School days, holidays, sick days |
-| 12 | [Attendance](12-attendance.md) | Parents | Works; cramped screen | Daily record per child |
+| 12 | [Attendance](12-attendance.md) | Parents | Works; calendar radios cramped | "School today?", suggested from the day's work; one tap to confirm |
 | 13 | [Evidence and capture](13-evidence-and-capture.md) | Parents, kids' computers | Solid; capture flow to grow | Work samples, Chrome extension, inbox |
 | 14 | [Portfolios and reports](14-portfolios-and-reports.md) | Parents | Works; email not reliable | Evaluator reports and weekly checklist |
 | 15 | [Notifications](15-notifications.md) | Parents | Works | "Ada needs you" and friends |

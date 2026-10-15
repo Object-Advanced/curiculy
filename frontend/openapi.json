@@ -1237,6 +1237,230 @@
         "title": "AssignmentUpdate",
         "type": "object"
       },
+      "AttendanceChildDay": {
+        "description": "One child on one day: what's recorded, and what Curiculy suggests.",
+        "properties": {
+          "activities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "expected": {
+            "default": false,
+            "title": "Expected",
+            "type": "boolean"
+          },
+          "lessons_done": {
+            "default": 0,
+            "title": "Lessons Done",
+            "type": "integer"
+          },
+          "lessons_planned": {
+            "default": 0,
+            "title": "Lessons Planned",
+            "type": "integer"
+          },
+          "lessons_without_minutes": {
+            "default": 0,
+            "title": "Lessons Without Minutes",
+            "type": "integer"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "minutes_from_work": {
+            "default": 0,
+            "title": "Minutes From Work",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendanceStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendanceStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "student_id",
+          "name"
+        ],
+        "title": "AttendanceChildDay",
+        "type": "object"
+      },
+      "AttendanceChildSummary": {
+        "properties": {
+          "absent_days": {
+            "default": 0,
+            "title": "Absent Days",
+            "type": "integer"
+          },
+          "field_trip_days": {
+            "default": 0,
+            "title": "Field Trip Days",
+            "type": "integer"
+          },
+          "lessons_without_minutes": {
+            "default": 0,
+            "title": "Lessons Without Minutes",
+            "type": "integer"
+          },
+          "minutes": {
+            "default": 0,
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on_track_days": {
+            "default": 0,
+            "title": "On Track Days",
+            "type": "integer"
+          },
+          "present_days": {
+            "default": 0,
+            "title": "Present Days",
+            "type": "integer"
+          },
+          "school_days_left": {
+            "default": 0,
+            "title": "School Days Left",
+            "type": "integer"
+          },
+          "sick_days": {
+            "default": 0,
+            "title": "Sick Days",
+            "type": "integer"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "unmarked_days": {
+            "default": 0,
+            "title": "Unmarked Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "student_id",
+          "name"
+        ],
+        "title": "AttendanceChildSummary",
+        "type": "object"
+      },
+      "AttendanceConfirm": {
+        "properties": {
+          "marks": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceMark"
+            },
+            "maxItems": 400,
+            "minItems": 1,
+            "title": "Marks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "marks"
+        ],
+        "title": "AttendanceConfirm",
+        "type": "object"
+      },
+      "AttendanceDayCard": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceChildDay"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "day_off": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Off"
+          },
+          "school_day": {
+            "title": "School Day",
+            "type": "boolean"
+          },
+          "weekday": {
+            "title": "Weekday",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "weekday",
+          "school_day",
+          "children"
+        ],
+        "title": "AttendanceDayCard",
+        "type": "object"
+      },
       "AttendanceDayRead": {
         "properties": {
           "date": {
@@ -1255,6 +1479,70 @@
         "title": "AttendanceDayRead",
         "type": "object"
       },
+      "AttendanceDays": {
+        "properties": {
+          "count_by": {
+            "title": "Count By",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceDayCard"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "today": {
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          }
+        },
+        "required": [
+          "today",
+          "count_by",
+          "days"
+        ],
+        "title": "AttendanceDays",
+        "type": "object"
+      },
+      "AttendanceMark": {
+        "description": "One child's day, as the parent marks it. ``minutes`` is only changed when sent.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "maximum": 1440.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "student_id",
+          "date",
+          "status"
+        ],
+        "title": "AttendanceMark",
+        "type": "object"
+      },
       "AttendanceRead": {
         "properties": {
           "date": {
@@ -1265,6 +1553,22 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "source": {
+            "default": "parent",
+            "title": "Source",
+            "type": "string"
           },
           "status": {
             "$ref": "#/components/schemas/AttendanceStatus"
@@ -1289,10 +1593,88 @@
           "Present",
           "Absent",
           "Sick",
-          "Vacation"
+          "Vacation",
+          "Field trip"
         ],
         "title": "AttendanceStatus",
         "type": "string"
+      },
+      "AttendanceSummary": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceChildSummary"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "count_by": {
+            "title": "Count By",
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "school_year_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Year Id"
+          },
+          "school_year_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Year Name"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "today": {
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          }
+        },
+        "required": [
+          "school_year_id",
+          "school_year_name",
+          "start_date",
+          "end_date",
+          "today",
+          "count_by",
+          "children"
+        ],
+        "title": "AttendanceSummary",
+        "type": "object"
       },
       "AttendanceSummaryRead": {
         "properties": {
@@ -13416,6 +13798,207 @@
           }
         ],
         "summary": "Upsert Attendance",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/attendance/confirm": {
+      "post": {
+        "description": "Save the parent's marks (\"Looks right\"). Days that haven't happened can't be marked.",
+        "operationId": "confirm_attendance_api_attendance_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttendanceRead"
+                  },
+                  "title": "Response Confirm Attendance Api Attendance Confirm Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Confirm Attendance",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/attendance/days": {
+      "get": {
+        "description": "Each day and child: what's marked, and what the day's work suggests. Saves nothing.",
+        "operationId": "attendance_days_api_attendance_days_get",
+        "parameters": [
+          {
+            "description": "Inclusive; the family's today when left out.",
+            "in": "query",
+            "name": "start_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive; the family's today when left out.",
+              "title": "Start Date"
+            }
+          },
+          {
+            "description": "Inclusive; the start date when left out. Up to 62 days.",
+            "in": "query",
+            "name": "end_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive; the start date when left out. Up to 62 days.",
+              "title": "End Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "student_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceDays"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Attendance Days",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/api/attendance/summary": {
+      "get": {
+        "description": "Each child's school year so far: present, sick, absent, not marked, and the school days ahead.",
+        "operationId": "attendance_summary_api_attendance_summary_get",
+        "parameters": [
+          {
+            "description": "The current school year when left out.",
+            "in": "query",
+            "name": "school_year_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The current school year when left out.",
+              "title": "School Year Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Attendance Summary",
         "tags": [
           "attendance"
         ]

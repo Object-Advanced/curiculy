@@ -53,6 +53,8 @@ class TestListAttendance:
             "student_id": student.id,
             "date": "2026-09-16",
             "status": "Present",
+            "source": "parent",
+            "minutes": None,
         }
 
     def test_includes_both_bounds(self, client: TestClient, db: Session) -> None:

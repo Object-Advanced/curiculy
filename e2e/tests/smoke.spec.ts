@@ -273,6 +273,34 @@ test("a parent logs an activity with a photo", async ({ page }) => {
   await expect(card.getByRole("link", { name: "Open the photo from 5K race" })).toBeVisible();
 });
 
+test("a parent confirms today's attendance from Home", async ({ page }) => {
+  await startDemo(page);
+  const [sam] = await apiAs<{ id: number }[]>(page, "GET", "/students");
+  // The server's today, whatever the real date is.
+  const { today } = await apiAs<{ today: string }>(page, "GET", "/attendance/days");
+  await apiAs(page, "POST", "/assignments", {
+    student_id: sam!.id, title: "Leaf rubbings", scheduled_date: today, status: "completed", completion_date: today,
+  });
+
+  await openRoute(page, "#/dashboard", "Home");
+  const card = page.getByRole("group", { name: "School today?" });
+  await expect(card.getByText("Present (suggested): Finished 1 lesson")).toBeVisible();
+  await card.getByRole("button", { name: "Looks right" }).click();
+  await expect(card.getByText("Present, as suggested")).toBeVisible();
+  await expect(card.getByRole("button", { name: "Looks right" })).toHaveCount(0);
+
+  await card.getByRole("link", { name: "Change or see the year" }).click();
+  const todayCard = page.getByRole("region", { name: "School today?" });
+  await expect(todayCard.getByText("Marked Present, as suggested")).toBeVisible();
+  await todayCard.getByRole("group", { name: "Sam Rivera on School today?" }).getByRole("button", { name: "Field trip" }).click();
+  await todayCard.getByRole("button", { name: "Looks right" }).click();
+  await expect(todayCard.getByText("Marked Field trip")).toBeVisible();
+  const marked = await apiAs<{ status: string; source: string }[]>(
+    page, "GET", `/attendance?start_date=${today}&end_date=${today}`,
+  );
+  expect(marked.map((row) => [row.status, row.source])).toEqual([["Field trip", "parent"]]);
+});
+
 test("a parent counts the year in hours and sets their own terms", async ({ page }) => {
   await startDemo(page);
   await openRoute(page, "#/settings", "Settings");

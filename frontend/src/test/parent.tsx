@@ -5,7 +5,16 @@ import { http, HttpResponse } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
 
 import type { Student } from "../api/client";
-import type { Activity, Curriculum, LibraryItem, LibrarySummary, ReadingEntry, Reference } from "../api/parent";
+import type {
+  Activity,
+  AttendanceChild,
+  AttendanceDay,
+  Curriculum,
+  LibraryItem,
+  LibrarySummary,
+  ReadingEntry,
+  Reference,
+} from "../api/parent";
 import { routes } from "../router";
 import { server } from "./server";
 
@@ -205,4 +214,27 @@ export function activity(id: number, title: string, onDate: string, extra: Parti
     evidence: [],
     ...extra,
   };
+}
+
+export function attendanceChild(studentId: number, name: string, extra: Partial<AttendanceChild> = {}): AttendanceChild {
+  return {
+    student_id: studentId,
+    name,
+    status: null,
+    source: null,
+    suggestion: null,
+    reasons: [],
+    expected: true,
+    lessons_planned: 0,
+    lessons_done: 0,
+    activities: [],
+    minutes: null,
+    minutes_from_work: 0,
+    lessons_without_minutes: 0,
+    ...extra,
+  };
+}
+
+export function attendanceDay(date: string, weekday: string, children: AttendanceChild[], extra: Partial<AttendanceDay> = {}): AttendanceDay {
+  return { date, weekday, school_day: true, day_off: null, children, ...extra };
 }

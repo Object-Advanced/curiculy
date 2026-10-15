@@ -11,14 +11,14 @@ The gaps between the app and its purpose, found on 2026-10-11. Each is planned i
 | # | Issue | Fix |
 |---|---|---|
 | C1 | **No requirement layer.** Reports print whatever exists; nothing knows what *should* exist or what's missing. | Requirement packs, Records, Tasks; Pennsylvania first |
-| C2 | **Subject isn't real** ("Subject: Unfiled"); no lesson minutes; no terms on the school year | Subjects, minutes, terms |
+| C2 | **Subject isn't real** ("Subject: Unfiled"). ~~No lesson minutes; no terms on the school year~~ **minutes and terms built 2026-10-15** | Subjects on lessons |
 | C3 | **Two unconnected curriculum structures** (library units and lesson plans); the same book can exist twice | One Curriculum + Materials + Guide model |
 | C4 | **Books and programs share one setup** (one form, no type, no author, no structure) | One Library, search-first adding, four kinds with their own required fields |
 | C5 | **Work samples are slow to add, and captures don't know who or what** | Add work on the lesson, ask at check-off, snap the stack, inbox suggestions |
-| C6 | **Attendance isn't suggested,** and there's no "everyone present" | "School today?" card and weekly sweep |
+| C6 | ~~**Attendance isn't suggested,** and there's no "everyone present"~~ **Built 2026-10-16:** the "School today?" card (Home and Attendance), the two-week sweep and the year's counts. Still open: one dot per child on the calendar instead of radios; "Move Ada's lessons?" after a sick day (with the move engine) | [Attendance](../2-features/12-attendance.md) |
 | C7 | **The calendar can't move one lesson, preview a change, or check it against any rules** | Move engine with previews and the plan checker |
 | C8 | **No state or structured grade** on the household and children | State at sign-up; grades from a fixed list, re-confirmed each July 1 (no birth date, on purpose) |
-| C10 | **No way to record subjects that have no curriculum** (PE, music, art, safety) | Activities |
+| C10 | ~~**No way to record subjects that have no curriculum** (PE, music, art, safety)~~ **Fixed 2026-10-15** | [Activities](../2-features/25-activities.md); repeating activities still to come |
 | C11 | **No transcript or credits for grades 9–12** | Courses carry credits; a running transcript |
 | C12 | **No guided setup:** a new family has to find Library, Settings and Calendar on their own | The year-setup interview |
 | C13 | **Phone photos can be stored sideways:** uploads drop the EXIF rotate tag without applying it (found while confirming GPS is stripped) | `ImageOps.exif_transpose` before re-saving, plus tests |
