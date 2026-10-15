@@ -30,6 +30,8 @@ Everything the family teaches or reads from, on one bookshelf: **books, textbook
      - **read from a photo of the page**
      - made with "Make numbered lessons"
 
+     A textbook's lessons can also say how many **minutes** each takes (optional, for families who count hours).
+
      Or **Skip for now**.
   6. **Done:** what's still missing and why, the item's place in the community catalog, and, for a textbook, **Plan a curriculum with it**.
 - **Scanning a barcode:**
@@ -43,12 +45,13 @@ Everything the family teaches or reads from, on one bookshelf: **books, textbook
   - The photo is read in memory and never stored. No AI is involved.
 - **Opening an item** (`?item=<id>`) shows:
   - its **Ready to schedule?** checklist
-  - tabs for **Details**, **Chapters** or **Lesson list**, **Cover** (upload a real cover image, not a photo of the book, or remove the upload), and **Schedule**
+  - tabs for **Details**, **Chapters** or **Lesson list**, **Reading list** (books: which children have it on their list, and **Add to Ada's list**), **Cover** (upload a real cover image, not a photo of the book, or remove the upload), and **Schedule**
   - the curricula it's part of
   - **Delete**
   - **Plan a curriculum with it**, for a textbook
 - **Schedule it: one book on its own,** without building a curriculum:
-  - The parent picks who, from when, and how fast: pages a day, chapters a day (when the chapters are entered), a finish date, or the rest of the school year.
+  - The parent picks who, from when, and how fast: pages a day, chapters a day (when the chapters are entered), a finish date, or the rest of the school year. Optionally, **about how many minutes a lesson**.
+  - A book scheduled this way joins the child's [reading list](24-reading-lists.md) by itself.
   - A preview shows every date before anything is saved.
   - The item shows where it's **on the calendar**, with **Take off the calendar**.
   - Under the hood it's a one-item curriculum, marked `solo`. It isn't in the planner's list and is never shared with the catalog.
@@ -85,7 +88,7 @@ Everything the family teaches or reads from, on one bookshelf: **books, textbook
 - reading photos of handwriting (as opposed to print) needs the vision model, which isn't installed (see open issue 3a)
 
 **Tests:**
-- `frontend/src/routes/LibraryPage.test.tsx` (including scanning from a photo, reading a page photo, and scheduling one book)
+- `frontend/src/routes/LibraryPage.test.tsx` (including scanning from a photo, reading a page photo, scheduling one book, and putting a book on a reading list)
 - `tests/test_library.py`
 - `tests/test_photo_readers.py`: real barcodes (drawn, then turned) and real contents pages, read by the real Tesseract
 - the e2e smoke tests: adding a textbook by hand; the shelf's filters; scheduling one book

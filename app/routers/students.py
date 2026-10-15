@@ -7,6 +7,8 @@ from app.core.security import CurrentUser, get_current_user, require_parent
 from app.db import get_admin_db
 from app.core.deps import get_tenant_db
 from app.models import (
+    Activity,
+    ActivityStudent,
     CalendarException,
     DEFAULT_STUDENT_COLOR,
     Enrollment,
@@ -72,6 +74,11 @@ def _clear_student_dependents(db: Session, student_id: int) -> None:
     for model in (Enrollment, CalendarException):
         for row in db.query(model).filter(model.student_id == student_id).all():
             db.delete(row)
+    # An activity that was only this child's goes with them; a shared one stays
+    # for the siblings.
+    for activity in db.query(Activity).filter(Activity.students.any(ActivityStudent.student_id == student_id)).all():
+        if all(link.student_id == student_id for link in activity.students):
+            db.delete(activity)
 
 
 @router.get("", response_model=list[StudentRead])

@@ -32,7 +32,7 @@ Feature page: [Household, students and settings](../2-features/02-household-setu
 | POST | `/api/enrollments` | parent | Create enrollment |
 | GET | `/api/enrollments/{enrollment_id}` | parent | Get enrollment |
 | GET | `/api/household` | parent | Read household |
-| PATCH | `/api/household` | parent | Update household route |
+| PATCH | `/api/household` | parent | Rename, time zone, icon, or `count_by` (`days` or `hours`) |
 | POST | `/api/household/state` | parent | Set the family's state from a date (a move adds a period) |
 | PUT | `/api/household/states` | parent | Replace the state history |
 | GET | `/api/settings/exception-colors` | parent | Get exception colors |
@@ -90,8 +90,23 @@ See [Product spine: Curriculum planner](../6-planning/product-spine.md#curriculu
 | POST | `/api/planner/curricula/{planned_curriculum_id}/items` | parent | Add a library item in a role: textbook, workbook, online, reading, teacher |
 | DELETE | `/api/planner/curricula/{planned_curriculum_id}/items/{item_id}` | parent | Take a library item out (it stays in the library) |
 | POST | `/api/planner/curricula/{planned_curriculum_id}/schedule/preview` | parent | What scheduling would do, per child; saves nothing. Without a textbook, one pace: `pages_per_day`, `chapters_per_day` or `finish_by` (none: the rest of the school year) |
-| POST | `/api/planner/curricula/{planned_curriculum_id}/schedule` | parent | A course and dated lessons for each child |
+| POST | `/api/planner/curricula/{planned_curriculum_id}/schedule` | parent | A course and dated lessons for each child. Optional `minutes_per_lesson`: the course's default minutes. Its books to read join each child's reading list |
 | DELETE | `/api/planner/courses/{course_id}` | parent | Unschedule (finished lessons stay) |
+
+## Reading lists and activities
+Feature pages: [Reading lists](../2-features/24-reading-lists.md), [Activities](../2-features/25-activities.md)
+
+| Method | Path | Who | Handler |
+|---|---|---|---|
+| GET | `/api/reading-list` | parent | Reading-list entries, filtered by `student_id`, `library_item_id` or `school_year_id`: reading now, up next, then finished |
+| POST | `/api/reading-list` | parent | Put a library book on a child's list for this school year (409 if it's there) |
+| PATCH | `/api/reading-list/{reading_id}` | parent | Status, dates, or what it counts toward; dates fill in with today when left out |
+| DELETE | `/api/reading-list/{reading_id}` | parent | Take it off the list (lessons on the calendar stay) |
+| GET | `/api/activities` | parent | Activities, newest first; `student_id`, `from`, `to` |
+| POST | `/api/activities` | parent | Log one: title, `on_date`, `student_ids`, `subject_codes`, optional minutes, notes and `link_url` |
+| GET / PATCH / DELETE | `/api/activities/{activity_id}` | parent | Read, change (only the fields sent), delete |
+| POST | `/api/activities/{activity_id}/evidence` | parent | Add a photo or PDF (served by `GET /api/evidence/files/{path}`) |
+| DELETE | `/api/activities/{activity_id}/evidence/{activity_evidence_id}` | parent | Remove one |
 
 ## Community catalog
 See [Product spine: Community catalog](../6-planning/product-spine.md#community-catalog-built-by-every-family). Shared data: nothing about any family.
@@ -128,10 +143,10 @@ Feature page: [Calendar and lessons](../2-features/04-calendar-and-lessons.md)
 | POST | `/api/assignments` | parent | Create assignment |
 | DELETE | `/api/assignments/{assignment_id}` | parent | Delete assignment |
 | GET | `/api/assignments/{assignment_id}` | signed in | Get assignment |
-| PUT | `/api/assignments/{assignment_id}` | parent | Update assignment |
+| PUT | `/api/assignments/{assignment_id}` | parent | Update a lesson (dates, status, `minutes`) |
 | POST | `/api/assignments/{assignment_id}/evidence` | parent | Upload assignment evidence |
 | PUT | `/api/assignments/{assignment_id}/grade` | parent | Upsert assignment grade |
-| PATCH | `/api/assignments/{assignment_id}/status` | signed in | Update assignment status |
+| PATCH | `/api/assignments/{assignment_id}/status` | signed in | Check off a lesson or change its status; a parent can also send `minutes` |
 | GET | `/api/students/{student_id}/assignments` | signed in | List student assignments |
 | GET | `/api/students/{student_id}/courses` | parent | List student courses |
 | GET | `/api/calendar` | parent | List shared assignments |
@@ -208,6 +223,8 @@ Feature page: [School year and days off](../2-features/11-school-year-and-days-o
 | POST | `/api/school-years` | parent | Create school year |
 | GET | `/api/school-years/{school_year_id}` | parent | Get school year |
 | PATCH | `/api/school-years/{school_year_id}` | parent | Update school year |
+| PUT | `/api/school-years/{school_year_id}/terms` | parent | The family's own terms: named, in order, inside the year, not overlapping (up to 12) |
+| POST | `/api/school-years/{school_year_id}/terms/reset` | parent | Back to four even quarters |
 
 ## Attendance
 Feature page: [Attendance](../2-features/12-attendance.md)

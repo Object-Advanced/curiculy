@@ -85,6 +85,8 @@ class AssignmentRead(ORMModel):
     color_hex: str | None = None
     grade: AssignmentGradeRead | None
     evidence_count: int
+    # Minutes spent (an estimate until it's checked off); hours-mode families count them.
+    minutes: int | None = None
 
     @model_validator(mode="wrap")
     @classmethod
@@ -112,12 +114,15 @@ class AssignmentCreate(BaseModel):
     curriculum_resource_id: int | None = None
     curriculum_unit_id: int | None = None
     subject_taxonomy_id: int | None = None
+    minutes: int | None = Field(default=None, ge=1, le=600)
 
 
 class AssignmentStatusUpdate(BaseModel):
-    """A status-only write, used by the student dashboard checklist."""
+    """A status write, used by checklists. ``minutes`` records how long it took,
+    when the parent says (hours-mode families are asked at check-off)."""
 
     status: AssignmentStatus
+    minutes: int | None = Field(default=None, ge=1, le=600)
 
 
 class AssignmentUpdate(BaseModel):
@@ -133,6 +138,8 @@ class AssignmentUpdate(BaseModel):
     scheduled_date: date | None = None
     completion_date: date | None = None
     status: AssignmentStatus | None = None
+    # Minutes spent; null clears it.
+    minutes: int | None = Field(default=None, ge=1, le=600)
 
     @field_validator("scheduled_date", "status")
     @classmethod

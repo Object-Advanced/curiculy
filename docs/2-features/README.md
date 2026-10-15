@@ -34,5 +34,7 @@ Every major function of Curiculy has one page with two halves:
 | 21 | [Library](21-library.md) | Parents | Works (new) | One shelf for books, textbooks, workbooks and online sites; a step-by-step adding walkthrough |
 | 22 | [Curriculum planner](22-curriculum-planner.md) | Parents | Works (new) | A textbook plus what goes with it, previewed, then put on the calendar |
 | 23 | [Community catalog and review](23-community-catalog.md) | Parents, admins | Works (new) | What families enter, reviewed and shared; curricula other families built |
+| 24 | [Reading lists](24-reading-lists.md) | Parents | Works (new) | Each child's books: reading now, up next, finished; scheduled books move by themselves |
+| 25 | [Activities](25-activities.md) | Parents | Works (new) | Subjects without a curriculum: "5K race, PE, 40 min", with photos |
 
 All problems found, in one prioritized list: **[Open issues](../6-planning/open-issues.md)**.

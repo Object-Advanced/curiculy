@@ -19,6 +19,8 @@ export interface LessonDraft {
   type: LessonType;
   start_page: number | null;
   end_page: number | null;
+  /** How long it usually takes, when the publisher says (families who count hours). */
+  minutes?: number | null;
 }
 
 export interface Parsed<T> {

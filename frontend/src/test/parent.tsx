@@ -4,7 +4,8 @@ import { render } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
 
-import type { Curriculum, LibraryItem, LibrarySummary, Reference } from "../api/parent";
+import type { Student } from "../api/client";
+import type { Activity, Curriculum, LibraryItem, LibrarySummary, ReadingEntry, Reference } from "../api/parent";
 import { routes } from "../router";
 import { server } from "./server";
 
@@ -151,4 +152,57 @@ export function renderAt(path: string) {
     </QueryClientProvider>,
   );
   return router;
+}
+
+export function student(id: number, name: string): Student {
+  return {
+    id,
+    name,
+    grade: "4",
+    grade_label: "4th grade",
+    color_hex: "#000000",
+    grade_confirmed_on: null,
+    grade_needs_confirming: false,
+    has_iep: false,
+    has_login: false,
+    household_id: 1,
+    notes: null,
+  };
+}
+
+export function readingEntry(id: number, studentId: number, title: string, extra: Partial<ReadingEntry> = {}): ReadingEntry {
+  return {
+    id,
+    student_id: studentId,
+    student_name: "Ada",
+    school_year_id: 1,
+    book: summary(100 + id, "reading_book", title, { author: "E. B. White" }),
+    status: "up_next",
+    status_label: "Up next",
+    started_on: null,
+    finished_on: null,
+    counts_toward: "english",
+    counts_toward_name: "English",
+    source: "tracked",
+    scheduled: false,
+    lessons_total: 0,
+    lessons_done: 0,
+    pages: 184,
+    ...extra,
+  };
+}
+
+export function activity(id: number, title: string, onDate: string, extra: Partial<Activity> = {}): Activity {
+  return {
+    id,
+    title,
+    on_date: onDate,
+    minutes: null,
+    notes: null,
+    link_url: null,
+    subjects: [],
+    students: [{ student_id: 3, name: "Ada" }],
+    evidence: [],
+    ...extra,
+  };
 }

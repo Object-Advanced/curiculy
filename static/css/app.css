@@ -1050,6 +1050,44 @@ label.checkbox-row {
     max-width: 36rem;
 }
 
+/* Count the school year in days or hours. */
+.settings-hub .count-by-pref {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.15rem;
+}
+
+.card.count-by-pref h2 {
+    margin-bottom: 0.2rem;
+}
+
+.count-by-pref .muted {
+    max-width: 36rem;
+}
+
+/* A school year's terms, under it in Settings → School Years. */
+.year-terms,
+.year-terms-form {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.year-term-list {
+    display: grid;
+    gap: 0.2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.year-term-row {
+    align-items: end;
+}
+
 .settings-hub .exception-color-pref {
     display: grid;
     gap: 0.85rem;
@@ -3932,7 +3970,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261013-no-ai");
+    background-image: url("/static/night-mountains.jpg?v=20261015-reading");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

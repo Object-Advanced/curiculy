@@ -361,7 +361,7 @@ class TestCustomPortfolio:
         assert "Ada" in html
         assert "Blaise" in html
         assert "page-break" in html
-        assert "Assignments" in html
+        assert "<h2>Lessons</h2>" in html
         assert "Attendance" not in html
         assert "Books / Reading Log" not in html
         assert "Photos / Attachments" not in html

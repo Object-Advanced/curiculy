@@ -9,6 +9,7 @@ import {
   openRoute,
   openSignIn,
   seedLibrary,
+  seedRecords,
   seedSchoolWeek,
   settle,
   startDemo,
@@ -81,6 +82,22 @@ test("library and planner", async ({ page }) => {
   await expect(page.getByText("Everything is ready. Put it on the calendar below.")).toBeVisible();
   await page.waitForLoadState("networkidle");
   await expect.soft(page).toHaveScreenshot("curriculum.png", { fullPage: true });
+});
+
+test("reading lists and activities", async ({ page }) => {
+  await startDemo(page);
+  const { novel } = await seedLibrary(page);
+  await seedRecords(page, novel);
+
+  await page.goto("/next/reading");
+  await expect(page.getByRole("heading", { name: "The Hobbit" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await expect.soft(page).toHaveScreenshot("reading.png", { fullPage: true });
+
+  await page.goto("/next/activities");
+  await expect(page.getByRole("heading", { name: "5K race" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await expect.soft(page).toHaveScreenshot("activities.png", { fullPage: true });
 });
 
 test("kid's own work list", async ({ page }) => {

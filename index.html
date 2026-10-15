@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curiculy</title>
-    <script src="/static/js/theme-boot.js?v=20261013-no-ai"></script>
-    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261013-no-ai">
-    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261013-no-ai">
-    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261013-no-ai" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="/static/css/tokens.css?v=20261013-no-ai">
-    <link rel="stylesheet" href="/static/css/app.css?v=20261013-no-ai">
+    <script src="/static/js/theme-boot.js?v=20261015-reading"></script>
+    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261015-reading">
+    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261015-reading">
+    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261015-reading" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/css/tokens.css?v=20261015-reading">
+    <link rel="stylesheet" href="/static/css/app.css?v=20261015-reading">
 </head>
 <body>
     <div id="auth-page">
         <section class="auth-card" aria-labelledby="auth-title-signin">
             <header class="auth-brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261013-no-ai" alt="" width="72" height="72" aria-hidden="true">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261015-reading" alt="" width="72" height="72" aria-hidden="true">
                 <p class="auth-product">Curiculy</p>
             </header>
             <p id="login-error" class="banner error" hidden></p>
@@ -108,7 +108,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261013-no-ai" alt="" width="40" height="40">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261015-reading" alt="" width="40" height="40">
                 <div>
                     <strong>Curiculy</strong>
                     <p>Homeschool planner</p>
@@ -122,6 +122,8 @@
                 <a href="#/students" data-route="students" class="nav-parent">Kids</a>
                 <a href="/next/library" class="nav-parent">Library</a>
                 <a href="/next/planner" class="nav-parent">Curriculum planner</a>
+                <a href="/next/reading" class="nav-parent">Reading</a>
+                <a href="/next/activities" class="nav-parent">Activities</a>
                 <a href="#/portfolios" data-route="portfolios" class="nav-parent">Portfolios</a>
             </nav>
             <div class="sidebar-user">
@@ -194,9 +196,9 @@
             <header class="modal-head">
                 <div>
                     <p id="detail-eyebrow" class="meta"></p>
-                    <h2 id="detail-title">Assignment</h2>
+                    <h2 id="detail-title">Lesson</h2>
                 </div>
-                <button type="button" class="icon-button" data-action="close-modal" aria-label="Close assignment detail">&times;</button>
+                <button type="button" class="icon-button" data-action="close-modal" aria-label="Close lesson details">&times;</button>
             </header>
             <div id="detail-body" class="modal-body"></div>
             <footer id="detail-actions" class="modal-actions" hidden></footer>
@@ -477,7 +479,7 @@
                 </div>
                 <div class="segmented catalog-kind-tabs" role="tablist" aria-label="Lesson plan sections">
                     <button type="button" role="tab" data-action="lesson-builder-tab" data-tab="assignments"
-                            class="active" aria-selected="true">Assignments</button>
+                            class="active" aria-selected="true">Lessons</button>
                     <button type="button" role="tab" data-action="lesson-builder-tab" data-tab="notes"
                             aria-selected="false">Notes</button>
                     <button type="button" role="tab" data-action="lesson-builder-tab" data-tab="grading"
@@ -560,7 +562,7 @@
                 <p id="recalibrate-overdue-copy" class="muted">Checking the calendar…</p>
                 <div id="recalibrate-overdue-stat" class="recalibrate-stat" hidden>
                     <strong id="recalibrate-overdue-count">0</strong>
-                    <span id="recalibrate-overdue-label">overdue assignments</span>
+                    <span id="recalibrate-overdue-label">overdue lessons</span>
                 </div>
                 <footer class="modal-actions">
                     <button type="button" class="ghost" data-action="close-recalibrate">Cancel</button>
@@ -573,7 +575,7 @@
                     <p class="meta">Step 2 of 3</p>
                     <h2 id="recalibrate-title-2">Choose a recovery plan</h2>
                 </header>
-                <p class="muted">Completed work stays on its original dates. Only leftover assignments move.</p>
+                <p class="muted">Completed work stays on its original dates. Only leftover lessons move.</p>
                 <div class="recalibrate-choices" role="radiogroup" aria-label="Recovery strategy">
                     <label class="recalibrate-choice">
                         <input type="radio" name="recalibrate-strategy" value="extend_year" checked>
@@ -690,7 +692,7 @@
     <input type="file" id="curriculum-pdf-input" accept="application/pdf" hidden>
     <input type="file" id="paper-import-input" accept="image/*" capture="environment" style="display: none;">
     <div id="toast-container" aria-live="polite" aria-relevant="additions text"></div>
-    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261013-no-ai"></script>
-    <script src="/static/js/app.js?v=20261013-no-ai"></script>
+    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261015-reading"></script>
+    <script src="/static/js/app.js?v=20261015-reading"></script>
 </body>
 </html>

@@ -51,7 +51,9 @@ from app.models.community import (
     CommunityCurriculum,
     CommunityCurriculumItem,
 )
+from app.models.activities import Activity, ActivityEvidence, ActivityStudent
 from app.models.library import LibraryChapter, LibraryItem, LibraryLesson
+from app.models.reading import ReadingListEntry
 from app.models.planner import Course, PlannedCurriculum, PlannedCurriculumItem
 from app.models.mixins import TimestampMixin
 
@@ -87,6 +89,9 @@ class Household(TimestampMixin, TenantBase):
     # IANA zone ("America/Chicago"). "Today" for this family follows it; the
     # SPA fills it from the parent's browser when it is missing.
     timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # How the family's school year is counted: "days" (attendance) or "hours"
+    # (lesson and activity minutes), where the state allows either.
+    count_by: Mapped[str] = mapped_column(String(8), nullable=False, default="days", server_default="days")
 
     students: Mapped[list["Student"]] = relationship(back_populates="household")
     school_years: Mapped[list["SchoolYear"]] = relationship(back_populates="household")
@@ -215,9 +220,33 @@ class SchoolYear(TimestampMixin, TenantBase):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # False while the terms are the even quarters Curiculy made (they follow
+    # the year's dates); True once the parent set their own.
+    terms_by_parent: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
 
     household: Mapped[Household] = relationship(back_populates="school_years")
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="school_year")
+    terms: Mapped[list["SchoolYearTerm"]] = relationship(
+        back_populates="school_year", cascade="all, delete-orphan", order_by="SchoolYearTerm.position"
+    )
+
+
+class SchoolYearTerm(TimestampMixin, TenantBase):
+    """A term of the school year (quarters by default): progress, samples and
+    reports are counted per term."""
+
+    __tablename__ = "school_year_terms"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    school_year_id: Mapped[int] = mapped_column(
+        ForeignKey("school_years.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(32), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    school_year: Mapped[SchoolYear] = relationship(back_populates="terms")
 
 
 class HouseholdSettings(TimestampMixin, TenantBase):
@@ -290,9 +319,9 @@ class CalendarException(TimestampMixin, TenantBase):
 
 
 __all__ = [
-    "DEFAULT_STUDENT_COLOR",
-    "STUDENT_COLOR_PALETTE",
-    "next_unused_student_color",
+    "Activity",
+    "ActivityEvidence",
+    "ActivityStudent",
     "Assignment",
     "AssignmentEvidence",
     "AssignmentGrade",
@@ -300,6 +329,13 @@ __all__ = [
     "Author",
     "BookEdition",
     "CalendarException",
+    "CatalogContribution",
+    "CatalogEntry",
+    "CatalogEntryVersion",
+    "CatalogFlag",
+    "CommunityCurriculum",
+    "CommunityCurriculumItem",
+    "Course",
     "Curriculum",
     "CurriculumClassification",
     "CurriculumEdition",
@@ -308,6 +344,7 @@ __all__ = [
     "CurriculumPlan",
     "CurriculumResource",
     "CurriculumUnit",
+    "DEFAULT_STUDENT_COLOR",
     "Enrollment",
     "EvidenceStaging",
     "HomeworkHelpMessage",
@@ -315,13 +352,6 @@ __all__ = [
     "Household",
     "HouseholdSettings",
     "HouseholdState",
-    "CatalogContribution",
-    "CatalogEntry",
-    "CatalogEntryVersion",
-    "CatalogFlag",
-    "CommunityCurriculum",
-    "CommunityCurriculumItem",
-    "Course",
     "LibraryChapter",
     "LibraryItem",
     "LibraryLesson",
@@ -329,11 +359,15 @@ __all__ = [
     "PlannedCurriculum",
     "PlannedCurriculumItem",
     "Publisher",
+    "ReadingListEntry",
     "ReportingCategory",
+    "STUDENT_COLOR_PALETTE",
     "SchoolYear",
+    "SchoolYearTerm",
     "Student",
     "StudentSubject",
     "SubjectTaxonomy",
     "Work",
     "WorkAuthor",
+    "next_unused_student_color",
 ]

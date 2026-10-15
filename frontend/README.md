@@ -4,7 +4,7 @@ The new Curiculy app: Vite + React 19 + TypeScript (strict), Tailwind v4 on the 
 
 **Screens:**
 - **Kids:** **My trail** (`/next/trail`) and the **Sticker journal** (`/next/journal`). See `docs/2-features/19-my-trail.md` and `20-sticker-journal.md`.
-- **Parents** ("Morning Light", inside `ParentShell`): the **Library** (`/next/library`), the **Curriculum planner** (`/next/planner`), and, for admins, **Catalog review** (`/next/admin/catalog`). See `docs/2-features/21-library.md`, `22-curriculum-planner.md` and `23-community-catalog.md`.
+- **Parents** ("Morning Light", inside `ParentShell`): the **Library** (`/next/library`), the **Curriculum planner** (`/next/planner`), **Reading lists** (`/next/reading`), **Activities** (`/next/activities`), and, for admins, **Catalog review** (`/next/admin/catalog`). See `docs/2-features/21-library.md`, `22-curriculum-planner.md`, `23-community-catalog.md`, `24-reading-lists.md` and `25-activities.md`.
 
 ## Layout
 ```
@@ -20,8 +20,8 @@ frontend/
     ├── api/              client.ts (openapi-fetch + sign-in), queries.ts and parent.ts (TanStack Query), images.ts (signed-in images), schema.d.ts (generated)
     ├── lib/              Pure logic: dates, the daily puzzle (ported from app.js), stickers, map layout, pasted chapters and lessons, cover colors
     ├── components/       Kid: TrailMap (SVG), StopList, StickerPanel, BonusChest, KidHeader, CampBanner, StickerIcon
-    │                     Parent: ParentShell, ui/ (Modal, Fields, Checklist), library/, planner/
-    ├── routes/           TrailPage, JournalPage, LibraryPage, PlannerPage, NewCurriculumPage, CurriculumPage, CatalogReviewPage, NotFound
+    │                     Parent: ParentShell, ui/ (Modal, Fields, Checklist), library/, planner/, reading/, activities/
+    ├── routes/           TrailPage, JournalPage, LibraryPage, PlannerPage, NewCurriculumPage, CurriculumPage, ReadingPage, ActivitiesPage, CatalogReviewPage, NotFound
     └── test/             Vitest setup and the MSW server
 ```
 

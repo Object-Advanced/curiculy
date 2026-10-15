@@ -37,8 +37,11 @@ def update_household(
     name: str | None = None,
     icon: str | None = None,
     timezone: str | None = None,
+    count_by: str | None = None,
 ) -> Household:
     household = get_default_household(db)
+    if count_by is not None:
+        household.count_by = count_by
     if name is not None:
         household.name = name
     if icon is not None:

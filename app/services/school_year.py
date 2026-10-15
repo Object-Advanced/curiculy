@@ -27,6 +27,7 @@ from app.models import CalendarException, Household, HouseholdSettings, SchoolYe
 from app.schemas.core import DEFAULT_EXCEPTION_COLOR_VALUES
 from app.services.clock import household_today
 from app.services.households import get_default_household
+from app.services.terms import sync_terms
 
 DEFAULT_CLASS_WEEKDAYS = (0, 1, 2, 3, 4)
 DEFAULT_WEEKDAYS_STORED = "0,1,2,3,4"
@@ -136,6 +137,7 @@ def require_operational_school_year(db: Session) -> SchoolYear:
         end_date=end,
     )
     db.add(year)
+    sync_terms(year)
     db.flush()
     return year
 
@@ -153,6 +155,7 @@ def create_named_school_year(
         end_date=end_date,
     )
     db.add(year)
+    sync_terms(year)
     db.flush()
     db.commit()
     db.refresh(year)
@@ -175,6 +178,7 @@ def update_named_school_year(
         year.end_date = end_date
     if year.end_date < year.start_date:
         raise ValueError("end_date must be on or after start_date")
+    sync_terms(year)
     db.flush()
     db.commit()
     db.refresh(year)
@@ -209,6 +213,7 @@ def save_school_year_settings(
     else:
         year.start_date = start_date
         year.end_date = end_date
+    sync_terms(year)
     _ensure_settings_row(db, household, weekdays=weekdays)
     db.commit()
     db.refresh(year)

@@ -87,6 +87,8 @@ class Course(TimestampMixin, TenantBase):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # "0,1,2,3": the weekdays lessons land on (Monday = 0).
     weekdays: Mapped[str] = mapped_column(String(32), nullable=False)
+    # "About how long is a lesson?": the estimate for lessons without their own.
+    default_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     curriculum: Mapped[PlannedCurriculum] = relationship(back_populates="courses")
     student = relationship("Student")

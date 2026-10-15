@@ -134,6 +134,9 @@ class ScheduleRequest(BaseModel):
     finish_by: date | None = None
     pages_per_day: int | None = Field(default=None, ge=1, le=200)
     chapters_per_day: int | None = Field(default=None, ge=1, le=20)
+    # "About how long is a lesson?": the estimate for lessons without their own
+    # minutes (a textbook lesson's or an online site's session length win).
+    minutes_per_lesson: int | None = Field(default=None, ge=1, le=600)
 
     @model_validator(mode="after")
     def _one_pace(self) -> "ScheduleRequest":

@@ -33,9 +33,11 @@ One subject's plan, usually built around **one textbook**, then put on the calen
   4. **Put it on the calendar:**
      - which children (one is picked automatically), a start date (next Monday by default), and which days (after the first preview)
     - **without a textbook, how fast:** pages a day, a chapter or more a day (books and workbooks with chapters), finish by a date, or the rest of the school year (an online site measured in lessons: one lesson a session until it's done)
+     - **about how many minutes a lesson** (optional): kept as the course's default, and given to each lesson that has no length of its own (a textbook lesson's minutes, or an online site's session length, come first)
      - **Preview the dates** shows each book's count and dates, the finish date, and a warning if it ends after the school year
      - **Put it on the calendar** saves it, then **Go to the calendar**
 - **On the calendar:** each child's course and dates, with **Take off the calendar**. Finished lessons stay.
+- **Books to read** in a scheduled curriculum go on each child's [reading list](24-reading-lists.md), counting toward the curriculum's subject. Taking the course off the calendar takes a never-started book off the list.
 - **The calendar hand-off:**
   - the legacy calendar opens on the week the lessons start (`#/assignments?from=planner&date=…`)
   - it shows a three-step card: each day's lessons; moving one; sick days, days off and Recalibrate

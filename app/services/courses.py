@@ -22,6 +22,7 @@ def course_read(db: Session, course: Course) -> CourseRead:
         end_date=course.end_date,
         weekdays=parse_weekdays(course.weekdays),
         lessons_scheduled=lessons or 0,
+        default_minutes=course.default_minutes,
     )
 
 

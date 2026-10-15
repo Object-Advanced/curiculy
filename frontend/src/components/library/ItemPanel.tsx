@@ -2,8 +2,10 @@ import { useEffect, useId, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 import {
+  useAddReading,
   useDeleteItem,
   useLibraryItem,
+  useReadersOf,
   useReference,
   useRemoveCover,
   useSaveChapters,
@@ -13,6 +15,7 @@ import {
   useUploadCover,
   type LibraryItem,
 } from "../../api/parent";
+import { useStudents } from "../../api/queries";
 import { shortDate } from "../../lib/dates";
 import { ScheduleStep } from "../planner/ScheduleStep";
 import { ReadinessList } from "../ui/Checklist";
@@ -22,7 +25,63 @@ import { BookCover } from "./BookCover";
 import { KindFields, draftFromItem, draftToFields, type Draft } from "./KindFields";
 import { ChapterEditor, LessonEditor } from "./StructureEditors";
 
-type Tab = "details" | "structure" | "cover" | "schedule";
+type Tab = "details" | "structure" | "reading" | "cover" | "schedule";
+
+const TAB_NAMES: Record<Tab, string> = {
+  details: "Details",
+  structure: "Chapters",
+  reading: "Reading list",
+  cover: "Cover",
+  schedule: "Schedule",
+};
+
+/** A book to read: which children have it on their reading list. */
+function ReadersSection({ item }: { item: LibraryItem }) {
+  const students = useStudents(true);
+  const readers = useReadersOf(item.id);
+  const add = useAddReading();
+  const onList = new Map((readers.data ?? []).map((entry) => [entry.student_id, entry]));
+  const kids = students.data ?? [];
+  return (
+    <div className="stack-lg">
+      <p className="step-lede">
+        Put {item.title} on a child's reading list for this year, to track when they start and finish it. For daily
+        reading on the calendar, use Schedule it instead: it joins their list by itself.
+      </p>
+      {students.isSuccess && kids.length === 0 ? (
+        <p className="notice">Add your children first (Kids, in the menu above).</p>
+      ) : null}
+      <ul className="stack" aria-label="Who's reading it">
+        {kids.map((kid) => {
+          const entry = onList.get(kid.id);
+          return (
+            <li className="row-between" key={kid.id}>
+              <span>
+                <strong>{kid.name}</strong>:{" "}
+                {entry ? `${entry.status_label}${entry.scheduled ? ", on the calendar" : ""}` : "not on their list"}
+              </span>
+              {entry ? (
+                <Link className="btn btn-quiet btn-small" to={`/reading?child=${kid.id}`}>
+                  Open {kid.name}'s list
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  disabled={add.isPending || readers.isPending}
+                  onClick={() => add.mutate({ student_id: kid.id, library_item_id: item.id, status: "up_next" })}
+                >
+                  Add to {kid.name}'s list
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <ErrorLine error={add.error ?? readers.error} />
+    </div>
+  );
+}
 
 /** Schedule one item on its own: no curriculum to build first. */
 function ScheduleSection({ item }: { item: LibraryItem }) {
@@ -214,6 +273,7 @@ function StructureSection({ item }: { item: LibraryItem }) {
           type: lesson.type as "lesson",
           start_page: lesson.start_page ?? null,
           end_page: lesson.end_page ?? null,
+          minutes: lesson.minutes ?? null,
         }))}
         saving={lessons.isPending}
         error={lessons.error}
@@ -261,6 +321,14 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
   const hasStructure = item.kind !== "online_program";
   const schedulable = !(item.kind === "textbook" && item.for_parent);
   const structureName = item.kind === "textbook" ? "Lesson list" : "Chapters";
+  const readable = item.kind === "reading_book";
+  const tabs: Tab[] = [
+    "details",
+    ...(hasStructure ? (["structure"] as const) : []),
+    ...(readable ? (["reading"] as const) : []),
+    "cover",
+    ...(schedulable ? (["schedule"] as const) : []),
+  ];
   const plannable = item.kind === "textbook" && !item.for_parent;
 
   return (
@@ -333,7 +401,7 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
         <ReadinessList readiness={item.readiness} />
       </section>
       <div className="chips" role="tablist" aria-label="Edit">
-        {(["details", ...(hasStructure ? ["structure"] : []), "cover", ...(schedulable ? ["schedule"] : [])] as Tab[]).map((name) => (
+        {tabs.map((name) => (
           <button
             key={name}
             type="button"
@@ -343,13 +411,14 @@ export function ItemPanel({ itemId, onClose }: { itemId: number; onClose: () => 
             aria-pressed={tab === name}
             onClick={() => setTab(name)}
           >
-            {name === "details" ? "Details" : name === "structure" ? structureName : name === "cover" ? "Cover" : "Schedule"}
+            {name === "structure" ? structureName : TAB_NAMES[name]}
           </button>
         ))}
       </div>
       <div role="tabpanel">
         {tab === "details" ? <DetailsSection key={item.id} item={item} /> : null}
         {tab === "structure" ? <StructureSection item={item} /> : null}
+        {tab === "reading" ? <ReadersSection item={item} /> : null}
         {tab === "cover" ? <CoverSection item={item} /> : null}
         {tab === "schedule" ? <ScheduleSection item={item} /> : null}
       </div>

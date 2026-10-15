@@ -26,7 +26,7 @@ def read_household(db: Session = Depends(get_tenant_db)):
 @router.patch("", response_model=HouseholdRead)
 def update_household_route(payload: HouseholdUpdate, db: Session = Depends(get_tenant_db)):
     household = update_household(
-        db, name=payload.name, icon=payload.icon, timezone=payload.timezone
+        db, name=payload.name, icon=payload.icon, timezone=payload.timezone, count_by=payload.count_by
     )
     return household_read(db, household)
 

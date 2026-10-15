@@ -19,6 +19,7 @@ from app.core.rate_limit import RateLimiter
 from app.db import dispose_engines
 from app.evidence import EvidenceRejected, evidence_root
 from app.routers import (
+    activities,
     admin,
     assignments,
     attendance,
@@ -42,6 +43,7 @@ from app.routers import (
     pacing,
     planner,
     portfolios,
+    reading,
     recalibration,
     reports,
     school_years,
@@ -113,6 +115,8 @@ def create_app() -> FastAPI:
     application.include_router(community.router, prefix="/api")
     application.include_router(community_admin.router, prefix="/api")
     application.include_router(planner.router, prefix="/api")
+    application.include_router(reading.router, prefix="/api")
+    application.include_router(activities.router, prefix="/api")
     application.include_router(curricula.router, prefix="/api")
     application.include_router(curriculum_plans.router, prefix="/api")
     application.include_router(catalog.router, prefix="/api")

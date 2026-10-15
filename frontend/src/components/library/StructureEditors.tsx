@@ -274,6 +274,7 @@ export function LessonEditor({
         type: row.type,
         start_page: row.start_page,
         end_page: row.end_page,
+        minutes: row.minutes ?? null,
       })),
     );
   };
@@ -281,7 +282,7 @@ export function LessonEditor({
   return (
     <div className="editor">
       <p className="step-lede" id={caption}>
-        Every lesson, in order: its number, its name, and its first and last page (quizzes and tests too). The calendar
+        Every lesson, in order: its number, its name, and its first and last page (quizzes and tests too), plus how many minutes it takes if you know. The calendar
         places one lesson each school day, keeps tests on their own day, and can only catch up properly after a missed
         day when every lesson is listed. You can save part of it now and finish later.
       </p>
@@ -335,6 +336,7 @@ export function LessonEditor({
                 <th scope="col">Type</th>
                 <th scope="col">First page</th>
                 <th scope="col">Last page</th>
+                <th scope="col">Minutes</th>
                 <th scope="col">
                   <span className="sr-only">Remove</span>
                 </th>
@@ -395,6 +397,17 @@ export function LessonEditor({
                         aria-label={`${label} last page`}
                         value={row.end_page ?? ""}
                         onChange={(event) => update(index, { end_page: toNumber(event.target.value) })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="input input-small num-input"
+                        type="number"
+                        min={1}
+                        max={300}
+                        aria-label={`${label} minutes`}
+                        value={row.minutes ?? ""}
+                        onChange={(event) => update(index, { minutes: toNumber(event.target.value) })}
                       />
                     </td>
                     <td>
