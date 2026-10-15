@@ -27,5 +27,5 @@ What protects families today, and what's still open. Children's data lives here,
 6. **Medium:** rate limits live in memory; move them to the edge (Cloudflare) for the public launch.
 7. **Medium:** replace the unmaintained `passlib` (Phase 7). The image also runs as root; make it non-root (Phase 7).
 8. **Low:** `/api/health` still reports `dev_mode` publicly; remove it.
-9. **Low:** the interactive API docs (`/docs`, `/openapi.json`) are public on curiculy.com. That's FastAPI's default. They don't expose data, but they map the whole API for strangers; turn them off in production or require sign-in.
+9. ~~**Low:** the interactive API docs (`/docs`, `/openapi.json`) are public on curiculy.com.~~ **Fixed 2026-10-15:** they're off unless `API_DOCS=true` (or `DEV_MODE`), so the live site returns 404 for `/docs`, `/redoc` and `/openapi.json`.
 10. **Before launch:** an external penetration test and a dependency vulnerability scan in CI.

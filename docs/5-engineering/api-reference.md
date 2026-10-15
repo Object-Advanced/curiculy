@@ -1,6 +1,6 @@
 # API reference
 
-Every endpoint the server answers, generated from the running app's route table (October 2026). All paths are under `https://curiculy.com`. **Who** is the minimum role: *parent* routes refuse kids; *signed in* routes accept a parent or a child (a child only for their own data); *public* routes need no sign-in (sign-in, registration, demo, health). The app also serves an interactive version at `/docs` (FastAPI's default). It's currently public on the live site; see [Security](../4-operations/security-and-privacy.md).
+Every endpoint the server answers, generated from the running app's route table (October 2026). All paths are under `https://curiculy.com`. **Who** is the minimum role: *parent* routes refuse kids; *signed in* routes accept a parent or a child (a child only for their own data); *public* routes need no sign-in (sign-in, registration, demo, health). For an interactive version, run the app locally with `API_DOCS=true` (or `DEV_MODE=true`) and open `/docs`. It's off on the live site.
 
 ## Accounts and sign-in
 Feature page: [Accounts and sign-in](../2-features/01-accounts-and-sign-in.md)
