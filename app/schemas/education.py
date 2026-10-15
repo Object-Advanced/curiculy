@@ -225,15 +225,6 @@ class DashboardStatsRead(BaseModel):
     weekly_trend: list[StudentWeeklyTrend]
 
 
-class StudentSparkRead(BaseModel):
-    """A question about today's lessons, when the local model is available."""
-
-    student_id: int
-    source: str
-    question: str | None = None
-    about: str | None = None
-
-
 class AttendanceDayRead(ORMModel):
     date: date
     status: AttendanceStatus

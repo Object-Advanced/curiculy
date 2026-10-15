@@ -1306,7 +1306,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/homework-help/sessions/{session_id}/messages": {
+    "/api/homework-help/sessions/{session_id}/nudge": {
         parameters: {
             query?: never;
             header?: never;
@@ -1317,9 +1317,10 @@ export interface paths {
         put?: never;
         /**
          * Ask For Nudge
-         * @description The child says what's tricky (optional) and gets their one nudge.
+         * @description The child taps Stuck? and gets their one nudge, built from the lesson
+         *     itself (its book, pages and the parent's note). No AI; nothing typed.
          */
-        post: operations["ask_for_nudge_api_homework_help_sessions__session_id__messages_post"];
+        post: operations["ask_for_nudge_api_homework_help_sessions__session_id__nudge_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2273,26 +2274,6 @@ export interface paths {
         post: operations["set_student_pin_api_students__student_id__pin_post"];
         /** Clear Student Pin */
         delete: operations["clear_student_pin_api_students__student_id__pin_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/students/{student_id}/spark": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Student Spark
-         * @description Ask a kind question about today's lessons when the local model is up.
-         */
-        get: operations["get_student_spark_api_students__student_id__spark_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3957,11 +3938,6 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** HomeworkHelpMessageCreate */
-        HomeworkHelpMessageCreate: {
-            /** Content */
-            content: string;
-        };
         /** HomeworkHelpMessageRead */
         HomeworkHelpMessageRead: {
             /** Content */
@@ -4014,8 +3990,6 @@ export interface components {
              * @default false
              */
             nudged: boolean;
-            /** Push Count */
-            push_count: number;
             status: components["schemas"]["HomeworkHelpStatus"];
             /** Student Id */
             student_id: number;
@@ -5582,20 +5556,6 @@ export interface components {
             name: string;
             /** Notes */
             notes: string | null;
-        };
-        /**
-         * StudentSparkRead
-         * @description A question about today's lessons, when the local model is available.
-         */
-        StudentSparkRead: {
-            /** About */
-            about?: string | null;
-            /** Question */
-            question?: string | null;
-            /** Source */
-            source: string;
-            /** Student Id */
-            student_id: number;
         };
         /**
          * StudentSubjectCreate
@@ -8400,7 +8360,7 @@ export interface operations {
             };
         };
     };
-    ask_for_nudge_api_homework_help_sessions__session_id__messages_post: {
+    ask_for_nudge_api_homework_help_sessions__session_id__nudge_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8409,11 +8369,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["HomeworkHelpMessageCreate"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -10517,37 +10473,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudentRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_student_spark_api_students__student_id__spark_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                student_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StudentSparkRead"];
                 };
             };
             /** @description Validation Error */

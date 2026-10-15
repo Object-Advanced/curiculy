@@ -86,7 +86,6 @@ BODIES = {
     ("PUT", "/api/assignments/{assignment_id}/grade"): {"score_value": "F"},
     ("PATCH", "/api/school-years/{school_year_id}"): {"name": "Hacked"},
     ("PUT", "/api/curriculum/plans/{plan_id}"): {"title": "Hacked"},
-    ("POST", "/api/homework-help/sessions/{session_id}/messages"): {"content": "hi"},
     ("POST", "/api/homework-help/sessions/{session_id}/outcome"): {"outcome": "resolved"},
     ("POST", "/api/recalibrate/{student_id}/execute"): {"strategy": "extend"},
     ("PATCH", "/api/planner/curricula/{planned_curriculum_id}"): {"name": "Hacked"},

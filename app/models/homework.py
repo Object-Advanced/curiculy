@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import TenantBase
@@ -29,7 +29,6 @@ class HomeworkHelpSession(TimestampMixin, TenantBase):
         default=HomeworkHelpStatus.ACTIVE,
         nullable=False,
     )
-    push_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     messages: Mapped[list["HomeworkHelpMessage"]] = relationship(
         back_populates="session",

@@ -19,7 +19,6 @@ class HomeworkHelpSessionRead(ORMModel):
     student_id: int
     assignment_id: int
     status: HomeworkHelpStatus
-    push_count: int
     locked: bool = False
     nudged: bool = False
     messages: list[HomeworkHelpMessageRead] = Field(default_factory=list)
@@ -29,18 +28,10 @@ class HomeworkHelpSessionCreate(BaseModel):
     assignment_id: int
 
 
-class HomeworkHelpMessageCreate(BaseModel):
-    content: str = Field(min_length=1, max_length=500)
-
-
 class HomeworkHelpOutcome(BaseModel):
     """What the child chose after their nudge."""
 
     outcome: Literal["helped", "ask_grown_up"]
-
-
-class NudgeReply(BaseModel):
-    message: str
 
 
 class ParentNotificationRead(ORMModel):

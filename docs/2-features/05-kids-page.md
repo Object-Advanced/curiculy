@@ -15,7 +15,7 @@ A parent opens one child to see their day, check lessons off, and get a conversa
 - **Today** card:
   - "1 of 2 complete", with today's lessons and check boxes (a small celebration plays on check-off)
   - **Recalibrate schedule**, **Print weekly checklist**, and **See Sam's trail** (a preview of the child's [My trail](19-my-trail.md)) in the card's heading
-- **"Ask Sam":** a question for the parent to ask about today's book. A simple question appears at once; when the local AI is available, a better one about today's lessons replaces it.
+- **"Ask Sam":** a question for the parent to ask about one of today's lessons ("Sam, what surprised you in “Charlotte's Web” today?"). It's picked from ten warm questions, the same all day for each child, with a few for days without lessons. No AI.
 - **Books in motion:** progress bars per book (lessons done out of the total).
 
 ### Out of scope today (by design)
@@ -26,18 +26,16 @@ Since Phase 2b, the kid-voice header ("Hey Sam — let's have a good day") and t
 |---|---|---|---|
 | GET | `/api/students/{id}/assignments?start_date=today` | parent | Today's lessons |
 | GET | `/api/students/{id}/courses` | parent | Progress per book |
-| GET | `/api/students/{id}/spark` | parent | A question about today's lessons from the AI (optional) |
 | PATCH | `/api/assignments/{id}/status` | parent | Check off |
 
 ### Code
-- `static/js/app.js`: `renderStudents`, `loadStudentDashboard`, `renderTodayChecklist`, `renderTalkCard`, `renderActiveCourses`
-- `app/services/spark.py`
+- `static/js/app.js`: `renderStudents`, `loadStudentDashboard`, `renderTodayChecklist`, `renderTalkCard` and `localTalkPrompt` (the questions), `renderActiveCourses`
 
 ## Review (October 2026)
 
 ### Working well
 - **Calm and parent-voiced.** The actions a parent needs sit right next to today's list.
-- **Never waits on the AI.** The local question shows first, and the AI's question replaces it only if it arrives.
+- **Instant and predictable.** The question is made in the browser from today's lessons; nothing to wait for.
 
 ### Problems and risks
 - **Three names for one page:** the menu says "Kids", the title says "Sam's day", and the code says `students` and "My day".

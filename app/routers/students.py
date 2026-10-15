@@ -7,7 +7,6 @@ from app.core.security import CurrentUser, get_current_user, require_parent
 from app.db import get_admin_db
 from app.core.deps import get_tenant_db
 from app.models import (
-    Assignment,
     CalendarException,
     DEFAULT_STUDENT_COLOR,
     Enrollment,
@@ -15,7 +14,7 @@ from app.models import (
     next_unused_student_color,
 )
 from app.reference.grades import grade_needs_confirming
-from app.schemas import GradeConfirm, StudentCreate, StudentRead, StudentSparkRead
+from app.schemas import GradeConfirm, StudentCreate, StudentRead
 from app.schemas.auth import StudentPinUpsert
 from app.services.clock import household_today
 from app.services.child_accounts import (
@@ -24,7 +23,6 @@ from app.services.child_accounts import (
     upsert_child_pin,
 )
 from app.services.households import get_default_household
-from app.services.spark import lesson_question
 
 router = APIRouter(
     prefix="/students",
@@ -99,32 +97,6 @@ def get_student(
         _get_student(student_id, db),
         admin_db=admin_db,
         tenant_uuid=user.tenant_uuid,
-    )
-
-
-@router.get("/{student_id}/spark", response_model=StudentSparkRead)
-def get_student_spark(student_id: int, db: Session = Depends(get_tenant_db)) -> StudentSparkRead:
-    """Ask a kind question about today's lessons when the local model is up."""
-    student = _get_student(student_id, db)
-    titles = [
-        title
-        for (title,) in db.query(Assignment.title)
-        .filter(
-            Assignment.student_id == student.id,
-            Assignment.scheduled_date == household_today(db),
-        )
-        .order_by(Assignment.id)
-        if title
-    ]
-    asked = lesson_question(student.name, student.grade, titles)
-    if asked is None:
-        return StudentSparkRead(student_id=student.id, source="none")
-    question, about = asked
-    return StudentSparkRead(
-        student_id=student.id,
-        source="ai",
-        question=question,
-        about=about,
     )
 
 

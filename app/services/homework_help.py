@@ -1,85 +1,37 @@
 """Stuck? One nudge back toward the family's own materials, then a grown-up.
 
 Curiculy guides a child through the curriculum their parent chose; it does not
-teach. When a child is stuck on a lesson they get one short nudge (re-read the
-directions, look at the example in their book, try the first small step) and
-then two choices: it helped, or go get a grown-up. A nudge never answers,
-solves, writes, or explains the lesson, and there is one per lesson until a
-parent turns nudges back on.
+teach, and **no AI talks to children** (decided 2026-10-13). When a child is
+stuck on a lesson they tap Stuck? and get one short nudge, built from the
+lesson itself: the book and pages to open ("Open BJU Reading 4 to pages
+45–49 and read the directions again, out loud"), and the note their grown-up
+left. Then two choices: it helped, or go get a grown-up (which tells the
+parent). There is one nudge per lesson until a parent turns nudges back on.
+The child types nothing, so nothing they write is collected.
 """
 
 from __future__ import annotations
 
-import logging
 import re
 
-from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.enums import HomeworkHelpMessageRole, HomeworkHelpStatus, ParentNotificationType
-from app.models import Assignment, HomeworkHelpSession, Student
-from app.schemas.homework import NudgeReply
+from app.models import Assignment, HomeworkHelpSession, LibraryItem, LibraryLesson, Student
 from app.services.notifications import create_notification
-from app.services.ollama_chat import chat_with_model_fallback
-
-logger = logging.getLogger(__name__)
 
 NUDGE_MAX_CHARS = 280
 PARENT_NOTE_MAX_CHARS = 300
 # Older builds logged help activity into the parent's own notes with this prefix.
 LEGACY_LOG_PREFIX = "[Homework help]"
-
-SYSTEM_PROMPT = """
-A child is stuck on one lesson from their family's own homeschool curriculum.
-You are not their teacher. Do not teach, explain, or solve anything.
-
-Give exactly ONE short nudge: one or two sentences in simple, warm words that
-help them get going again on their own. Good nudges:
-- read the directions again slowly, out loud
-- look at the example in their own book or workbook, or the page before
-- check the note their grown-up left
-- do just the first small step, then check it
-- one simple question that points them back to their own materials
-
-Never give an answer. Never solve, write, or fill in any part of the work.
-Never give a worked example. Never explain the idea behind the lesson.
-If they ask for the answer, kindly say that is a job for their book and their
-grown-up, then give a nudge.
-
-Respond with JSON only: {"message": "..."}
-""".strip()
-
-ANSWER_SEEKING_NUDGE = (
-    "I can't give answers, but your book and your grown-up can help. "
-    "Read the directions one more time, then try just the first step."
-)
+# What the child "says" in the thread the parent sees: they tapped Stuck?.
+STUCK_MESSAGE = "I'm stuck."
 FALLBACK_NUDGE = (
     "Read the directions one more time, out loud. Then look for an example in your "
     "book or on the page before."
 )
-
-_PUSH_PATTERNS = [
-    re.compile(pattern, flags=re.IGNORECASE)
-    for pattern in (
-        r"\bjust tell me\b",
-        r"\bgive me the (full |complete )?answers?\b",
-        r"\bwhat('?s| is| are) the answers?\b",
-        r"\btell me the answers?\b",
-        r"\bwrite the (essay|paper|paragraph|story|report)\b",
-        r"\bdo (it|this|the homework|the work|the problem|the worksheet) for me\b",
-        r"\bsolve (it|this) for me\b",
-        r"\bshow me the (full )?solution\b",
-        r"\banswer key\b",
-        r"\bfill (in|out) the worksheet\b",
-        r"\bjust give (it|me)\b",
-        r"\bcomplete answer\b",
-    )
-]
-
-
-def is_answer_seeking(text: str) -> bool:
-    blob = (text or "").strip()
-    return bool(blob) and any(pattern.search(blob) for pattern in _PUSH_PATTERNS)
+# The Curriculum planner writes pages into workbook and reading lessons' titles.
+_PAGES_IN_TITLE = re.compile(r"\bpp?\. (\d+)(?:–(\d+))?")
 
 
 def has_nudge(session: HomeworkHelpSession) -> bool:
@@ -101,46 +53,51 @@ def first_name(name: str | None) -> str:
     return (name or "").strip().split(" ")[0] or "Your child"
 
 
-def _tidy(text: str) -> str:
-    text = " ".join((text or "").split())
-    if not text:
-        return FALLBACK_NUDGE
-    if len(text) <= NUDGE_MAX_CHARS:
-        return text
-    cut = text[:NUDGE_MAX_CHARS]
-    end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
-    return cut[: end + 1] if end > 0 else cut.rsplit(" ", 1)[0] + "…"
+def _pages(first: int, last: int | None) -> str:
+    return f"page {first}" if last in (None, first) else f"pages {first}–{last}"
 
 
-async def nudge_with_ollama(
-    *,
-    assignment_title: str,
-    resource_title: str | None,
-    note: str | None,
-    child_name: str,
-    user_message: str,
-) -> str:
-    lesson = [f"Child's first name: {child_name}", f"Lesson: {assignment_title}"]
+def where_to_look(db: Session, assignment: Assignment, resource_title: str | None = None) -> tuple[str | None, bool]:
+    """(what to open, whether it's a website), most specific first."""
+    if assignment.library_lesson_id:
+        lesson = db.get(LibraryLesson, assignment.library_lesson_id)
+        book = db.get(LibraryItem, lesson.item_id) if lesson else None
+        if book is not None:
+            if lesson.start_page:
+                return f"Open {book.title} to {_pages(lesson.start_page, lesson.end_page)}", False
+            return f"Open {book.title} to today's lesson", False
+    if assignment.library_item_id:
+        book = db.get(LibraryItem, assignment.library_item_id)
+        if book is not None:
+            if book.kind == "online_program":
+                return f"Go back to {book.title}", True
+            match = _PAGES_IN_TITLE.search(assignment.title or "")
+            if match:
+                first, last = int(match.group(1)), int(match.group(2)) if match.group(2) else None
+                return f"Open {book.title} to {_pages(first, last)}", False
+            return f"Open {book.title} to today's pages", False
     if resource_title:
-        lesson.append(f"From their book or plan: {resource_title}")
+        return f"Look in {resource_title}", False
+    return None, False
+
+
+def nudge_for(db: Session, assignment: Assignment, resource_title: str | None = None) -> str:
+    """One short nudge back to the family's own materials. Never an answer."""
+    place, online = where_to_look(db, assignment, resource_title)
+    if place and online:
+        nudge = f"{place} and look at its example or hint, then try the first one again."
+    elif place:
+        nudge = f"{place} and read the directions again, out loud. Look for an example on the page or the page before."
+    else:
+        nudge = FALLBACK_NUDGE
+    note = parent_note(assignment)
     if note:
-        lesson.append(f"Note from their grown-up: {note}")
-    try:
-        content = await chat_with_model_fallback(
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + "\n".join(lesson)},
-                {"role": "user", "content": user_message},
-            ],
-            format=NudgeReply.model_json_schema(),
-            options={"temperature": 0.3},
-        )
-    except Exception as error:
-        logger.warning("Nudge model unavailable: %s", error)
-        return FALLBACK_NUDGE
-    try:
-        return _tidy(NudgeReply.model_validate_json(content).message)
-    except ValidationError:
-        return _tidy(content)
+        room = NUDGE_MAX_CHARS - len(nudge) - len(" Your grown-up left a note: “”")
+        if room >= 20:
+            if len(note) > room:
+                note = note[: room - 1].rsplit(" ", 1)[0] + "…"
+            nudge += f" Your grown-up left a note: “{note}”"
+    return nudge
 
 
 def latest_session(db: Session, assignment_id: int, student_id: int) -> HomeworkHelpSession | None:

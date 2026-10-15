@@ -165,7 +165,6 @@ def test_capture_credential_cannot_call_parent_apis(
             headers=headers,
             json={"evidence_id": 1, "assignment_id": 1},
         ),
-        auth_client.get("/api/students/1/spark", headers=headers),
         auth_client.post("/api/auth/capture-token", headers=headers),
         auth_client.get("/api/auth/switchable-users", headers=headers),
         auth_client.get("/api/school-years", headers=headers),

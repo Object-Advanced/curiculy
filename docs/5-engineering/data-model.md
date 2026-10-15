@@ -114,7 +114,7 @@ There are no real users yet, so the tables for curricula, lesson plans, enrollme
 - **Alembic migrations** in `migrations/versions/`, run as the owner role at startup (`python -m app.db_startup`, called by `entrypoint.sh`). Each migration runs in one transaction: it applies fully or not at all.
 - **A new family table also needs, in its migration,** `tenancy.protect_family_table("<table>")` and `tenancy.add_family_reference(...)` for each reference to another family table (`migrations/tenancy.py`). The safety check refuses to start if either is missing.
 - **To write one:** change the models, run `alembic revision --autogenerate -m "…"`, read what it wrote, then add the tenancy steps. `tests/test_database.py` fails if the migrations and models disagree.
-- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`). `0006` added `planned_curricula.solo`.
+- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`). `0006` added `planned_curricula.solo`. `0007` dropped `homework_help_sessions.push_count` (no AI for children: nothing to count).
 
 ## Known data gaps
 - **Lessons aren't tied to a school year,** so reports use date ranges.

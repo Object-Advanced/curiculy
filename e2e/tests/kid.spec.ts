@@ -108,9 +108,10 @@ test("stuck? gives one nudge, then sends the kid to a grown-up", async ({ page }
   await page.getByRole("button", { name: /^Math facts practice/ }).click();
 
   await expect(page.getByRole("heading", { name: "Stuck?" })).toBeVisible();
-  await page.getByLabel("What part is tricky?").fill("I don't know where to start");
+  // Nothing to type: no AI reads it. The nudge comes from the lesson itself;
+  // this one has no book or note, so it's the general nudge.
+  await expect(page.getByRole("textbox")).toHaveCount(0);
   await page.getByRole("button", { name: "Give me a nudge" }).click();
-  // No model in this suite, so the built-in nudge answers.
   await expect(page.getByRole("heading", { name: "Here’s a nudge" })).toBeVisible();
   await expect(page.locator(".stuck-nudge")).toContainText("Read the directions one more time");
   await expect(page.getByRole("button", { name: "Give me a nudge" })).toHaveCount(0);

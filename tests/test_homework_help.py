@@ -1,23 +1,28 @@
-"""Stuck? nudges: one nudge per lesson back to the family's materials, then a grown-up."""
+"""Stuck? nudges: one nudge per lesson back to the family's materials, then a grown-up.
 
+No AI talks to children (decided 2026-10-13): the nudge is built from the
+lesson itself, and the child types nothing.
+"""
+
+import inspect
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
-from app.schemas.homework import NudgeReply
-from app.services.homework_help import (
-    ANSWER_SEEKING_NUDGE,
-    FALLBACK_NUDGE,
-    NUDGE_MAX_CHARS,
-    nudge_with_ollama,
-)
+from app.models import Assignment, LibraryItem, LibraryLesson, Student
+from app.routers import homework_help as homework_router
+from app.services import homework_help as homework_service
+from app.services.homework_help import FALLBACK_NUDGE, NUDGE_MAX_CHARS, nudge_for
+from app.services.households import get_default_household
 from tests.test_auth import bearer
 from tests.test_kid_auth import _child_token, _parent_ready, _set_pin
 
 pytest_plugins = ["tests.test_auth"]
 
-NUDGE = "Look at the fraction circles example on the page before, then try the first one."
+NOTE = "Parent reminder: use fraction circles."
+NOTED_NUDGE = f"{FALLBACK_NUDGE} Your grown-up left a note: “{NOTE}”"
 
 
 def _assignment(client: TestClient, token: str, student_id: int, title: str = "Fractions p. 42") -> dict:
@@ -28,7 +33,7 @@ def _assignment(client: TestClient, token: str, student_id: int, title: str = "F
             "student_id": student_id,
             "title": title,
             "scheduled_date": date.today().isoformat(),
-            "notes": "Parent reminder: use fraction circles.",
+            "notes": NOTE,
         },
     ).json()
 
@@ -44,14 +49,8 @@ def _start(client: TestClient, child: str, assignment_id: int):
     return client.post("/api/homework-help/sessions", headers=bearer(child), json={"assignment_id": assignment_id})
 
 
-def _ask(client: TestClient, child: str, session_id: int, content: str = "I don't get the second one."):
-    with patch("app.routers.homework_help.nudge_with_ollama", new=AsyncMock(return_value=NUDGE)) as model:
-        response = client.post(
-            f"/api/homework-help/sessions/{session_id}/messages",
-            headers=bearer(child),
-            json={"content": content},
-        )
-    return response, model
+def _ask(client: TestClient, child: str, session_id: int):
+    return client.post(f"/api/homework-help/sessions/{session_id}/nudge", headers=bearer(child))
 
 
 def _outcome(client: TestClient, token: str, session_id: int, outcome: str):
@@ -74,44 +73,32 @@ def test_one_nudge_then_the_parent_sees_exactly_what_was_said(auth_client: TestC
     assert started.json()["nudged"] is False
     assert _inbox(auth_client, token) == []
 
-    response, model = _ask(auth_client, child, started.json()["id"])
+    response = _ask(auth_client, child, started.json()["id"])
     assert response.status_code == 200
     body = response.json()
     assert body["nudged"] is True
-    assert [row["role"] for row in body["messages"]] == ["user", "assistant"]
-    assert body["messages"][1]["content"] == NUDGE
-    kwargs = model.await_args.kwargs
-    assert kwargs["child_name"] == "Ada"
-    assert kwargs["note"] == "Parent reminder: use fraction circles."
+    assert [(row["role"], row["content"]) for row in body["messages"]] == [
+        ("user", "I'm stuck."),
+        ("assistant", NOTED_NUDGE),
+    ]
 
     [note] = _inbox(auth_client, token)
     assert note["type"] == "homework_help_started"
     assert note["title"] == "Ada asked for a nudge"
-    assert NUDGE in note["body"]
+    assert NOTED_NUDGE in note["body"]
     # The parent's own notes are left alone.
     saved = auth_client.get(f"/api/assignments/{work['id']}", headers=bearer(token)).json()
-    assert saved["notes"] == "Parent reminder: use fraction circles."
+    assert saved["notes"] == NOTE
 
-    second, model = _ask(auth_client, child, body["id"], "another hint please")
+    second = _ask(auth_client, child, body["id"])
     assert second.status_code == 403
     assert "ask a grown-up" in second.json()["detail"]
-    model.assert_not_awaited()
 
 
 def test_parent_cannot_ask_for_a_nudge(auth_client: TestClient) -> None:
     token, student = _parent_ready(auth_client)
     work = _assignment(auth_client, token, student["id"])
     assert _start(auth_client, token, work["id"]).status_code == 403
-
-
-def test_asking_for_the_answer_gets_a_fixed_nudge_without_the_model(auth_client: TestClient) -> None:
-    _token, _student, work, child = _ready(auth_client)
-    session = _start(auth_client, child, work["id"]).json()
-    response, model = _ask(auth_client, child, session["id"], "just tell me the answer")
-    assert response.status_code == 200
-    assert response.json()["messages"][-1]["content"] == ANSWER_SEEKING_NUDGE
-    assert response.json()["push_count"] == 1
-    model.assert_not_awaited()
 
 
 def test_helped_uses_up_the_nudge_until_a_parent_allows_another(auth_client: TestClient) -> None:
@@ -126,7 +113,7 @@ def test_helped_uses_up_the_nudge_until_a_parent_allows_another(auth_client: Tes
     # Coming back to the lesson shows the same, used nudge; no second one.
     again = _start(auth_client, child, work["id"])
     assert again.json()["id"] == session["id"]
-    assert _ask(auth_client, child, session["id"])[0].status_code == 403
+    assert _ask(auth_client, child, session["id"]).status_code == 403
 
     assert auth_client.post(
         f"/api/homework-help/assignments/{work['id']}/unlock", headers=bearer(child)
@@ -187,58 +174,87 @@ def test_mark_notifications_read(auth_client: TestClient) -> None:
     assert auth_client.get("/api/notifications", headers=bearer(child)).status_code == 403
 
 
-def test_a_nudge_still_arrives_when_the_model_is_down(auth_client: TestClient) -> None:
+def test_no_ai_is_reached_from_anything_a_child_does(auth_client: TestClient) -> None:
+    """A tripwire on every way the app reaches a model: the whole flow still works."""
     _token, _student, work, child = _ready(auth_client)
-    session = _start(auth_client, child, work["id"]).json()
-    with patch(
-        "app.services.homework_help.chat_with_model_fallback",
-        new=AsyncMock(side_effect=ConnectionError("ollama down")),
+
+    def tripwire(*_args, **_kwargs):
+        raise AssertionError("A child's request reached the AI")
+
+    with (
+        patch("ollama.AsyncClient", side_effect=tripwire),
+        patch("ollama.Client", side_effect=tripwire),
+        patch("app.services.ollama_chat.chat_with_model_fallback", side_effect=tripwire),
     ):
-        response = auth_client.post(
-            f"/api/homework-help/sessions/{session['id']}/messages",
-            headers=bearer(child),
-            json={"content": "I am stuck on the first problem."},
-        )
-    assert response.status_code == 200
-    assert response.json()["messages"][-1]["content"] == FALLBACK_NUDGE
+        session = _start(auth_client, child, work["id"]).json()
+        assert _ask(auth_client, child, session["id"]).status_code == 200
+        assert _outcome(auth_client, child, session["id"], "ask_grown_up").status_code == 200
+    for module in (homework_router, homework_service):
+        assert "ollama" not in inspect.getsource(module).lower()
 
 
-async def test_nudge_prompt_points_back_to_the_family_materials() -> None:
-    chat = AsyncMock(return_value={"message": {"content": NudgeReply(message=NUDGE).model_dump_json()}})
-    client = MagicMock()
-    client.chat = chat
-    with patch("app.services.ollama_chat.ollama.AsyncClient", return_value=client):
-        nudge = await nudge_with_ollama(
-            assignment_title="Fractions p. 42",
-            resource_title="Saxon Math 5/4",
-            note="Use fraction circles.",
-            child_name="Ada",
-            user_message="How do I start?",
-        )
-    assert nudge == NUDGE
-    kwargs = chat.await_args.kwargs
-    assert kwargs["format"] == NudgeReply.model_json_schema()
-    assert kwargs["options"] == {"temperature": 0.3}
-    system = kwargs["messages"][0]["content"]
-    assert "You are not their teacher" in system
-    assert "Never give an answer" in system
-    assert "From their book or plan: Saxon Math 5/4" in system
-    assert "Note from their grown-up: Use fraction circles." in system
+# --- Where the nudge points ---------------------------------------------------
+
+def _student(db: Session) -> Student:
+    student = Student(household_id=get_default_household(db).id, name="Ada Okafor")
+    db.add(student)
+    db.flush()
+    return student
 
 
-async def test_a_long_reply_is_trimmed_to_a_nudge() -> None:
-    rambling = "Try the first step. " + "Then keep going with more and more detail. " * 20
-    with patch(
-        "app.services.homework_help.chat_with_model_fallback",
-        new=AsyncMock(return_value=NudgeReply(message=rambling).model_dump_json()),
-    ):
-        nudge = await nudge_with_ollama(
-            assignment_title="Fractions p. 42",
-            resource_title=None,
-            note=None,
-            child_name="Ada",
-            user_message="help",
-        )
+def _lesson(db: Session, student: Student, title: str, **links) -> Assignment:
+    lesson = Assignment(student_id=student.id, title=title, scheduled_date=date(2026, 10, 19), **links)
+    db.add(lesson)
+    db.flush()
+    return lesson
+
+
+def test_a_textbook_lesson_points_to_its_pages(db: Session) -> None:
+    book = LibraryItem(kind="textbook", title="Saxon Math 5/4", total_pages=600)
+    book.lessons.append(LibraryLesson(position=0, number=12, name="Fractions", start_page=45, end_page=49))
+    db.add(book)
+    db.flush()
+    lesson = _lesson(db, _student(db), "Saxon Math 5/4 · Lesson 12: Fractions (pp. 45–49)",
+                     library_item_id=book.id, library_lesson_id=book.lessons[0].id)
+    assert nudge_for(db, lesson) == (
+        "Open Saxon Math 5/4 to pages 45–49 and read the directions again, out loud. "
+        "Look for an example on the page or the page before."
+    )
+
+
+def test_workbook_and_reading_lessons_point_to_their_pages(db: Session) -> None:
+    student = _student(db)
+    workbook = LibraryItem(kind="workbook", title="Spectrum Math 4", total_pages=160)
+    novel = LibraryItem(kind="reading_book", title="Charlotte's Web", total_pages=184)
+    db.add_all([workbook, novel])
+    db.flush()
+    pages = _lesson(db, student, "Spectrum Math 4 · pp. 18–20 (Unit 1)", library_item_id=workbook.id)
+    one = _lesson(db, student, "Read Charlotte's Web, p. 41", library_item_id=novel.id)
+    assert nudge_for(db, pages).startswith("Open Spectrum Math 4 to pages 18–20 and read the directions")
+    assert nudge_for(db, one).startswith("Open Charlotte's Web to page 41 and read")
+
+
+def test_an_online_lesson_points_back_to_the_site(db: Session) -> None:
+    site = LibraryItem(kind="online_program", title="IXL Math", website_url="https://www.ixl.com")
+    db.add(site)
+    db.flush()
+    lesson = _lesson(db, _student(db), "IXL Math · 20 minutes", library_item_id=site.id)
+    assert nudge_for(db, lesson) == "Go back to IXL Math and look at its example or hint, then try the first one again."
+
+
+def test_older_lessons_use_their_book_title_and_the_parents_note(db: Session) -> None:
+    student = _student(db)
+    lesson = _lesson(db, student, "Fractions worksheet", notes="Use the blue workbook.\n[Homework help] old log line")
+    assert nudge_for(db, lesson, resource_title="Saxon Math 5/4") == (
+        "Look in Saxon Math 5/4 and read the directions again, out loud. Look for an example on the page "
+        "or the page before. Your grown-up left a note: “Use the blue workbook.”"
+    )
+    bare = _lesson(db, student, "Free writing")
+    assert nudge_for(db, bare) == FALLBACK_NUDGE
+
+
+def test_a_long_note_is_trimmed_to_fit_a_nudge(db: Session) -> None:
+    lesson = _lesson(db, _student(db), "Essay", notes="Remember the outline we made together. " * 10)
+    nudge = nudge_for(db, lesson)
     assert len(nudge) <= NUDGE_MAX_CHARS
-    assert nudge.startswith("Try the first step.")
-    assert nudge.endswith(".")
+    assert nudge.startswith(FALLBACK_NUDGE) and nudge.endswith("…”")
