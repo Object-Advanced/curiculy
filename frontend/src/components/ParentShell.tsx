@@ -37,6 +37,7 @@ export function ParentShell() {
           <NavLink to="/planner">Curriculum planner</NavLink>
           <NavLink to="/reading">Reading</NavLink>
           <NavLink to="/activities">Activities</NavLink>
+          <NavLink to="/attendance">Attendance</NavLink>
           <a href="/#/portfolios">Portfolios</a>
           {me.data?.is_admin ? <NavLink to="/admin/catalog">Catalog review</NavLink> : null}
           <a href="/#/settings">Settings</a>

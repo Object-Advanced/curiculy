@@ -52,6 +52,9 @@ test("parent screens", async ({ page }) => {
   for (const [name, hash, title] of screens) {
     await openRoute(page, hash, title);
     await settle(page);
+    // "School today?" follows the server's real date (shown on school days,
+    // hidden on others), so it stays out of the picture; the smoke tests cover it.
+    await page.addStyleTag({ content: "#home-school-today { display: none !important; }" });
     await expect.soft(page).toHaveScreenshot(`${name}.png`, { mask: serverDateDriven(page) });
   }
 

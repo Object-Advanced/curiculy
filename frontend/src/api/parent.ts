@@ -43,6 +43,12 @@ export type ReadingUpdate = Schemas["ReadingEntryUpdate"];
 export type Activity = Schemas["ActivityRead"];
 export type ActivityCreate = Schemas["ActivityCreate"];
 export type ActivityUpdate = Schemas["ActivityUpdate"];
+export type AttendanceDays = Schemas["AttendanceDays"];
+export type AttendanceDay = Schemas["AttendanceDayCard"];
+export type AttendanceChild = Schemas["AttendanceChildDay"];
+export type AttendanceMark = Schemas["AttendanceMark"];
+export type AttendanceSummary = Schemas["AttendanceSummary"];
+export type AttendanceStatus = Schemas["AttendanceStatus"];
 
 export const parentKeys = {
   reference: ["reference"] as const,
@@ -61,6 +67,9 @@ export const parentKeys = {
   readingFor: (studentId: number) => ["reading", "student", studentId] as const,
   readersOf: (itemId: number) => ["reading", "item", itemId] as const,
   activities: ["activities"] as const,
+  attendance: ["attendance"] as const,
+  attendanceDays: (from: string, to: string) => ["attendance", "days", from, to] as const,
+  attendanceSummary: ["attendance", "summary"] as const,
 };
 
 /** Unwrap an openapi-fetch result, or throw the server's message. */
@@ -594,5 +603,38 @@ export function useDeleteActivity() {
     mutationFn: async (id: number) =>
       unwrap(await api.DELETE("/api/activities/{activity_id}", { params: { path: { activity_id: id } } })),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.activities }),
+  });
+}
+
+// ---- Attendance ---------------------------------------------------------------------
+
+/** Each day and child: what's marked and what the day's work suggests. No dates: the family's today. */
+export function useAttendanceDays(from?: string, to?: string, enabled = true) {
+  return useQuery({
+    queryKey: parentKeys.attendanceDays(from ?? "today", to ?? from ?? "today"),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/api/attendance/days", {
+          params: { query: { ...(from ? { start_date: from } : {}), ...(to ? { end_date: to } : {}) } },
+        }),
+      ),
+    enabled,
+  });
+}
+
+export function useAttendanceSummary() {
+  return useQuery({
+    queryKey: parentKeys.attendanceSummary,
+    queryFn: async () => unwrap(await api.GET("/api/attendance/summary")),
+  });
+}
+
+/** "Looks right": save the parent's marks, then refresh every day card and the counts. */
+export function useConfirmAttendance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (marks: AttendanceMark[]) =>
+      unwrap(await api.POST("/api/attendance/confirm", { body: { marks } })),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.attendance }),
   });
 }

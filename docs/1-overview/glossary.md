@@ -19,6 +19,7 @@ The words parents see, the words the code uses, and the words we're moving to. W
 | **Days off** | Calendar exceptions | `CalendarException` | Holidays, vacations, sick days and appointments; for the household or one child |
 | **School year** | School year | `SchoolYear` (the "operational" year is the latest) | Start and end dates |
 | **Term** | Terms, Quarter 1 | `SchoolYearTerm` | A part of the school year: four even quarters by default, or the family's own (semesters, a co-op's terms) |
+| **Attendance** | School today?, Attendance | `Attendance` (`/api/attendance`) | One mark per child per school day: Present, Field trip (counts as present), Sick or Absent. Suggested from the day's work; recorded only when the parent confirms |
 | **Days or hours** | Count the school year in | `Household.count_by` | Whether the year is counted in school days (attendance) or hours (lesson and activity minutes) |
 | **Reading list** | Reading lists | `ReadingListEntry` (`/api/reading-list`) | One child's books for the year: up next, reading now, finished, with dates and the subject each counts toward |
 | **Activity** | Activities, Log an activity | `Activity` (`/api/activities`) | Something logged for a subject without a curriculum (a race for PE, a recital for music): children, subjects, minutes, notes, photos, a link |

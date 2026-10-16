@@ -355,7 +355,14 @@ class AssignmentEvidence(TimestampMixin, TenantBase):
 
 
 class Attendance(TimestampMixin, TenantBase):
-    """One day's attendance for one student: present, absent, sick, or vacation."""
+    """One day's attendance for one student: present, field trip, absent, sick, or vacation.
+
+    Every row is the parent's tap. ``source`` says whether they confirmed
+    Curiculy's suggestion ("suggestion": a lesson was checked off, or an
+    activity logged, that day) or chose it themselves ("parent"). ``minutes``
+    is the day's school time when the parent set it; otherwise hours-mode
+    families count the day's lesson and activity minutes.
+    """
 
     __tablename__ = "attendance"
     __table_args__ = (
@@ -374,6 +381,8 @@ class Attendance(TimestampMixin, TenantBase):
         Enum(AttendanceStatus, native_enum=False, length=32, values_callable=enum_values),
         nullable=False,
     )
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="parent", server_default="parent")
+    minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     student: Mapped["Student"] = relationship(
         back_populates="attendance",

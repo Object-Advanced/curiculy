@@ -2012,6 +2012,8 @@ function renderDashboard() {
             <strong>${state.students.length || "—"}</strong>
           </div>
         </div>
+        <div id="home-school-today" class="home-school-today" role="group"
+             aria-labelledby="school-today-title" hidden></div>
       </section>
       <div class="home-stage">
       <div class="home-break-row">
@@ -2384,6 +2386,75 @@ function paintDashboardCharts(stats) {
   applyChartDefaults();
   paintTodayProgressChart(stats.today_progress || []);
   paintWeeklyTrendChart(stats);
+}
+
+/* ---- "School today?" on Home: suggested from the day's work, saved with one tap ---- */
+
+let schoolTodayRequest = 0;
+let schoolToday = null;
+
+function schoolTodayLine(child) {
+  if (child.status) return `${child.status}${child.source === "suggestion" ? ", as suggested" : ""}`;
+  if (child.suggestion) return `${child.suggestion} (suggested)${child.reasons.length ? `: ${child.reasons[0]}` : ""}`;
+  return "Not marked yet";
+}
+
+function renderSchoolToday(day) {
+  const children = (day?.children || []).filter((child) => child.expected || child.status || child.suggestion);
+  if (!children.length) return "";
+  const toConfirm = children.filter((child) => child.suggestion && !child.status);
+  const waiting = children.filter((child) => !child.status && !child.suggestion);
+  return `
+    <p class="home-school-today-title" id="school-today-title"><strong>School today?</strong></p>
+    <ul class="home-school-today-list">
+      ${children
+        .map(
+          (child) => `
+        <li><strong>${escapeHtml(child.name)}</strong> <span class="muted">${escapeHtml(schoolTodayLine(child))}</span></li>`
+        )
+        .join("")}
+    </ul>
+    <div class="home-school-today-actions">
+      ${toConfirm.length ? `<button type="button" data-action="school-today-confirm">Looks right</button>` : ""}
+      <a class="button ghost" href="/next/attendance">${
+        waiting.length ? `Mark ${escapeHtml(waiting.map((child) => child.name).join(" and "))}` : "Change or see the year"
+      }</a>
+    </div>`;
+}
+
+async function loadSchoolToday() {
+  const token = (schoolTodayRequest += 1);
+  try {
+    const result = await api("/attendance/days");
+    const box = $("home-school-today");
+    if (token !== schoolTodayRequest || !box) return;
+    schoolToday = result?.days?.[0] || null;
+    const html = renderSchoolToday(schoolToday);
+    box.innerHTML = html;
+    box.hidden = !html;
+  } catch {
+    // Home works without it; the Attendance page says what went wrong.
+    const box = $("home-school-today");
+    if (box) box.hidden = true;
+  }
+}
+
+async function confirmSchoolToday() {
+  const children = (schoolToday?.children || []).filter((child) => child.suggestion && !child.status);
+  if (!children.length) return;
+  try {
+    const result = await api("/attendance/confirm", {
+      method: "POST",
+      body: JSON.stringify({
+        marks: children.map((child) => ({ student_id: child.student_id, date: schoolToday.date, status: child.suggestion })),
+      }),
+    });
+    if (isOfflineQueued(result)) return;
+    flash("Attendance saved.");
+    await loadSchoolToday();
+  } catch (error) {
+    flash(error.message, true);
+  }
 }
 
 async function loadDashboardStats() {
@@ -4675,7 +4746,8 @@ function attendanceHeader(studentId, iso, { compact = false } = {}) {
         <p class="attendance-exception">${label}</p>
       </div>`;
   }
-  const yesChecked = status === "Present" ? " checked" : "";
+  // A field trip counts as present.
+  const yesChecked = status === "Present" || status === "Field trip" ? " checked" : "";
   const noChecked = status === "Absent" ? " checked" : "";
   return `
     <div class="attendance-header${compactClass}" style="${studentColorStyle(studentId)}">
@@ -7830,7 +7902,10 @@ const VIEWS = {
 // Views render synchronously from cached state; anything that has to fetch on
 // entry hangs its loader here and patches its own container afterwards.
 const ACTIVATORS = {
-  dashboard: loadDashboardStats,
+  dashboard: () => {
+    loadSchoolToday();
+    return loadDashboardStats();
+  },
   assignments: loadAssignmentsPage,
   students: loadStudentDashboard,
   portfolios: loadPortfolioReport,
@@ -8029,6 +8104,9 @@ async function handleClick(event) {
       break;
     case "set-count-by":
       await setCountBy(control.dataset.value);
+      break;
+    case "school-today-confirm":
+      await confirmSchoolToday();
       break;
     case "edit-year-terms":
       editYearTerms(Number(control.dataset.yearId));

@@ -185,6 +185,9 @@ class AttendanceRead(ORMModel):
     student_id: int
     date: date
     status: AttendanceStatus
+    # "parent" or "suggestion" (the parent confirmed what the day's work suggested)
+    source: str = "parent"
+    minutes: int | None = None
 
 
 class AttendanceUpsert(BaseModel):

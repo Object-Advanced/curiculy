@@ -231,8 +231,11 @@ Feature page: [Attendance](../2-features/12-attendance.md)
 
 | Method | Path | Who | Handler |
 |---|---|---|---|
-| GET | `/api/attendance` | parent | List attendance |
-| POST | `/api/attendance` | parent | Upsert attendance |
+| GET | `/api/attendance` | parent | List attendance (each row has `source`: `parent` or `suggestion`, and `minutes`) |
+| POST | `/api/attendance` | parent | Upsert one child's day (the calendar's radios) |
+| GET | `/api/attendance/days` | parent | Each day and child: the mark, or the suggestion from the day's work, with reasons and minutes. `start_date`, `end_date` (the family's today when left out; up to 62 days), `student_id` |
+| POST | `/api/attendance/confirm` | parent | Save marks (`student_id`, `date`, `status`, optional `minutes`); only days that have happened |
+| GET | `/api/attendance/summary` | parent | Each child's school year so far: present, field trips, sick, absent, not marked, school days left, on-track days, minutes |
 
 ## Evidence and capture
 Feature page: [Evidence and capture](../2-features/13-evidence-and-capture.md)

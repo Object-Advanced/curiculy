@@ -469,6 +469,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/attendance/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Attendance
+         * @description Save the parent's marks ("Looks right"). Days that haven't happened can't be marked.
+         */
+        post: operations["confirm_attendance_api_attendance_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attendance/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attendance Days
+         * @description Each day and child: what's marked, and what the day's work suggests. Saves nothing.
+         */
+        get: operations["attendance_days_api_attendance_days_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attendance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attendance Summary
+         * @description Each child's school year so far: present, sick, absent, not marked, and the school days ahead.
+         */
+        get: operations["attendance_summary_api_attendance_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/capture-token": {
         parameters: {
             query?: never;
@@ -2819,6 +2879,124 @@ export interface components {
             scheduled_date?: string | null;
             status?: components["schemas"]["AssignmentStatus"] | null;
         };
+        /**
+         * AttendanceChildDay
+         * @description One child on one day: what's recorded, and what Curiculy suggests.
+         */
+        AttendanceChildDay: {
+            /** Activities */
+            activities?: string[];
+            /**
+             * Expected
+             * @default false
+             */
+            expected: boolean;
+            /**
+             * Lessons Done
+             * @default 0
+             */
+            lessons_done: number;
+            /**
+             * Lessons Planned
+             * @default 0
+             */
+            lessons_planned: number;
+            /**
+             * Lessons Without Minutes
+             * @default 0
+             */
+            lessons_without_minutes: number;
+            /** Minutes */
+            minutes?: number | null;
+            /**
+             * Minutes From Work
+             * @default 0
+             */
+            minutes_from_work: number;
+            /** Name */
+            name: string;
+            /** Reasons */
+            reasons?: string[];
+            /** Source */
+            source?: string | null;
+            status?: components["schemas"]["AttendanceStatus"] | null;
+            /** Student Id */
+            student_id: number;
+            suggestion?: components["schemas"]["AttendanceStatus"] | null;
+        };
+        /** AttendanceChildSummary */
+        AttendanceChildSummary: {
+            /**
+             * Absent Days
+             * @default 0
+             */
+            absent_days: number;
+            /**
+             * Field Trip Days
+             * @default 0
+             */
+            field_trip_days: number;
+            /**
+             * Lessons Without Minutes
+             * @default 0
+             */
+            lessons_without_minutes: number;
+            /**
+             * Minutes
+             * @default 0
+             */
+            minutes: number;
+            /** Name */
+            name: string;
+            /**
+             * On Track Days
+             * @default 0
+             */
+            on_track_days: number;
+            /**
+             * Present Days
+             * @default 0
+             */
+            present_days: number;
+            /**
+             * School Days Left
+             * @default 0
+             */
+            school_days_left: number;
+            /**
+             * Sick Days
+             * @default 0
+             */
+            sick_days: number;
+            /** Student Id */
+            student_id: number;
+            /**
+             * Unmarked Days
+             * @default 0
+             */
+            unmarked_days: number;
+        };
+        /** AttendanceConfirm */
+        AttendanceConfirm: {
+            /** Marks */
+            marks: components["schemas"]["AttendanceMark"][];
+        };
+        /** AttendanceDayCard */
+        AttendanceDayCard: {
+            /** Children */
+            children: components["schemas"]["AttendanceChildDay"][];
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Day Off */
+            day_off?: string | null;
+            /** School Day */
+            school_day: boolean;
+            /** Weekday */
+            weekday: string;
+        };
         /** AttendanceDayRead */
         AttendanceDayRead: {
             /**
@@ -2827,6 +3005,34 @@ export interface components {
              */
             date: string;
             status: components["schemas"]["AttendanceStatus"];
+        };
+        /** AttendanceDays */
+        AttendanceDays: {
+            /** Count By */
+            count_by: string;
+            /** Days */
+            days: components["schemas"]["AttendanceDayCard"][];
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+        };
+        /**
+         * AttendanceMark
+         * @description One child's day, as the parent marks it. ``minutes`` is only changed when sent.
+         */
+        AttendanceMark: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Minutes */
+            minutes?: number | null;
+            status: components["schemas"]["AttendanceStatus"];
+            /** Student Id */
+            student_id: number;
         };
         /** AttendanceRead */
         AttendanceRead: {
@@ -2837,6 +3043,13 @@ export interface components {
             date: string;
             /** Id */
             id: number;
+            /** Minutes */
+            minutes?: number | null;
+            /**
+             * Source
+             * @default parent
+             */
+            source: string;
             status: components["schemas"]["AttendanceStatus"];
             /** Student Id */
             student_id: number;
@@ -2846,7 +3059,27 @@ export interface components {
          * @description Daily attendance for a student. Stored with these exact capitalizations.
          * @enum {string}
          */
-        AttendanceStatus: "Present" | "Absent" | "Sick" | "Vacation";
+        AttendanceStatus: "Present" | "Absent" | "Sick" | "Vacation" | "Field trip";
+        /** AttendanceSummary */
+        AttendanceSummary: {
+            /** Children */
+            children: components["schemas"]["AttendanceChildSummary"][];
+            /** Count By */
+            count_by: string;
+            /** End Date */
+            end_date: string | null;
+            /** School Year Id */
+            school_year_id: number | null;
+            /** School Year Name */
+            school_year_name: string | null;
+            /** Start Date */
+            start_date: string | null;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+        };
         /** AttendanceSummaryRead */
         AttendanceSummaryRead: {
             /**
@@ -7229,6 +7462,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttendanceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_attendance_api_attendance_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attendance_days_api_attendance_days_get: {
+        parameters: {
+            query?: {
+                /** @description Inclusive; the family's today when left out. */
+                start_date?: string | null;
+                /** @description Inclusive; the start date when left out. Up to 62 days. */
+                end_date?: string | null;
+                student_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceDays"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attendance_summary_api_attendance_summary_get: {
+        parameters: {
+            query?: {
+                /** @description The current school year when left out. */
+                school_year_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceSummary"];
                 };
             };
             /** @description Validation Error */

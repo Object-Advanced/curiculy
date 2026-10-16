@@ -358,6 +358,14 @@ def test_ids_inside_request_bodies_refuse_another_familys_records(probe: dict) -
                                      "student_ids": [a["student"], b["student"]]}),
         ("PATCH", f"/api/activities/{a['activity']}", {"student_ids": [b["student"]]}),
         ("GET", f"/api/activities?student_id={b['student']}", None),
+        ("POST", "/api/attendance/confirm", {"marks": [
+            {"student_id": b["student"], "date": "2026-10-12", "status": "Absent"}]}),
+        ("POST", "/api/attendance/confirm", {"marks": [
+            {"student_id": a["student"], "date": "2026-10-12", "status": "Present"},
+            {"student_id": b["student"], "date": "2026-10-12", "status": "Absent"}]}),
+        ("GET", f"/api/attendance/days?student_id={b['student']}", None),
+        ("GET", "/api/attendance/days?start_date=2026-10-12&end_date=2026-10-12", None),
+        ("GET", "/api/attendance/summary", None),
     ]
     for method, url, body in attempts:
         response = client.request(method, url, headers=headers, json=body)

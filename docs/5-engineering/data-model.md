@@ -104,7 +104,7 @@ erDiagram
 | `assignments` | **Lessons** (the code keeps the old name until the legacy screens go): child, title, `scheduled_date`, `completion_date`, `status`, `minutes`, `notes`, `shared_group_uuid`; the older book, unit and resource links; and, for planner lessons, `course_id`, `library_item_id` and `library_lesson_id` |
 | `assignment_grades`, `assignment_evidence` | A grade; work-sample file paths |
 | `evidence_staging` | The unsorted inbox (captures not yet filed) |
-| `attendance` | One row per child per day |
+| `attendance` | One row per child per day: status (Present, Field trip, Sick, Absent, Vacation), `source` (`parent`, or `suggestion` when the parent confirmed what the day's work suggested), and `minutes` when the parent set the day's school time |
 | `curricula`, `curriculum_editions`, `curriculum_units`, `curriculum_resources`, `curriculum_page_mappings` | The older "Curriculum catalog": books and programs and their structure (replaced by the Library and the Curriculum planner as the new screens arrive) |
 | `curriculum_plans`, `curriculum_lessons` | Lesson plans (Week/Day guides) and their lessons |
 | `enrollments` | The older child + book + school year link (replaced by `courses`) |
@@ -117,13 +117,13 @@ erDiagram
 The placeholder tables `jurisdictions` and `compliance_packets` were removed in the move to Postgres; state requirements get a real design in the [Product spine](../6-planning/product-spine.md).
 
 ## Planned redesign (core loop, 2026-10-11)
-There are no real users yet, so the tables for curricula, lesson plans, enrollments, work samples and subjects are being **redesigned cleanly**, not patched. Built so far: subjects, the Library (books, textbooks with their lesson lists, workbooks, online sites), the Curriculum planner and courses, the community catalog, reading lists, activities, lesson minutes and school-year terms. Still to come: attendance suggestions, requirement packs and Tasks. See [Product spine: data model changes](../6-planning/product-spine.md#data-model-changes).
+There are no real users yet, so the tables for curricula, lesson plans, enrollments, work samples and subjects are being **redesigned cleanly**, not patched. Built so far: subjects, the Library (books, textbooks with their lesson lists, workbooks, online sites), the Curriculum planner and courses, the community catalog, reading lists, activities, lesson minutes, school-year terms and attendance suggestions. Still to come: requirement packs and Tasks. See [Product spine: data model changes](../6-planning/product-spine.md#data-model-changes).
 
 ## How the schema changes
 - **Alembic migrations** in `migrations/versions/`, run as the owner role at startup (`python -m app.db_startup`, called by `entrypoint.sh`). Each migration runs in one transaction: it applies fully or not at all.
 - **A new family table also needs, in its migration,** `tenancy.protect_family_table("<table>")` and `tenancy.add_family_reference(...)` for each reference to another family table (`migrations/tenancy.py`). The safety check refuses to start if either is missing.
 - **To write one:** change the models, run `alembic revision --autogenerate -m "…"`, read what it wrote, then add the tenancy steps. `tests/test_database.py` fails if the migrations and models disagree.
-- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`). `0006` added `planned_curricula.solo`. `0007` dropped `homework_help_sessions.push_count` (no AI for children: nothing to count). `0008` added reading lists, activities, school-year terms (with quarters for existing years), lesson and course minutes, and `households.count_by`.
+- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`). `0006` added `planned_curricula.solo`. `0007` dropped `homework_help_sessions.push_count` (no AI for children: nothing to count). `0008` added reading lists, activities, school-year terms (with quarters for existing years), lesson and course minutes, and `households.count_by`. `0009` added `attendance.source` and `attendance.minutes`.
 
 ## Known data gaps
 - **Lessons aren't tied to a school year,** so reports use date ranges.

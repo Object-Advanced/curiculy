@@ -116,6 +116,8 @@ class AttendanceStatus(StrEnum):
     ABSENT = "Absent"
     SICK = "Sick"
     VACATION = "Vacation"
+    # Learning away from home (a museum, a co-op outing): counts as present.
+    FIELD_TRIP = "Field trip"
 
 
 class ScoreType(StrEnum):

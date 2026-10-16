@@ -1619,6 +1619,39 @@ a.button.ghost:hover {
     box-shadow: var(--shadow);
 }
 
+/* "School today?" inside the Home hero: one row per child, one tap to confirm. */
+.home-school-today {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.home-school-today[hidden] {
+    display: none;
+}
+
+.home-school-today-title {
+    margin: 0;
+}
+
+.home-school-today-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.home-school-today-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .home-kicker,
 .spark-kicker {
     margin: 0 0 0.35rem;
@@ -3970,7 +4003,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261015-reading");
+    background-image: url("/static/night-mountains.jpg?v=20261016-attendance");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
