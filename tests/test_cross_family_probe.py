@@ -366,6 +366,19 @@ def test_ids_inside_request_bodies_refuse_another_familys_records(probe: dict) -
         ("GET", f"/api/attendance/days?student_id={b['student']}", None),
         ("GET", "/api/attendance/days?start_date=2026-10-12&end_date=2026-10-12", None),
         ("GET", "/api/attendance/summary", None),
+        ("POST", "/api/moves/preview", {"kind": "lesson", "assignment_id": b["assignment"], "to_date": "2026-12-01"}),
+        ("POST", "/api/moves/preview", {"kind": "catch_up", "course_id": b["course"], "option": "push_back"}),
+        ("POST", "/api/moves/preview", {"kind": "day", "date": "2026-12-01", "student_ids": [b["student"]]}),
+        ("POST", "/api/moves/preview", {"kind": "course", "course_id": b["course"], "weekdays": [0]}),
+        ("POST", "/api/moves/apply", {
+            "request": {"kind": "catch_up", "course_id": b["course"], "option": "push_back"}, "plan_hash": "0" * 32}),
+        ("POST", "/api/moves/apply", {
+            "request": {"kind": "lesson", "assignment_id": b["assignment"], "to_date": "2026-12-01"},
+            "plan_hash": "0" * 32}),
+        ("POST", "/api/moves/apply", {
+            "request": {"kind": "day", "date": "2026-12-01", "student_ids": [a["student"], b["student"]],
+                        "add_to_calendar": "off"}, "plan_hash": "0" * 32}),
+        ("GET", "/api/moves/behind", None),
     ]
     for method, url, body in attempts:
         response = client.request(method, url, headers=headers, json=body)

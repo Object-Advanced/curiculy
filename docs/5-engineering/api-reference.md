@@ -32,7 +32,7 @@ Feature page: [Household, students and settings](../2-features/02-household-setu
 | POST | `/api/enrollments` | parent | Create enrollment |
 | GET | `/api/enrollments/{enrollment_id}` | parent | Get enrollment |
 | GET | `/api/household` | parent | Read household |
-| PATCH | `/api/household` | parent | Rename, time zone, icon, or `count_by` (`days` or `hours`) |
+| PATCH | `/api/household` | parent | Rename, time zone, icon, `count_by` (`days` or `hours`), or `daily_lesson_limit` (null clears it) |
 | POST | `/api/household/state` | parent | Set the family's state from a date (a move adds a period) |
 | PUT | `/api/household/states` | parent | Replace the state history |
 | GET | `/api/settings/exception-colors` | parent | Get exception colors |
@@ -107,6 +107,16 @@ Feature pages: [Reading lists](../2-features/24-reading-lists.md), [Activities](
 | GET / PATCH / DELETE | `/api/activities/{activity_id}` | parent | Read, change (only the fields sent), delete |
 | POST | `/api/activities/{activity_id}/evidence` | parent | Add a photo or PDF (served by `GET /api/evidence/files/{path}`) |
 | DELETE | `/api/activities/{activity_id}/evidence/{activity_evidence_id}` | parent | Remove one |
+
+## Catch up and moving lessons
+Feature page: [Catch up and moving lessons](../2-features/26-catch-up-and-moves.md)
+
+| Method | Path | Who | Handler |
+|---|---|---|---|
+| POST | `/api/moves/preview` | parent | What a move would change: one lesson (`ripple` or `just_this`), a day off or sick day, a catch-up option, or a course's new days or pause. Saves nothing; returns the changes, each course's finish, warnings and a `plan_hash` |
+| POST | `/api/moves/apply` | parent | Apply `{request, plan_hash}`; 409 if the calendar changed since the preview |
+| GET | `/api/moves/behind` | parent | Courses with lessons left on days that have passed |
+| GET | `/api/moves/catch-up/{course_id}` | parent | The catch-up sheet: each option's result, preview and why not; one recommended (`allow_weekends`) |
 
 ## Community catalog
 See [Product spine: Community catalog](../6-planning/product-spine.md#community-catalog-built-by-every-family). Shared data: nothing about any family.

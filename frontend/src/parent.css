@@ -1352,4 +1352,38 @@
     font-size: var(--text-xl);
     color: var(--text-strong);
   }
+
+  /* ---- Moves and catching up ---- */
+  .catch-up-choices {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  .choice-card.is-unworkable {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .move-preview p,
+  .move-notes {
+    margin: 0;
+  }
+
+  .move-notes,
+  .move-warnings {
+    display: grid;
+    gap: var(--space-1);
+    padding-left: var(--space-5);
+  }
+
+  .move-changes summary {
+    cursor: pointer;
+    font-weight: var(--weight-semibold);
+  }
+
+  .move-changes ul {
+    display: grid;
+    gap: var(--space-1);
+    margin: var(--space-2) 0 0;
+    padding-left: var(--space-5);
+  }
 }

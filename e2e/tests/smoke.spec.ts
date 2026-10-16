@@ -1,10 +1,13 @@
 import { join } from "node:path";
 
+import type { Page } from "@playwright/test";
+
 import {
   FROZEN_NOW,
   apiAs,
   browserToday,
   expect,
+  isoDay,
   openRoute,
   seedSchoolWeek,
   seedLibrary,
@@ -299,6 +302,58 @@ test("a parent confirms today's attendance from Home", async ({ page }) => {
     page, "GET", `/attendance?start_date=${today}&end_date=${today}`,
   );
   expect(marked.map((row) => [row.status, row.source])).toEqual([["Field trip", "parent"]]);
+});
+
+/** BJU Reading 4 for Sam, starting `offset` days from the server's today. */
+async function scheduleReading(page: Page, offset: number): Promise<{ courseId: number; studentId: number; today: string }> {
+  const [sam] = await apiAs<{ id: number }[]>(page, "GET", "/students");
+  const { today } = await apiAs<{ today: string }>(page, "GET", "/attendance/days");
+  const { textbook } = await seedLibrary(page);
+  const curriculum = await apiAs<{ id: number }>(page, "POST", "/planner/curricula", { textbook_id: textbook });
+  const result = await apiAs<{ courses: { id: number }[] }>(page, "POST", `/planner/curricula/${curriculum.id}/schedule`, {
+    student_ids: [sam!.id], start_date: isoDay(offset, today),
+  });
+  return { courseId: result.courses[0]!.id, studentId: sam!.id, today };
+}
+
+test("a parent catches a course up, choosing how", async ({ page }) => {
+  await startDemo(page);
+  await scheduleReading(page, -14);
+  await page.goto("/next/catch-up");
+  const behind = page.getByRole("region", { name: "Behind" });
+  await expect(behind.getByText(/Sam Rivera: \d+ lessons behind/)).toBeVisible();
+  await behind.getByRole("button", { name: "Catch up BJU Reading 4 for Sam Rivera" }).click();
+  const dialog = page.getByRole("dialog", { name: "How should BJU Reading 4 catch up?" });
+  await expect(dialog.getByText("Recommended")).toBeVisible();
+  await dialog.getByText("Starts again next Monday, and the rest follows.").click();
+  await expect(dialog.getByRole("radio", { name: /Push back a whole week/ })).toBeChecked();
+  await expect(dialog.getByRole("region", { name: "What changes" })).toContainText(/lessons? moves?/);
+  await dialog.getByRole("button", { name: "Catch up" }).click();
+  await expect(dialog.getByText(/^Done\./)).toBeVisible();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Nobody's behind: every course's lessons are on today or later.")).toBeVisible();
+});
+
+test("a parent moves one lesson, and the rest of the course follows", async ({ page }) => {
+  await startDemo(page);
+  const { studentId, today } = await scheduleReading(page, 1);
+  const lessons = async () =>
+    (await apiAs<{ assignments: { id: number; title: string; scheduled_date: string }[] }>(
+      page, "GET", `/students/${studentId}/assignments?start_date=${today}&end_date=${isoDay(60, today)}`,
+    )).assignments.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date) || a.id - b.id);
+  const [first, second] = await lessons();
+  await page.goto(`/next/catch-up?move=${first!.id}`);
+  const dialog = page.getByRole("dialog", { name: `Move ${first!.title}` });
+  await expect(dialog.getByLabel(/Move it to/)).toHaveValue(isoDay(1, first!.scheduled_date));
+  // Onto the next lesson's day: every lesson after it moves along, in order.
+  await dialog.getByLabel(/Move it to/).fill(second!.scheduled_date);
+  await dialog.getByRole("button", { name: "Preview" }).click();
+  await expect(dialog.getByRole("region", { name: "What changes" })).toContainText("12 lessons move.");
+  await dialog.getByRole("button", { name: "Move them" }).click();
+  await expect(dialog.getByText("Done. 12 lessons move.")).toBeVisible();
+  const after = await lessons();
+  expect(after.find((lesson) => lesson.id === first!.id)!.scheduled_date).toBe(second!.scheduled_date);
+  expect(after.find((lesson) => lesson.id === second!.id)!.scheduled_date > second!.scheduled_date).toBe(true);
 });
 
 test("a parent counts the year in hours and sets their own terms", async ({ page }) => {

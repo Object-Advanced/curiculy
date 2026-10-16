@@ -90,6 +90,7 @@ class HouseholdRead(ORMModel):
     timezone: str | None = None
     # "days" (attendance) or "hours" (lesson and activity minutes)
     count_by: str = "days"
+    daily_lesson_limit: int | None = None
     # The state today, and every period (a move adds one).
     state_code: str | None = None
     states: list[HouseholdStatePeriod] = Field(default_factory=list)
@@ -111,6 +112,8 @@ class HouseholdUpdate(BaseModel):
     timezone: str | None = Field(default=None, max_length=64)
     # Count the school year in days or in hours, where the state allows either.
     count_by: Literal["days", "hours"] | None = None
+    # The most lessons a child should have in a day; null clears it.
+    daily_lesson_limit: int | None = Field(default=None, ge=1, le=20)
 
     @field_validator("name")
     @classmethod
@@ -150,7 +153,10 @@ class HouseholdUpdate(BaseModel):
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> "HouseholdUpdate":
-        if self.name is None and self.icon is None and self.timezone is None and self.count_by is None:
+        if (
+            self.name is None and self.icon is None and self.timezone is None and self.count_by is None
+            and "daily_lesson_limit" not in self.model_fields_set
+        ):
             raise ValueError("at least one field is required")
         return self
 

@@ -38,10 +38,13 @@ def update_household(
     icon: str | None = None,
     timezone: str | None = None,
     count_by: str | None = None,
+    daily_lesson_limit: int | None | object = ...,
 ) -> Household:
     household = get_default_household(db)
     if count_by is not None:
         household.count_by = count_by
+    if daily_lesson_limit is not ...:
+        household.daily_lesson_limit = daily_lesson_limit
     if name is not None:
         household.name = name
     if icon is not None:

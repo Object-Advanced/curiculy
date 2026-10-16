@@ -16,6 +16,7 @@ import {
 } from "../api/parent";
 import { BookCover } from "../components/library/BookCover";
 import { gradeOptions, subjectOptions } from "../components/library/KindFields";
+import { CourseMoveSheet } from "../components/moves/MoveSheets";
 import { ScheduleStep } from "../components/planner/ScheduleStep";
 import { Checklist } from "../components/ui/Checklist";
 import { ErrorLine, SelectField, TextField } from "../components/ui/Fields";
@@ -259,8 +260,10 @@ function ItemsStep({ curriculum }: { curriculum: Curriculum }) {
 function CoursesSection({ curriculum, onUnscheduled }: { curriculum: Curriculum; onUnscheduled: () => void }) {
   const unschedule = useUnschedule();
   const [confirming, setConfirming] = useState<number | null>(null);
+  const [changing, setChanging] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   if (curriculum.courses.length === 0 && !message) return null;
+  const changingCourse = curriculum.courses.find((course) => course.id === changing);
   return (
     <section className="card stack" aria-labelledby="on-calendar">
       <h2 className="section-title" id="on-calendar">
@@ -298,12 +301,25 @@ function CoursesSection({ curriculum, onUnscheduled }: { curriculum: Curriculum;
               </button>
             </span>
           ) : (
-            <button type="button" className="btn btn-small" onClick={() => setConfirming(course.id)}>
-              Take off the calendar
-            </button>
+            <span className="row">
+              <button type="button" className="btn btn-quiet btn-small" onClick={() => setChanging(course.id)}>
+                Change days or pause
+              </button>
+              <button type="button" className="btn btn-small" onClick={() => setConfirming(course.id)}>
+                Take off the calendar
+              </button>
+            </span>
           )}
         </div>
       ))}
+      {changingCourse ? (
+        <CourseMoveSheet
+          courseId={changingCourse.id}
+          courseName={curriculum.name}
+          weekdays={changingCourse.weekdays}
+          onClose={() => setChanging(null)}
+        />
+      ) : null}
       {message ? (
         <p className="field-hint" role="status">
           {message}

@@ -23,7 +23,7 @@ The words parents see, the words the code uses, and the words we're moving to. W
 | **Days or hours** | Count the school year in | `Household.count_by` | Whether the year is counted in school days (attendance) or hours (lesson and activity minutes) |
 | **Reading list** | Reading lists | `ReadingListEntry` (`/api/reading-list`) | One child's books for the year: up next, reading now, finished, with dates and the subject each counts toward |
 | **Activity** | Activities, Log an activity | `Activity` (`/api/activities`) | Something logged for a subject without a curriculum (a race for PE, a recital for music): children, subjects, minutes, notes, photos, a link |
-| **Catch up** | Recalibrate | `recalibration` | Shift unfinished lessons forward after falling behind |
+| **Catch up** | Catch up, Move to…, Recalibrate | `moves` (`/api/moves`); older: `recalibration` | Move lessons after falling behind, a sick day or a day off: each course keeps its order, every move is previewed first, and finished lessons never move |
 | **Work sample** | Evidence | `AssignmentEvidence` | A photo or PDF of a child's work on a lesson |
 | **Unsorted** | Unsorted Evidence | `EvidenceStaging` | Captures waiting to be filed onto a lesson |
 | **Capture token** | Capture token | `CaptureToken` | Lets the Chrome extension upload screenshots and nothing else |

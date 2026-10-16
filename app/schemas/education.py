@@ -87,6 +87,8 @@ class AssignmentRead(ORMModel):
     evidence_count: int
     # Minutes spent (an estimate until it's checked off); hours-mode families count them.
     minutes: int | None = None
+    # The planner course it belongs to: its lessons move as a sequence.
+    course_id: int | None = None
 
     @model_validator(mode="wrap")
     @classmethod

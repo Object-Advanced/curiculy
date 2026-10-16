@@ -618,6 +618,17 @@
             ],
             "title": "Completion Date"
           },
+          "course_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Id"
+          },
           "curriculum_id": {
             "anyOf": [
               {
@@ -979,6 +990,17 @@
               }
             ],
             "title": "Completion Date"
+          },
+          "course_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Id"
           },
           "curriculum_id": {
             "anyOf": [
@@ -1757,6 +1779,45 @@
           "message"
         ],
         "title": "BarcodeRead",
+        "type": "object"
+      },
+      "BehindCourse": {
+        "properties": {
+          "behind": {
+            "title": "Behind",
+            "type": "integer"
+          },
+          "behind_since": {
+            "format": "date",
+            "title": "Behind Since",
+            "type": "string"
+          },
+          "course_id": {
+            "title": "Course Id",
+            "type": "integer"
+          },
+          "course_name": {
+            "title": "Course Name",
+            "type": "string"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "student_name": {
+            "title": "Student Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "course_name",
+          "student_id",
+          "student_name",
+          "behind",
+          "behind_since"
+        ],
+        "title": "BehindCourse",
         "type": "object"
       },
       "Body_import_curriculum_csv_api_curriculum_import_csv_post": {
@@ -2640,6 +2701,198 @@
           }
         },
         "title": "CatalogEdits",
+        "type": "object"
+      },
+      "CatchUpChoice": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "option": {
+            "enum": [
+              "push_back",
+              "push_week",
+              "use_day_off",
+              "double_up",
+              "skip"
+            ],
+            "title": "Option",
+            "type": "string"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MovePreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recommended": {
+            "default": false,
+            "title": "Recommended",
+            "type": "boolean"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "why_not": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why Not"
+          },
+          "workable": {
+            "title": "Workable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "option",
+          "label",
+          "description",
+          "workable"
+        ],
+        "title": "CatchUpChoice",
+        "type": "object"
+      },
+      "CatchUpRequest": {
+        "properties": {
+          "allow_weekends": {
+            "default": false,
+            "title": "Allow Weekends",
+            "type": "boolean"
+          },
+          "course_id": {
+            "title": "Course Id",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "catch_up",
+            "default": "catch_up",
+            "title": "Kind",
+            "type": "string"
+          },
+          "option": {
+            "enum": [
+              "push_back",
+              "push_week",
+              "use_day_off",
+              "double_up",
+              "skip"
+            ],
+            "title": "Option",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "option"
+        ],
+        "title": "CatchUpRequest",
+        "type": "object"
+      },
+      "CatchUpSheet": {
+        "properties": {
+          "allow_weekends": {
+            "title": "Allow Weekends",
+            "type": "boolean"
+          },
+          "behind": {
+            "title": "Behind",
+            "type": "integer"
+          },
+          "behind_since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Behind Since"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/CatchUpChoice"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "course_id": {
+            "title": "Course Id",
+            "type": "integer"
+          },
+          "course_name": {
+            "title": "Course Name",
+            "type": "string"
+          },
+          "daily_lesson_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Lesson Limit"
+          },
+          "school_year_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Year End"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "student_name": {
+            "title": "Student Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "course_name",
+          "student_id",
+          "student_name",
+          "behind",
+          "behind_since",
+          "school_year_end",
+          "daily_lesson_limit",
+          "allow_weekends",
+          "choices"
+        ],
+        "title": "CatchUpSheet",
         "type": "object"
       },
       "ChapterRead": {
@@ -3826,6 +4079,120 @@
         ],
         "title": "ContributorRole",
         "type": "string"
+      },
+      "CourseEffect": {
+        "properties": {
+          "course_id": {
+            "title": "Course Id",
+            "type": "integer"
+          },
+          "course_name": {
+            "title": "Course Name",
+            "type": "string"
+          },
+          "finish_after": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish After"
+          },
+          "finish_before": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish Before"
+          },
+          "lessons_moved": {
+            "title": "Lessons Moved",
+            "type": "integer"
+          },
+          "student_name": {
+            "title": "Student Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "course_name",
+          "student_name",
+          "finish_before",
+          "finish_after",
+          "lessons_moved"
+        ],
+        "title": "CourseEffect",
+        "type": "object"
+      },
+      "CourseMoveRequest": {
+        "description": "Re-pace a course from today: new days of the week, and/or a pause.",
+        "properties": {
+          "course_id": {
+            "title": "Course Id",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "course",
+            "default": "course",
+            "title": "Kind",
+            "type": "string"
+          },
+          "pause_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pause From"
+          },
+          "pause_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pause To"
+          },
+          "weekdays": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 7,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekdays"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "title": "CourseMoveRequest",
+        "type": "object"
       },
       "CourseRead": {
         "properties": {
@@ -5330,6 +5697,57 @@
         "title": "DashboardStatsRead",
         "type": "object"
       },
+      "DayMoveRequest": {
+        "description": "A day off or a sick day: each course's lessons from that day move forward\nby one of its days; other lessons that day move to the next school day.",
+        "properties": {
+          "add_to_calendar": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sick",
+                  "off"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add To Calendar"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "kind": {
+            "const": "day",
+            "default": "day",
+            "title": "Kind",
+            "type": "string"
+          },
+          "student_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 20,
+            "title": "Student Ids",
+            "type": "array"
+          },
+          "title": {
+            "default": "Day off",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "DayMoveRequest",
+        "type": "object"
+      },
       "EnrollmentCreate": {
         "properties": {
           "curriculum_id": {
@@ -6248,6 +6666,17 @@
             "title": "Count By",
             "type": "string"
           },
+          "daily_lesson_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Lesson Limit"
+          },
           "icon": {
             "anyOf": [
               {
@@ -6411,6 +6840,19 @@
               }
             ],
             "title": "Count By"
+          },
+          "daily_lesson_limit": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Lesson Limit"
           },
           "icon": {
             "anyOf": [
@@ -6739,6 +7181,68 @@
         "title": "InviteKeyRead",
         "type": "object"
       },
+      "LessonChange": {
+        "properties": {
+          "assignment_id": {
+            "title": "Assignment Id",
+            "type": "integer"
+          },
+          "course_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Name"
+          },
+          "from_date": {
+            "format": "date",
+            "title": "From Date",
+            "type": "string"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "student_name": {
+            "title": "Student Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "to_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Date"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "title",
+          "student_id",
+          "student_name",
+          "from_date"
+        ],
+        "title": "LessonChange",
+        "type": "object"
+      },
       "LessonGenerate": {
         "description": "'Make lessons 1-170': numbered lessons to fill in.",
         "properties": {
@@ -6771,6 +7275,41 @@
           "count"
         ],
         "title": "LessonGenerate",
+        "type": "object"
+      },
+      "LessonMoveRequest": {
+        "description": "Move one lesson. ``ripple`` pushes the rest of its course along with it;\n``just_this`` moves only it, sliding the lessons of the same book between\nthe two days by one so their order holds.",
+        "properties": {
+          "assignment_id": {
+            "title": "Assignment Id",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "lesson",
+            "default": "lesson",
+            "title": "Kind",
+            "type": "string"
+          },
+          "mode": {
+            "default": "ripple",
+            "enum": [
+              "ripple",
+              "just_this"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "to_date": {
+            "format": "date",
+            "title": "To Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "to_date"
+        ],
+        "title": "LessonMoveRequest",
         "type": "object"
       },
       "LessonRead": {
@@ -8026,6 +8565,120 @@
           "reason"
         ],
         "title": "MissingRead",
+        "type": "object"
+      },
+      "MoveApply": {
+        "description": "Apply a previewed move. The plan is worked out again; if the calendar\nchanged since the preview, nothing is saved.",
+        "properties": {
+          "plan_hash": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Plan Hash",
+            "type": "string"
+          },
+          "request": {
+            "discriminator": {
+              "mapping": {
+                "catch_up": "#/components/schemas/CatchUpRequest",
+                "course": "#/components/schemas/CourseMoveRequest",
+                "day": "#/components/schemas/DayMoveRequest",
+                "lesson": "#/components/schemas/LessonMoveRequest"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LessonMoveRequest"
+              },
+              {
+                "$ref": "#/components/schemas/DayMoveRequest"
+              },
+              {
+                "$ref": "#/components/schemas/CatchUpRequest"
+              },
+              {
+                "$ref": "#/components/schemas/CourseMoveRequest"
+              }
+            ],
+            "title": "Request"
+          }
+        },
+        "required": [
+          "request",
+          "plan_hash"
+        ],
+        "title": "MoveApply",
+        "type": "object"
+      },
+      "MovePreview": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/LessonChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseEffect"
+            },
+            "title": "Courses",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "plan_hash": {
+            "title": "Plan Hash",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "summary",
+          "changes",
+          "courses",
+          "plan_hash"
+        ],
+        "title": "MovePreview",
+        "type": "object"
+      },
+      "MoveResult": {
+        "properties": {
+          "moved": {
+            "title": "Moved",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "moved",
+          "skipped",
+          "summary"
+        ],
+        "title": "MoveResult",
         "type": "object"
       },
       "PaceRead": {
@@ -17736,6 +18389,203 @@
         "summary": "Preview Item Schedule",
         "tags": [
           "library"
+        ]
+      }
+    },
+    "/api/moves/apply": {
+      "post": {
+        "description": "Apply a previewed move. If the calendar changed since the preview, nothing is saved (409).",
+        "operationId": "apply_move_api_moves_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Apply Move",
+        "tags": [
+          "moves"
+        ]
+      }
+    },
+    "/api/moves/behind": {
+      "get": {
+        "description": "Courses with lessons left on days that have passed.",
+        "operationId": "courses_behind_api_moves_behind_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BehindCourse"
+                  },
+                  "title": "Response Courses Behind Api Moves Behind Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Courses Behind",
+        "tags": [
+          "moves"
+        ]
+      }
+    },
+    "/api/moves/catch-up/{course_id}": {
+      "get": {
+        "description": "How this course could catch up: each option with its result, one recommended.",
+        "operationId": "catch_up_api_moves_catch_up__course_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "title": "Course Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "allow_weekends",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Allow Weekends",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatchUpSheet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Catch Up",
+        "tags": [
+          "moves"
+        ]
+      }
+    },
+    "/api/moves/preview": {
+      "post": {
+        "description": "What a move would change, and what it does to the family's guidelines. Saves nothing.",
+        "operationId": "preview_move_api_moves_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LessonMoveRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DayMoveRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CatchUpRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CourseMoveRequest"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Preview Move",
+        "tags": [
+          "moves"
         ]
       }
     },

@@ -86,7 +86,7 @@ erDiagram
 
 | Table | Holds |
 |---|---|
-| `households` | The family: name, **time zone**, and whether the year is counted in days or hours (`count_by`). **Exactly one per family** (unique `tenant_id`). |
+| `households` | The family: name, **time zone**, whether the year is counted in days or hours (`count_by`), and the most lessons a child should have in a day (`daily_lesson_limit`). **Exactly one per family** (unique `tenant_id`). |
 | `household_states` | The state the family homeschools in, from a date (`starts_on`); a move adds a row |
 | `students` | Each child: name, **grade** (a code from the fixed list: `PreK`, `K`, `1`–`12`), `grade_confirmed_on` (re-asked after each July 1), `has_iep` (a yes/no only), color |
 | `student_subjects` | A child's subjects for a school year: `required` (from the state's rules for the grade), `common` or `own`; what it counts toward; on or off this year; one objective |
@@ -123,7 +123,7 @@ There are no real users yet, so the tables for curricula, lesson plans, enrollme
 - **Alembic migrations** in `migrations/versions/`, run as the owner role at startup (`python -m app.db_startup`, called by `entrypoint.sh`). Each migration runs in one transaction: it applies fully or not at all.
 - **A new family table also needs, in its migration,** `tenancy.protect_family_table("<table>")` and `tenancy.add_family_reference(...)` for each reference to another family table (`migrations/tenancy.py`). The safety check refuses to start if either is missing.
 - **To write one:** change the models, run `alembic revision --autogenerate -m "…"`, read what it wrote, then add the tenancy steps. `tests/test_database.py` fails if the migrations and models disagree.
-- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`). `0006` added `planned_curricula.solo`. `0007` dropped `homework_help_sessions.push_count` (no AI for children: nothing to count). `0008` added reading lists, activities, school-year terms (with quarters for existing years), lesson and course minutes, and `households.count_by`. `0009` added `attendance.source` and `attendance.minutes`.
+- The baseline is `0001` (October 2026), the first Postgres schema. `0005` added textbooks, the Curriculum planner and the community catalog (and dropped the short-lived `library_materials` and `library_lesson_pages`). `0006` added `planned_curricula.solo`. `0007` dropped `homework_help_sessions.push_count` (no AI for children: nothing to count). `0008` added reading lists, activities, school-year terms (with quarters for existing years), lesson and course minutes, and `households.count_by`. `0009` added `attendance.source` and `attendance.minutes`. `0010` added `households.daily_lesson_limit` (the move engine).
 
 ## Known data gaps
 - **Lessons aren't tied to a school year,** so reports use date ranges.
