@@ -1632,6 +1632,41 @@ a.button.ghost:hover {
     display: none;
 }
 
+.home-behind {
+    margin: 0.75rem 0 0;
+}
+
+.home-behind[hidden] {
+    display: none;
+}
+
+.lesson-limit-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.5rem 0.75rem;
+    flex-basis: 100%;
+}
+
+.lesson-limit-form label {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.lesson-limit-form input {
+    max-width: 8rem;
+}
+
+.lesson-limit-form button {
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.lesson-limit-form .muted {
+    flex-basis: 100%;
+    margin: 0;
+}
+
 .home-school-today-title {
     margin: 0;
 }
@@ -4003,7 +4038,7 @@ html[data-auth="required"] #auth-page {
     height: 100vh;
     padding: 1.5rem;
     background-color: var(--auth-backdrop);
-    background-image: url("/static/night-mountains.jpg?v=20261016-attendance");
+    background-image: url("/static/night-mountains.jpg?v=20261016-moves");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

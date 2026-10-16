@@ -49,6 +49,15 @@ export type AttendanceChild = Schemas["AttendanceChildDay"];
 export type AttendanceMark = Schemas["AttendanceMark"];
 export type AttendanceSummary = Schemas["AttendanceSummary"];
 export type AttendanceStatus = Schemas["AttendanceStatus"];
+export type MovePreview = Schemas["MovePreview"];
+export type MoveRequest =
+  | Schemas["LessonMoveRequest"]
+  | Schemas["DayMoveRequest"]
+  | Schemas["CatchUpRequest"]
+  | Schemas["CourseMoveRequest"];
+export type CatchUpSheetData = Schemas["CatchUpSheet"];
+export type CatchUpChoice = Schemas["CatchUpChoice"];
+export type BehindCourse = Schemas["BehindCourse"];
 
 export const parentKeys = {
   reference: ["reference"] as const,
@@ -70,6 +79,9 @@ export const parentKeys = {
   attendance: ["attendance"] as const,
   attendanceDays: (from: string, to: string) => ["attendance", "days", from, to] as const,
   attendanceSummary: ["attendance", "summary"] as const,
+  moves: ["moves"] as const,
+  behind: ["moves", "behind"] as const,
+  catchUp: (courseId: number, weekends: boolean) => ["moves", "catch-up", courseId, weekends] as const,
 };
 
 /** Unwrap an openapi-fetch result, or throw the server's message. */
@@ -636,5 +648,52 @@ export function useConfirmAttendance() {
     mutationFn: async (marks: AttendanceMark[]) =>
       unwrap(await api.POST("/api/attendance/confirm", { body: { marks } })),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: parentKeys.attendance }),
+  });
+}
+
+// ---- The move engine ------------------------------------------------------------------
+
+/** Courses with lessons left on days that have passed. */
+export function useBehind() {
+  return useQuery({
+    queryKey: parentKeys.behind,
+    queryFn: async () => unwrap(await api.GET("/api/moves/behind")),
+  });
+}
+
+/** Every way to catch a course up, each with its result. */
+export function useCatchUpSheet(courseId: number | null, allowWeekends: boolean) {
+  return useQuery({
+    queryKey: parentKeys.catchUp(courseId ?? 0, allowWeekends),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/api/moves/catch-up/{course_id}", {
+          params: { path: { course_id: courseId as number }, query: { allow_weekends: allowWeekends } },
+        }),
+      ),
+    enabled: courseId !== null,
+  });
+}
+
+/** What a move would change. Saves nothing. */
+export async function previewMove(request: MoveRequest): Promise<MovePreview> {
+  return unwrap(await api.POST("/api/moves/preview", { body: request }));
+}
+
+export async function lessonDetails(id: number) {
+  return unwrap(await api.GET("/api/assignments/{assignment_id}", { params: { path: { assignment_id: id } } }));
+}
+
+/** Apply exactly what was previewed; the server refuses if the calendar changed since. */
+export function useApplyMove() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ request, planHash }: { request: MoveRequest; planHash: string }) =>
+      unwrap(await api.POST("/api/moves/apply", { body: { request, plan_hash: planHash } })),
+    onSuccess: () => {
+      for (const key of [parentKeys.moves, parentKeys.attendance, parentKeys.curricula, parentKeys.library, parentKeys.reading]) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+    },
   });
 }

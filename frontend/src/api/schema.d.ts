@@ -1787,6 +1787,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/moves/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Move
+         * @description Apply a previewed move. If the calendar changed since the preview, nothing is saved (409).
+         */
+        post: operations["apply_move_api_moves_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moves/behind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Courses Behind
+         * @description Courses with lessons left on days that have passed.
+         */
+        get: operations["courses_behind_api_moves_behind_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moves/catch-up/{course_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catch Up
+         * @description How this course could catch up: each option with its result, one recommended.
+         */
+        get: operations["catch_up_api_moves_catch_up__course_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moves/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Move
+         * @description What a move would change, and what it does to the family's guidelines. Saves nothing.
+         */
+        post: operations["preview_move_api_moves_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notifications": {
         parameters: {
             query?: never;
@@ -2718,6 +2798,8 @@ export interface components {
             color_hex?: string | null;
             /** Completion Date */
             completion_date: string | null;
+            /** Course Id */
+            course_id?: number | null;
             /** Curriculum Id */
             curriculum_id: number | null;
             /** Curriculum Resource Id */
@@ -2809,6 +2891,8 @@ export interface components {
             color_hex?: string | null;
             /** Completion Date */
             completion_date: string | null;
+            /** Course Id */
+            course_id?: number | null;
             /** Curriculum Id */
             curriculum_id: number | null;
             /** Curriculum Resource Id */
@@ -3129,6 +3213,24 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** BehindCourse */
+        BehindCourse: {
+            /** Behind */
+            behind: number;
+            /**
+             * Behind Since
+             * Format: date
+             */
+            behind_since: string;
+            /** Course Id */
+            course_id: number;
+            /** Course Name */
+            course_name: string;
+            /** Student Id */
+            student_id: number;
+            /** Student Name */
+            student_name: string;
+        };
         /** Body_import_curriculum_csv_api_curriculum_import_csv_post */
         Body_import_curriculum_csv_api_curriculum_import_csv_post: {
             /**
@@ -3424,6 +3526,73 @@ export interface components {
             total_pages?: number | null;
             /** Website Url */
             website_url?: string | null;
+        };
+        /** CatchUpChoice */
+        CatchUpChoice: {
+            /** Description */
+            description: string;
+            /** Label */
+            label: string;
+            /**
+             * Option
+             * @enum {string}
+             */
+            option: "push_back" | "push_week" | "use_day_off" | "double_up" | "skip";
+            preview?: components["schemas"]["MovePreview"] | null;
+            /**
+             * Recommended
+             * @default false
+             */
+            recommended: boolean;
+            /** Result */
+            result?: string | null;
+            /** Why Not */
+            why_not?: string | null;
+            /** Workable */
+            workable: boolean;
+        };
+        /** CatchUpRequest */
+        CatchUpRequest: {
+            /**
+             * Allow Weekends
+             * @default false
+             */
+            allow_weekends: boolean;
+            /** Course Id */
+            course_id: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "catch_up";
+            /**
+             * Option
+             * @enum {string}
+             */
+            option: "push_back" | "push_week" | "use_day_off" | "double_up" | "skip";
+        };
+        /** CatchUpSheet */
+        CatchUpSheet: {
+            /** Allow Weekends */
+            allow_weekends: boolean;
+            /** Behind */
+            behind: number;
+            /** Behind Since */
+            behind_since: string | null;
+            /** Choices */
+            choices: components["schemas"]["CatchUpChoice"][];
+            /** Course Id */
+            course_id: number;
+            /** Course Name */
+            course_name: string;
+            /** Daily Lesson Limit */
+            daily_lesson_limit: number | null;
+            /** School Year End */
+            school_year_end: string | null;
+            /** Student Id */
+            student_id: number;
+            /** Student Name */
+            student_name: string;
         };
         /** ChapterRead */
         ChapterRead: {
@@ -3760,6 +3929,40 @@ export interface components {
          * @enum {string}
          */
         ContributorRole: "author" | "co_author" | "editor" | "illustrator" | "translator" | "contributor";
+        /** CourseEffect */
+        CourseEffect: {
+            /** Course Id */
+            course_id: number;
+            /** Course Name */
+            course_name: string;
+            /** Finish After */
+            finish_after: string | null;
+            /** Finish Before */
+            finish_before: string | null;
+            /** Lessons Moved */
+            lessons_moved: number;
+            /** Student Name */
+            student_name: string;
+        };
+        /**
+         * CourseMoveRequest
+         * @description Re-pace a course from today: new days of the week, and/or a pause.
+         */
+        CourseMoveRequest: {
+            /** Course Id */
+            course_id: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "course";
+            /** Pause From */
+            pause_from?: string | null;
+            /** Pause To */
+            pause_to?: string | null;
+            /** Weekdays */
+            weekdays?: number[] | null;
+        };
         /** CourseRead */
         CourseRead: {
             /** Curriculum Id */
@@ -4209,6 +4412,32 @@ export interface components {
             /** Weekly Trend */
             weekly_trend: components["schemas"]["StudentWeeklyTrend"][];
         };
+        /**
+         * DayMoveRequest
+         * @description A day off or a sick day: each course's lessons from that day move forward
+         *     by one of its days; other lessons that day move to the next school day.
+         */
+        DayMoveRequest: {
+            /** Add To Calendar */
+            add_to_calendar?: ("sick" | "off") | null;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "day";
+            /** Student Ids */
+            student_ids?: number[];
+            /**
+             * Title
+             * @default Day off
+             */
+            title: string;
+        };
         /** EnrollmentCreate */
         EnrollmentCreate: {
             /** Curriculum Id */
@@ -4518,6 +4747,8 @@ export interface components {
              * @default days
              */
             count_by: string;
+            /** Daily Lesson Limit */
+            daily_lesson_limit?: number | null;
             /** Icon */
             icon?: string | null;
             /** Id */
@@ -4577,6 +4808,8 @@ export interface components {
         HouseholdUpdate: {
             /** Count By */
             count_by?: ("days" | "hours") | null;
+            /** Daily Lesson Limit */
+            daily_lesson_limit?: number | null;
             /** Icon */
             icon?: string | null;
             /** Name */
@@ -4683,6 +4916,31 @@ export interface components {
             /** Key */
             key: string;
         };
+        /** LessonChange */
+        LessonChange: {
+            /** Assignment Id */
+            assignment_id: number;
+            /** Course Name */
+            course_name?: string | null;
+            /**
+             * From Date
+             * Format: date
+             */
+            from_date: string;
+            /**
+             * Skipped
+             * @default false
+             */
+            skipped: boolean;
+            /** Student Id */
+            student_id: number;
+            /** Student Name */
+            student_name: string;
+            /** Title */
+            title: string;
+            /** To Date */
+            to_date?: string | null;
+        };
         /**
          * LessonGenerate
          * @description 'Make lessons 1-170': numbered lessons to fill in.
@@ -4697,6 +4955,32 @@ export interface components {
              * @default lesson
              */
             type: string;
+        };
+        /**
+         * LessonMoveRequest
+         * @description Move one lesson. ``ripple`` pushes the rest of its course along with it;
+         *     ``just_this`` moves only it, sliding the lessons of the same book between
+         *     the two days by one so their order holds.
+         */
+        LessonMoveRequest: {
+            /** Assignment Id */
+            assignment_id: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "lesson";
+            /**
+             * Mode
+             * @default ripple
+             * @enum {string}
+             */
+            mode: "ripple" | "just_this";
+            /**
+             * To Date
+             * Format: date
+             */
+            to_date: string;
         };
         /** LessonRead */
         LessonRead: {
@@ -4976,6 +5260,41 @@ export interface components {
             label: string;
             /** Reason */
             reason: string;
+        };
+        /**
+         * MoveApply
+         * @description Apply a previewed move. The plan is worked out again; if the calendar
+         *     changed since the preview, nothing is saved.
+         */
+        MoveApply: {
+            /** Plan Hash */
+            plan_hash: string;
+            /** Request */
+            request: components["schemas"]["LessonMoveRequest"] | components["schemas"]["DayMoveRequest"] | components["schemas"]["CatchUpRequest"] | components["schemas"]["CourseMoveRequest"];
+        };
+        /** MovePreview */
+        MovePreview: {
+            /** Changes */
+            changes: components["schemas"]["LessonChange"][];
+            /** Courses */
+            courses: components["schemas"]["CourseEffect"][];
+            /** Notes */
+            notes?: string[];
+            /** Plan Hash */
+            plan_hash: string;
+            /** Summary */
+            summary: string;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /** MoveResult */
+        MoveResult: {
+            /** Moved */
+            moved: number;
+            /** Skipped */
+            skipped: number;
+            /** Summary */
+            summary: string;
         };
         /**
          * PaceRead
@@ -10060,6 +10379,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SchedulePreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_move_api_moves_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveApply"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoveResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    courses_behind_api_moves_behind_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BehindCourse"][];
+                };
+            };
+        };
+    };
+    catch_up_api_moves_catch_up__course_id__get: {
+        parameters: {
+            query?: {
+                allow_weekends?: boolean;
+            };
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatchUpSheet"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_move_api_moves_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonMoveRequest"] | components["schemas"]["DayMoveRequest"] | components["schemas"]["CatchUpRequest"] | components["schemas"]["CourseMoveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovePreview"];
                 };
             };
             /** @description Validation Error */

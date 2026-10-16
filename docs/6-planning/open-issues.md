@@ -16,7 +16,7 @@ The gaps between the app and its purpose, found on 2026-10-11. Each is planned i
 | C4 | **Books and programs share one setup** (one form, no type, no author, no structure) | One Library, search-first adding, four kinds with their own required fields |
 | C5 | **Work samples are slow to add, and captures don't know who or what** | Add work on the lesson, ask at check-off, snap the stack, inbox suggestions |
 | C6 | ~~**Attendance isn't suggested,** and there's no "everyone present"~~ **Built 2026-10-16:** the "School today?" card (Home and Attendance), the two-week sweep and the year's counts. Still open: one dot per child on the calendar instead of radios; "Move Ada's lessons?" after a sick day (with the move engine) | [Attendance](../2-features/12-attendance.md) |
-| C7 | **The calendar can't move one lesson, preview a change, or check it against any rules** | Move engine with previews and the plan checker |
+| C7 | ~~**The calendar can't move one lesson, preview a change, or check it against any rules**~~ **Built 2026-10-16:** the move engine, the catch-up sheet and the plan checker. Still open: dragging on the calendar, the state's numbers in warnings | [Catch up and moving lessons](../2-features/26-catch-up-and-moves.md) |
 | C8 | **No state or structured grade** on the household and children | State at sign-up; grades from a fixed list, re-confirmed each July 1 (no birth date, on purpose) |
 | C10 | ~~**No way to record subjects that have no curriculum** (PE, music, art, safety)~~ **Fixed 2026-10-15** | [Activities](../2-features/25-activities.md); repeating activities still to come |
 | C11 | **No transcript or credits for grades 9–12** | Courses carry credits; a running transcript |

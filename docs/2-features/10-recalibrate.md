@@ -8,7 +8,7 @@ When a family falls behind, move the unfinished lessons forward without dragging
 | **Where** | **Recalibrate Schedule** on the Calendar and on a child's Kids page |
 | **Health** | **Solid** |
 
-> **Planned (core loop, 2026-10-12):** Recalibrate becomes the [catch-up sheet](../6-planning/product-spine.md#the-catch-up-sheet): push everything back, push back a week, use a day off, double up, stretch the pages, or skip, each with its result in plain words, plus "keep test days" and a per-course default. Its two current strategies are reused.
+> **The catch-up sheet is built** (October 2026) for courses from the Curriculum planner: see [Catch up and moving lessons](26-catch-up-and-moves.md). Recalibrate stays on the Calendar for lessons added by hand, until the Calendar is rebuilt.
 
 ## Scope
 

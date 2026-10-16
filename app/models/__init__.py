@@ -92,6 +92,9 @@ class Household(TimestampMixin, TenantBase):
     # How the family's school year is counted: "days" (attendance) or "hours"
     # (lesson and activity minutes), where the state allows either.
     count_by: Mapped[str] = mapped_column(String(8), nullable=False, default="days", server_default="days")
+    # The most lessons a child should have in a day; moves warn above it and
+    # "double up" stays under it. None: no limit set.
+    daily_lesson_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     students: Mapped[list["Student"]] = relationship(back_populates="household")
     school_years: Mapped[list["SchoolYear"]] = relationship(back_populates="household")

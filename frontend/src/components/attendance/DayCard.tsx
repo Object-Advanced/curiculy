@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { Link } from "react-router";
 
 import {
   useConfirmAttendance,
@@ -85,6 +86,12 @@ export function DayCard({
     });
   }
   const waiting = day.children.filter((child) => child.expected && !rows[child.student_id]!.choice);
+  // Marked sick or absent with lessons still on the day: offer to move them.
+  const stranded = day.children.filter(
+    (child) =>
+      (child.status === "Sick" || child.status === "Absent") &&
+      (child.lessons_planned ?? 0) > (child.lessons_done ?? 0),
+  );
   const allMarked = day.children.every((child) => !child.expected || child.status);
 
   return (
@@ -176,6 +183,17 @@ export function DayCard({
                 : ""}
         </span>
       </div>
+      {stranded.length ? (
+        <ul className="move-notes">
+          {stranded.map((child) => (
+            <li key={child.student_id}>
+              <Link to={`/catch-up?day=${day.date}&student=${child.student_id}`}>
+                Move {child.name}'s lessons from {day.weekday}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <ErrorLine error={confirm.error} />
     </section>
   );

@@ -2014,6 +2014,7 @@ function renderDashboard() {
         </div>
         <div id="home-school-today" class="home-school-today" role="group"
              aria-labelledby="school-today-title" hidden></div>
+        <p id="home-behind" class="home-behind" hidden></p>
       </section>
       <div class="home-stage">
       <div class="home-break-row">
@@ -2454,6 +2455,30 @@ async function confirmSchoolToday() {
     await loadSchoolToday();
   } catch (error) {
     flash(error.message, true);
+  }
+}
+
+/* ---- Behind: courses with lessons left on days that have passed ---- */
+
+async function loadBehind() {
+  try {
+    const courses = await api("/moves/behind");
+    // Home may have been redrawn while this was loading: use the element on screen now.
+    const box = $("home-behind");
+    if (!box || !Array.isArray(courses)) return;
+    if (!courses.length) {
+      box.hidden = true;
+      return;
+    }
+    const lines = courses
+      .slice(0, 3)
+      .map((course) => `${course.student_name} is ${course.behind} lesson${course.behind === 1 ? "" : "s"} behind in ${course.course_name}`);
+    const more = courses.length > 3 ? ` and ${courses.length - 3} more` : "";
+    box.innerHTML = `${escapeHtml(lines.join("; "))}${escapeHtml(more)}. <a class="button ghost small" href="/next/catch-up">Catch up</a>`;
+    box.hidden = false;
+  } catch {
+    const box = $("home-behind");
+    if (box) box.hidden = true;
   }
 }
 
@@ -4438,6 +4463,14 @@ function renderCountBySettings() {
         ${choice("days", "School days")}
         ${choice("hours", "Hours")}
       </div>
+      <form class="lesson-limit-form" data-form="lesson-limit">
+        <label>Most lessons in a day, per child
+          <input name="daily_lesson_limit" type="number" min="1" max="20" inputmode="numeric"
+                 value="${state.household?.daily_lesson_limit ?? ""}" placeholder="No limit">
+        </label>
+        <button type="submit" class="ghost small">Save</button>
+        <p class="muted">Catching up stays under it, and moves say when a day goes over it.</p>
+      </form>
     </section>`;
 }
 
@@ -4940,6 +4973,7 @@ function renderAssignments() {
                <button type="button" class="add-assignment ghost" data-action="print-weekly-checklist"
                        data-student-id="${studentId}" data-start-date="${weekMondayISO(anchorDate())}">Print Weekly Checklist</button>`
         }
+        <a class="button add-assignment ghost" href="/next/catch-up">Catch up</a>
         <button type="button" class="add-assignment ghost" data-action="auto-schedule">Auto-schedule a book</button>
       </div>
       ${
@@ -6393,8 +6427,10 @@ function detailActions() {
       <button type="submit" form="assignment-edit">Save changes</button>
       <button type="button" class="ghost" data-action="cancel-edit">Cancel</button>`;
   }
+  const open = detail.item && (detail.item.status === "assigned" || detail.item.status === "in_progress");
   return `
     <button type="button" data-action="edit-assignment">Edit</button>
+    ${open ? `<a class="button ghost" href="/next/catch-up?move=${detail.item.id}">Move to…</a>` : ""}
     <button type="button" class="danger" data-action="delete-assignment">Delete lesson</button>`;
 }
 
@@ -7904,6 +7940,7 @@ const VIEWS = {
 const ACTIVATORS = {
   dashboard: () => {
     loadSchoolToday();
+    loadBehind();
     return loadDashboardStats();
   },
   assignments: loadAssignmentsPage,
@@ -8542,6 +8579,13 @@ async function handleSubmit(event) {
           sku,
         }),
       });
+    } else if (kind === "lesson-limit") {
+      const raw = String(data.daily_lesson_limit || "").trim();
+      result = await api("/household", {
+        method: "PATCH",
+        body: JSON.stringify({ daily_lesson_limit: raw ? Number(raw) : null }),
+      });
+      if (!isOfflineQueued(result)) paintHouseholdChrome(result);
     } else if (kind === "year-terms") {
       const rows = readYearTermRows();
       result = await api(`/school-years/${form.dataset.yearId}/terms`, {

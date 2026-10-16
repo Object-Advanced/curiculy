@@ -22,6 +22,7 @@ A daily record of whether each child did school. Many states count it: days pres
   - **School today?**, pre-filled; each child has Present · Field trip · Sick · Absent. **Looks right** saves; a child left unpicked stays unmarked ("Ben isn't marked: pick one, or leave it for later").
   - **Not marked yet:** the days of the last two weeks with a child unmarked, each pre-filled from that day's work.
   - **The year so far,** per child: days present (field trips included), sick and absent, school days not marked, and "On track for 181 days by June 4, with 88 school days left on your calendar". The state's own number comes with its requirement pack.
+- **Marked sick or absent with lessons still on the day:** "Move Ada's lessons from Thursday" opens that day's move ([Catch up and moving lessons](26-catch-up-and-moves.md)).
 - **Hours mode** (Settings → Count the school year in: Hours): a present child's **minutes of school** are added up from their finished lessons and activities, shown and editable on the card. A number the parent types is kept on the day; otherwise the work is added up. The year so far shows hours, and how many finished lessons have no minutes yet.
 - **How it was set:** each row says whether the parent confirmed a suggestion (`source: suggestion`) or chose it (`parent`), for the evaluator's log.
 - **Marked from the Calendar** too (Yes/No per child in each day cell; a field trip shows as Yes).
@@ -34,7 +35,6 @@ A daily record of whether each child did school. Many states count it: days pres
 
 ### Out of scope today
 - One small dot per child on the calendar, instead of radios (with the Calendar rebuild).
-- "Move Ada's lessons from today?" after marking a sick day (with the move engine).
 - Counting attendance against the state's requirement (with the requirement packs).
 
 ### API
@@ -74,4 +74,3 @@ A daily record of whether each child did school. Many states count it: days pres
 |---|---|---|
 | High | One dot per child on the calendar instead of radios; a day's card opens from it | Calendar rebuild |
 | High | Count against the state's requirement on Records | Requirement packs |
-| Medium | "Move Ada's lessons from today?" after a sick day | Move engine |

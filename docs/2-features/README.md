@@ -20,7 +20,7 @@ Every major function of Curiculy has one page with two halves:
 | 07 | [Stuck? nudges](07-stuck-nudges.md) | Kids, parents | Solid | One nudge, then a grown-up |
 | 08 | [Library and books](08-library-and-books.md) | Parents | Being replaced by 21 and 22 | The older catalog (still at `#/curricula`, no longer in the nav) |
 | 09 | [Pacing and lesson plans](09-pacing-and-lesson-plans.md) | Parents | Works; AI imports least predictable | Auto-schedule books; import or build plans |
-| 10 | [Recalibrate](10-recalibrate.md) | Parents | Solid | Catch up after falling behind |
+| 10 | [Recalibrate](10-recalibrate.md) | Parents | Solid; being replaced by 26 | Catch up lessons added by hand |
 | 11 | [School year and days off](11-school-year-and-days-off.md) | Parents | Works; editors need merging | School days, holidays, sick days |
 | 12 | [Attendance](12-attendance.md) | Parents | Works; calendar radios cramped | "School today?", suggested from the day's work; one tap to confirm |
 | 13 | [Evidence and capture](13-evidence-and-capture.md) | Parents, kids' computers | Solid; capture flow to grow | Work samples, Chrome extension, inbox |
@@ -36,5 +36,6 @@ Every major function of Curiculy has one page with two halves:
 | 23 | [Community catalog and review](23-community-catalog.md) | Parents, admins | Works (new) | What families enter, reviewed and shared; curricula other families built |
 | 24 | [Reading lists](24-reading-lists.md) | Parents | Works (new) | Each child's books: reading now, up next, finished; scheduled books move by themselves |
 | 25 | [Activities](25-activities.md) | Parents | Works (new) | Subjects without a curriculum: "5K race, PE, 40 min", with photos |
+| 26 | [Catch up and moving lessons](26-catch-up-and-moves.md) | Parents | Works (new) | The catch-up sheet, "Move to…", sick days and course changes, each previewed first |
 
 All problems found, in one prioritized list: **[Open issues](../6-planning/open-issues.md)**.

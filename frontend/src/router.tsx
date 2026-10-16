@@ -5,6 +5,7 @@ import { RequireSession } from "./components/RequireSession";
 import { ActivitiesPage } from "./routes/ActivitiesPage";
 import { AttendancePage } from "./routes/AttendancePage";
 import { CatalogReviewPage } from "./routes/CatalogReviewPage";
+import { CatchUpPage } from "./routes/CatchUpPage";
 import { CurriculumPage } from "./routes/CurriculumPage";
 import { JournalPage } from "./routes/JournalPage";
 import { LibraryPage } from "./routes/LibraryPage";
@@ -22,7 +23,7 @@ export const routes: RouteObject[] = [
       { path: "/trail", element: <TrailPage /> },
       { path: "/journal", element: <JournalPage /> },
       {
-        // Parent screens: the Library, the Curriculum planner, reading lists, activities, attendance, catalog review.
+        // Parent screens: the Library, the Curriculum planner, reading lists, activities, attendance, catch up, catalog review.
         element: <ParentShell />,
         children: [
           { path: "/library", element: <LibraryPage /> },
@@ -32,6 +33,7 @@ export const routes: RouteObject[] = [
           { path: "/reading", element: <ReadingPage /> },
           { path: "/activities", element: <ActivitiesPage /> },
           { path: "/attendance", element: <AttendancePage /> },
+          { path: "/catch-up", element: <CatchUpPage /> },
           { path: "/admin/catalog", element: <CatalogReviewPage /> },
         ],
       },

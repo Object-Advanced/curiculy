@@ -16,6 +16,7 @@ First-run setup, then the place a parent manages the family: kids, PINs, the fam
   - rename the family
   - the household **time zone**, which is set automatically from the parent's browser the first time and is what "today" means everywhere
   - **the state** the family homeschools in, from a date (a move adds a period). API ready; the setup screens come with the year-setup interview.
+  - **Most lessons in a day, per child** (`daily_lesson_limit`): catching up stays under it, and moves warn when a day goes over it.
   - **Count the school year in** school days or hours (`count_by`). Days come from attendance; hours add up the minutes on finished lessons and activities. Where the state allows either, the family chooses.
 - **Appearance:** light or dark mode. The choice is remembered on that device.
 - **Students:**

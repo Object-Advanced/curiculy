@@ -9,6 +9,7 @@ import {
   HOUSEHOLD,
   apiAs,
   expect,
+  isoDay,
   loadHouseholdState,
   openRoute,
   openSignIn,
@@ -79,6 +80,12 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
   const { textbook, novel } = await seedLibrary(page);
   await seedRecords(page, novel);
   const curriculum = await apiAs<{ id: number }>(page, "POST", "/planner/curricula", { textbook_id: textbook });
+  // Scheduled two weeks back, so the course is behind and the catch-up sheet has choices.
+  const [sam] = await apiAs<{ id: number }[]>(page, "GET", "/students");
+  const { today } = await apiAs<{ today: string }>(page, "GET", "/attendance/days");
+  const scheduled = await apiAs<{ courses: { id: number }[] }>(page, "POST", `/planner/curricula/${curriculum.id}/schedule`, {
+    student_ids: [sam!.id], start_date: isoDay(-14, today),
+  });
   const parentScreens: [string, string, string][] = [
     ["library", "/next/library", "Library"],
     ["planner", "/next/planner", "Curriculum planner"],
@@ -86,6 +93,7 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
     ["reading", "/next/reading", "Reading lists"],
     ["activities", "/next/activities", "Activities"],
     ["attendance", "/next/attendance", "Attendance"],
+    ["catch-up", "/next/catch-up", "Catch up"],
   ];
   for (const [screen, path, heading] of parentScreens) {
     await page.goto(path);
@@ -103,6 +111,10 @@ test("serious and critical accessibility issues do not grow", async ({ page }) =
   await expect(page.getByRole("dialog", { name: "Log an activity" })).toBeVisible();
   const logging = await scan(page, "activity-log");
   report["activity-log"] = { ...logging.counts, rules: logging.rules };
+  await page.goto(`/next/catch-up?course=${scheduled.courses[0]!.id}`);
+  await expect(page.getByRole("dialog", { name: "How should BJU Reading 4 catch up?" }).getByText("Recommended")).toBeVisible();
+  const sheet = await scan(page, "catch-up-sheet");
+  report["catch-up-sheet"] = { ...sheet.counts, rules: sheet.rules };
 
   // The child's own screen, signed in with the household's kid PIN.
   const { studentId, familyCode } = loadHouseholdState();

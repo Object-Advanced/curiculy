@@ -18,6 +18,7 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 - Toolbar shortcuts:
   - **Recalibrate Schedule** (see [Recalibrate](10-recalibrate.md))
   - **Print Weekly Checklist** (a PDF; see [Portfolios and reports](14-portfolios-and-reports.md))
+  - **Catch up** (see [Catch up and moving lessons](26-catch-up-and-moves.md))
   - **Auto-schedule a book** (see [Pacing](09-pacing-and-lesson-plans.md))
 - **Lesson status:** assigned, in progress, completed, skipped or excused. A parent can change any lesson. A child can change only their own.
 - **Completion date:** checking a lesson off records the household's today as its `completion_date` (a lesson already dated keeps its date); unchecking it, or any other status, clears it. A lesson done ahead of schedule keeps the day it was really done, and the lesson editor can still save it as long as neither date is moved.
@@ -26,6 +27,7 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 - **Words:** every screen says **lesson**. The code and the API still say `assignment` until the legacy screens are retired ([decided 2026-10-15](../6-planning/decisions.md)).
 - **Lesson details dialog:**
   - edit the lesson (status, dates, minutes)
+  - **Move to…** (lessons not yet done): picks a day and previews it, pushing the rest of its course back or just this one ([Catch up and moving lessons](26-catch-up-and-moves.md))
   - grade it
   - attach work samples (photos or PDFs)
   - see the "Stuck?" nudge history
