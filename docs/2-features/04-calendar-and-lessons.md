@@ -8,7 +8,7 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 | **Where** | `#/assignments` ("Calendar") and the lesson details dialog |
 | **Health** | **Works, needs a redesign for phones and for "All Students"** |
 
-> **Planned (core loop):** move one lesson or a whole day with a preview, checks against the family's and the state's guidelines, the [catch-up sheet](../6-planning/product-spine.md#the-catch-up-sheet) when work is missed, **Schedule from library** in place of "Auto-schedule a book", and an agenda list on phones. See [Calendar: move things, stay within the guidelines](../6-planning/product-spine.md#calendar-move-things-stay-within-the-guidelines).
+> **Planned (core loop):** move one lesson or a whole day with a preview, checks against the family's and the state's guidelines, the [catch-up sheet](../6-planning/product-spine.md#the-catch-up-sheet) when work is missed, and an agenda list on phones. **Schedule from the planner** replaced "Auto-schedule a book" on 2026-10-23: the toolbar link opens `/next/planner`. See [Calendar: move things, stay within the guidelines](../6-planning/product-spine.md#calendar-move-things-stay-within-the-guidelines).
 
 ## Scope
 
@@ -18,7 +18,7 @@ The family's school calendar. Every lesson (an "assignment" in the code) lives h
 - Toolbar shortcuts:
   - **Recalibrate Schedule** (see [Recalibrate](10-recalibrate.md))
   - **Print Weekly Checklist** (a PDF; see [Portfolios and reports](14-portfolios-and-reports.md))
-  - **Auto-schedule a book** (see [Pacing](09-pacing-and-lesson-plans.md))
+  - **Schedule from the planner** (opens `/next/planner`; see [Curriculum planner](22-curriculum-planner.md))
 - **Lesson status:** assigned, in progress, completed, skipped or excused. A parent can change any lesson. A child can change only their own.
 - **Completion date:** checking a lesson off records the household's today as its `completion_date` (a lesson already dated keeps its date); unchecking it, or any other status, clears it. A lesson done ahead of schedule keeps the day it was really done, and the lesson editor can still save it as long as neither date is moved.
 - **Shared lessons:** one lesson done by several kids (a "shared group"). When a parent checks it off, every child's copy is checked and dated; a child who finished their copy earlier keeps their own date.

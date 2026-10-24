@@ -16,7 +16,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 - **Catalog list** of books and programs, with filters (all / scheduled / …) and a switch between books and lesson plans.
 - **Add curriculum** by **ISBN lookup** (barcode number) or by hand: title, subject, publisher, and page count (pacing uses it).
 - ISBN lookup checks the shared book cache first, then **Open Library**, then **Google Books**.
-- **Auto-schedule** a book onto a child's calendar (see [Pacing](09-pacing-and-lesson-plans.md)).
+- **Scheduling moved to the Curriculum planner** (`/next/planner`) on 2026-10-23. This page can still save, unschedule, or delete an old catalog book. It no longer starts a schedule.
 - **Remove a book's schedule** (deletes its lessons that aren't done yet) or **delete the book**.
 - **Enrollments and years:** enroll a child in a book for a school year; add a school year. These forms also appear in Settings.
 
@@ -57,7 +57,7 @@ The family's shelf: the books and programs they use, found by ISBN or added by h
 ### Problems and risks
 - **Four ways in for ISBNs** (lookup-isbn, from-isbn, books/resolve, books/isbn). The app uses only one; the other three are API-only.
 - **Crowded page.** The Add form permanently takes half the page; there are two ISBN fields; enroll and school-year forms repeat what's in Settings.
-- **Different words for the same result.** Books say "Auto-schedule" and lesson plans say "Apply".
+- **Lesson plans on this page still say "Apply".** Scheduling a book from here used to say "Auto-schedule"; that button is gone, and new schedules start in the Curriculum planner.
 - **The "Source" column shows internal values** (`manual`, `barcode`).
 - **Confusing names:** `/curricula` (library) and `/curriculum` (lesson plans) differ by one letter.
 - The `curricula` router holds 17 queries and some business rules that belong in services.

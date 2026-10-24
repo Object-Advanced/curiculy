@@ -1,6 +1,6 @@
 # Open issues (from the October 2026 reviews)
 
-Every problem the feature reviews found, in one prioritized list. Each links to the page with the details.
+Every problem the feature reviews found, in one prioritized list. Each links to the page with the details. The 2026-10-23 code review is sequenced as pull requests in [Technical debt](technical-debt.md). This list stays the inventory. That page is the order to land the debt.
 - **Now:** worth doing before the next feature work.
 - **Launch:** required before the public launch (June 2027).
 - **Later:** improvements.

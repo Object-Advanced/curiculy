@@ -57,6 +57,14 @@ test("Home draws its charts with the vendored Chart.js", async ({ page }) => {
     .toBe(true);
 });
 
+test("the calendar sends scheduling to the planner", async ({ page }) => {
+  await startDemo(page);
+  await openRoute(page, "#/assignments", "Calendar");
+  const link = page.getByRole("link", { name: "Schedule from the planner" });
+  await expect(link).toHaveAttribute("href", "/next/planner");
+  await expect(page.getByRole("button", { name: /auto-schedule/i })).toHaveCount(0);
+});
+
 test("the calendar renders day, week, and month", async ({ page }) => {
   await startDemo(page);
   await openRoute(page, "#/assignments", "Calendar");
@@ -95,6 +103,10 @@ test("the older catalog still saves a book", async ({ page }) => {
   await form.getByLabel("Subject").fill("Math");
   await form.getByRole("button", { name: "Save curriculum" }).click();
   await expect(page.locator(".list", { hasText: "Saxon Math 3" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /auto-schedule/i })).toHaveCount(0);
+  await expect(
+    page.locator(".list-row", { hasText: "Saxon Math 3" }).getByRole("button", { name: "Delete" }),
+  ).toBeVisible();
 });
 
 test("a CSV pacing guide imports and applies to the calendar", async ({ page }) => {

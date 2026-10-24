@@ -19,7 +19,7 @@ Every major function of Curiculy has one page with two halves:
 | 06 | [Kid's My work](06-kid-my-work.md) | Kids | Works | Playful list pointing to their own materials |
 | 07 | [Stuck? nudges](07-stuck-nudges.md) | Kids, parents | Solid | One nudge, then a grown-up |
 | 08 | [Library and books](08-library-and-books.md) | Parents | Being replaced by 21 and 22 | The older catalog (still at `#/curricula`, no longer in the nav) |
-| 09 | [Pacing and lesson plans](09-pacing-and-lesson-plans.md) | Parents | Works; AI imports least predictable | Auto-schedule books; import or build plans |
+| 09 | [Pacing and lesson plans](09-pacing-and-lesson-plans.md) | Parents | Works; AI imports least predictable | Import or build plans; book auto-schedule UI removed |
 | 10 | [Recalibrate](10-recalibrate.md) | Parents | Solid | Catch up after falling behind |
 | 11 | [School year and days off](11-school-year-and-days-off.md) | Parents | Works; editors need merging | School days, holidays, sick days |
 | 12 | [Attendance](12-attendance.md) | Parents | Works; calendar radios cramped | "School today?", suggested from the day's work; one tap to confirm |

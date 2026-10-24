@@ -26,7 +26,7 @@ When school happens: the school year's dates, which weekdays are school days, an
 - **Colors per kind**, used on the calendar and on Home.
 - **Quick toggle** of a single day as a day off.
 - **Import public holidays** by country and year (for example US 2026), using the `holidays` library and skipping dates that are already blocked.
-- **Everything that schedules respects these:** Auto-schedule, plan Apply and Recalibrate all skip non-school days and days off.
+- **Everything that schedules respects these:** the pacing API, plan Apply, the Curriculum planner, and Recalibrate all skip non-school days and days off.
 
 ### Out of scope today
 - Several overlapping school years per child.

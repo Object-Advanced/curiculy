@@ -4069,13 +4069,9 @@ function curriculumCard(item) {
     .join(" · ");
   const status = item.is_scheduled ? "Scheduled" : "Unscheduled";
   const actions = item.is_scheduled
-    ? `<button type="button" class="ghost small" data-action="auto-schedule"
-               data-curriculum-id="${item.id}">Auto-schedule</button>
-       <button type="button" class="ghost small danger" data-action="unschedule-curriculum"
+    ? `<button type="button" class="ghost small danger" data-action="unschedule-curriculum"
                data-curriculum-id="${item.id}">Remove from schedule</button>`
-    : `<button type="button" class="small" data-action="auto-schedule"
-               data-curriculum-id="${item.id}">Auto-schedule a book</button>
-       <button type="button" class="ghost small danger" data-action="delete-curriculum"
+    : `<button type="button" class="ghost small danger" data-action="delete-curriculum"
                data-curriculum-id="${item.id}">Delete</button>`;
   return `
     <div class="list-row">
@@ -4940,7 +4936,7 @@ function renderAssignments() {
                <button type="button" class="add-assignment ghost" data-action="print-weekly-checklist"
                        data-student-id="${studentId}" data-start-date="${weekMondayISO(anchorDate())}">Print Weekly Checklist</button>`
         }
-        <button type="button" class="add-assignment ghost" data-action="auto-schedule">Auto-schedule a book</button>
+        <a class="button ghost" href="/next/planner">Schedule from the planner</a>
       </div>
       ${
         allStudents
@@ -5699,519 +5695,12 @@ async function syncCalendarTile(previous, item) {
   }
 }
 
-/* ---- Auto-schedule a book ---- */
-
-// Roughly a school term, so the deadline field opens on something plausible
-// rather than on today, which would ask for a whole book in no days at all.
-const DEFAULT_TERM_DAYS = 120;
-
-const DEFAULT_PAGES_PER_DAY = 10;
-
-// Monday to Friday, matching the API's own default. 0 is Monday.
-const DEFAULT_SCHOOL_WEEKDAYS = ["0", "1", "2", "3", "4"];
-
-// The preview response is kept whole. The commit has to send back the lessons
-// the API generated, with only the titles the parent edited changed, and
-// recomputing the page splits on this side would be a second implementation of
-// the generator waiting to disagree with the first.
-const pacing = { resources: null, books: [], preview: null };
-
-// Shared by both dialogs; only one is ever open, and whichever closes hands
-// focus back to the control that opened it.
-let lastFocused = null;
-
-function pacingField(name) {
-  return $("pacing-form").elements[name];
-}
-
-function pacingError(message) {
-  const el = $("pacing-error");
-  el.hidden = !message;
-  el.textContent = message || "";
-}
-
-function showPacingStep(step) {
-  $("pacing-form").hidden = step !== "form";
-  $("pacing-preview").hidden = step !== "preview";
-  $("pacing-actions").hidden = step !== "preview";
-}
-
-function pacingWeekdays() {
-  return [...$("pacing-weekdays").querySelectorAll("input:checked")].map((box) => Number(box.value));
-}
-
-function resetPacingWeekdays() {
-  const saved = classWeekdays().map(String);
-  for (const box of $("pacing-weekdays").querySelectorAll("input")) {
-    box.checked = saved.includes(box.value);
-  }
-}
-
-function pacingMethod() {
-  return pacingField("pacing_method").value || "deadline";
-}
-
-function updatePacingMethodUI(method) {
-  const byPace = method === "pace";
-  pacingField("pacing_method").value = method;
-  $("deadline-fields").hidden = byPace;
-  $("pace-fields").hidden = !byPace;
-  // Hidden required fields still fail HTML5 validation, so the date picker has
-  // to drop required when it is not the pacing mode in use.
-  pacingField("target_completion_date").required = !byPace;
-  pacingField("pages_per_day").required = byPace;
-  $("pacing-weekdays-help").textContent = byPace
-    ? "Each school day covers this many pages. Weekends and unticked days are skipped."
-    : "One a day places a lesson on every school day. Higher counts stack extra lessons on each of those days.";
-  $("pacing-modal").querySelectorAll('[data-action="pacing-method"]').forEach((button) => {
-    const active = button.dataset.method === method;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-}
-
-function numberOrNull(value) {
-  const trimmed = String(value ?? "").trim();
-  return trimmed === "" ? null : Number(trimmed);
-}
-
-function fillPacingStudents() {
-  const container = $("pacing-students");
-  const selected =
-    state.calendarStudentId === ALL_STUDENTS
-      ? new Set(state.students.map((student) => student.id))
-      : new Set(
-          [state.calendarStudentId].filter((id) =>
-            state.students.some((student) => student.id === id)
-          )
-        );
-  if (!selected.size && state.students.length) {
-    selected.add(state.students[0].id);
-  }
-  container.innerHTML = state.students
-    .map(
-      (student) => `
-      <label class="weekday-toggle">
-        <input type="checkbox" name="student_ids" value="${student.id}"
-               ${selected.has(student.id) ? "checked" : ""}>
-        ${escapeHtml(student.name)}
-      </label>`
-    )
-    .join("");
-}
-
-function selectedPacingStudentIds() {
-  return [...$("pacing-students").querySelectorAll("input:checked")].map((box) =>
-    Number(box.value)
-  );
-}
-
 function fillSelect(select, items, labelFn, selectedId) {
   select.innerHTML = items
     .map((item) => `<option value="${item.id}">${escapeHtml(labelFn(item))}</option>`)
     .join("");
   if (selectedId != null && items.some((item) => item.id === selectedId)) {
     select.value = String(selectedId);
-  }
-}
-
-function openAutoSchedule(curriculumId) {
-  if (!state.students.length) {
-    flash("Add a student before auto-scheduling a book.", true);
-    return;
-  }
-  if (!state.curricula.length) {
-    flash("Add a curriculum before auto-scheduling a book.", true);
-    return;
-  }
-
-  pacing.preview = null;
-  pacingError("");
-  showPacingStep("form");
-
-  fillPacingStudents();
-  const curricula = pacingField("curriculum_id");
-  const chosen = curriculumId ?? state.curricula[0].id;
-  fillSelect(curricula, state.curricula, (item) => item.title, chosen);
-
-  const today = todayISO();
-  pacingField("start_date").value = today;
-  pacingField("target_completion_date").value = addDays(today, DEFAULT_TERM_DAYS);
-  pacingField("start_page").value = "1";
-  pacingField("end_page").value = "";
-  pacingField("target_lessons").value = "";
-  pacingField("pages_per_day").value = String(DEFAULT_PAGES_PER_DAY);
-  updatePacingMethodUI("deadline");
-  // Reset with everything else, so an earlier run cannot leave the dialog
-  // reopening with no school days ticked at all.
-  resetPacingWeekdays();
-
-  lastFocused = document.activeElement;
-  $("pacing-modal").hidden = false;
-  document.body.classList.add("modal-open");
-  curricula.focus();
-  loadPacingBooks(chosen);
-}
-
-function closeAutoSchedule() {
-  const modal = $("pacing-modal");
-  if (modal.hidden) return;
-  modal.hidden = true;
-  document.body.classList.remove("modal-open");
-  pacing.preview = null;
-  pacingError("");
-  if (lastFocused && typeof lastFocused.focus === "function") {
-    lastFocused.focus();
-  }
-}
-
-/** Resolve a curriculum into its current edition and the books paged against it. */
-async function loadPacingBooks(curriculumId) {
-  const books = pacingField("book_id");
-  const note = $("pacing-edition");
-  pacing.resources = null;
-  pacing.books = [];
-  books.disabled = true;
-  books.innerHTML = `<option value="" disabled selected>Loading…</option>`;
-  note.textContent = "";
-  applyBookPages();
-
-  try {
-    const data = await api(`/curricula/${curriculumId}/resources`);
-    pacing.resources = data;
-    // Only a resource with a resolved book has pages to divide up; an answer key
-    // recorded without an ISBN cannot be paced.
-    pacing.books = data.resources
-      .filter((resource) => resource.book_edition)
-      .map((resource) => ({
-        id: resource.book_edition.id,
-        title: resource.book_edition.work.title,
-        label: `${resource.book_edition.work.title} · ${humanize(resource.kind)}`,
-        pageCount: resource.book_edition.page_count,
-      }));
-
-    if (!pacing.books.length) {
-      books.innerHTML = `<option value="" disabled selected>No books linked</option>`;
-      note.textContent = `${data.curriculum_title} (${data.edition_label}) has no resource with a resolved ISBN, so there is no page range to schedule.`;
-      applyBookPages();
-      return;
-    }
-    fillSelect(books, pacing.books, (item) => item.label);
-    for (const option of books.options) {
-      const book = pacing.books.find((item) => String(item.id) === option.value);
-      const pageCount = Number(book?.pageCount);
-      if (Number.isFinite(pageCount) && pageCount > 0) {
-        option.dataset.pageCount = String(pageCount);
-      }
-    }
-    books.value = String(pacing.books[0].id);
-    books.disabled = false;
-    note.textContent = `${data.curriculum_title} · ${data.edition_label}`;
-    applyBookPages();
-  } catch (error) {
-    books.innerHTML = `<option value="" disabled selected>Unavailable</option>`;
-    applyBookPages();
-    pacingError(error.message);
-  }
-}
-
-/** Page count of the book currently chosen in the Auto-schedule dropdown. */
-function selectedBookPageCount() {
-  const select = pacingField("book_id");
-  const optionCount = Number(select.selectedOptions[0]?.dataset.pageCount);
-  if (Number.isFinite(optionCount) && optionCount > 0) {
-    return optionCount;
-  }
-  const book = pacing.books.find((item) => String(item.id) === select.value) || pacing.books[0];
-  const count = Number(book?.pageCount ?? book?.page_count);
-  return Number.isFinite(count) && count > 0 ? count : null;
-}
-
-/** Open the page range on the whole book, when the catalog knows how long it is. */
-function applyBookPages() {
-  const pageCount = selectedBookPageCount();
-  pacingField("end_page").value = pageCount != null ? String(pageCount) : "";
-}
-
-function householdExceptionDates() {
-  const dates = new Set();
-  for (const item of state.exceptions || []) {
-    if (item.student_id != null) continue;
-    for (const iso of dayRange(item.start_date, item.end_date)) {
-      dates.add(iso);
-    }
-  }
-  return dates;
-}
-
-function countSchoolDays(startISO, endISO, weekdays, excluded) {
-  if (!startISO || !endISO) return 0;
-  const allowed = new Set(weekdays);
-  const skip = excluded instanceof Set ? excluded : new Set(excluded || []);
-  let count = 0;
-  for (const iso of dayRange(startISO, endISO)) {
-    if (skip.has(iso)) continue;
-    if (allowed.has(mondayIndex(parseISODate(iso)))) count += 1;
-  }
-  return count;
-}
-
-/** Map the Lessons dropdown (lessons per school day) onto the API's total count. */
-function previewTargetLessons(weekdays, startPage, endPage) {
-  const perDay = numberOrNull(pacingField("target_lessons").value);
-  if (perDay == null) return null;
-  const days = countSchoolDays(
-    pacingField("start_date").value,
-    pacingField("target_completion_date").value,
-    weekdays,
-    householdExceptionDates()
-  );
-  if (days < 1) return null;
-  const pages = endPage - startPage + 1;
-  return Math.min(perDay * days, Math.max(pages, 1));
-}
-
-async function generatePacingPreview() {
-  pacingError("");
-  const weekdays = pacingWeekdays();
-  const bookId = numberOrNull(pacingField("book_id").value);
-  const startPage = numberOrNull(pacingField("start_page").value);
-  const endPage = numberOrNull(pacingField("end_page").value);
-
-  if (!selectedPacingStudentIds().length) {
-    pacingError("Pick at least one student.");
-    return;
-  }
-
-  if (!bookId) {
-    pacingError("Pick a book to schedule.");
-    return;
-  }
-  if (!weekdays.length) {
-    pacingError("Pick at least one school day.");
-    return;
-  }
-  if (endPage < startPage) {
-    pacingError(`End page ${endPage} comes before start page ${startPage}.`);
-    return;
-  }
-
-  const method = pacingMethod();
-  const payload = {
-    book_id: bookId,
-    start_page: startPage,
-    end_page: endPage,
-    start_date: pacingField("start_date").value,
-    active_weekdays: weekdays,
-    excluded_dates: [...householdExceptionDates()],
-  };
-  if (method === "pace") {
-    const pagesPerDay = numberOrNull(pacingField("pages_per_day").value);
-    if (pagesPerDay == null || pagesPerDay < 1) {
-      pacingError("Pages per day must be at least 1.");
-      return;
-    }
-    payload.pages_per_day = pagesPerDay;
-  } else {
-    // A date input's value is already a plain YYYY-MM-DD string, which is what
-    // the API reads. It is passed straight through: routing it through a Date
-    // is what shifts a day for anyone west of Greenwich.
-    payload.target_completion_date = pacingField("target_completion_date").value;
-    payload.target_lessons = previewTargetLessons(weekdays, startPage, endPage);
-  }
-
-  const submit = $("pacing-form").querySelector('button[type="submit"]');
-  submit.disabled = true;
-  try {
-    pacing.preview = await api("/pacing/generate-preview", {
-      method: "POST",
-      skipOutbox: true,
-      body: JSON.stringify(payload),
-    });
-    renderPacingPreview(pacing.preview);
-    showPacingStep("preview");
-    $("pacing-course-title").focus();
-  } catch (error) {
-    pacingError(error.message);
-  } finally {
-    submit.disabled = false;
-  }
-}
-
-function pacingMathRows(data) {
-  const math = data.pacing;
-  const last = data.lessons[data.lessons.length - 1];
-  return [
-    ["Lessons", math.total_lessons],
-    ["School days", math.available_days],
-    ["Pages", `${math.total_pages} · ${math.pages_per_lesson} a lesson`],
-    [
-      "Pace",
-      math.is_rigorous
-        ? `${math.lessons_per_day} lessons a day`
-        : math.day_interval === 1
-          ? "Every school day"
-          : `Every ${math.day_interval} school days`,
-    ],
-    ["Last lesson", MEDIUM_DATE.format(parseISODate(last.scheduled_date))],
-  ];
-}
-
-function renderPacingPreview(data) {
-  const math = data.pacing;
-  const warning = $("pacing-warning");
-  const message =
-    math.warning ||
-    (math.is_rigorous
-      ? `This schedule stacks ${math.lessons_per_day} lessons a day. Move the target completion date out, add school days, or cover fewer pages to ease the pace.`
-      : "");
-  warning.hidden = !(math.is_rigorous || message);
-  warning.textContent = message;
-  warning.classList.toggle("rigorous", Boolean(math.is_rigorous));
-
-  $("pacing-math").innerHTML = pacingMathRows(data)
-    .map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`)
-    .join("");
-
-  const finishNote = $("pacing-calculated-finish");
-  const finishDate = math.target_completion_date
-    ? MEDIUM_DATE.format(parseISODate(math.target_completion_date))
-    : "";
-  finishNote.hidden = !finishDate;
-  finishNote.textContent = finishDate ? `Calculated finish date: ${finishDate}` : "";
-
-  $("pacing-course-title").value = data.book_title;
-  $("pacing-rows").innerHTML = data.lessons
-    .map(
-      (lesson) => `
-      <tr>
-        <td class="preview-seq">${lesson.sequence}</td>
-        <td>
-          <input class="preview-title" data-sequence="${lesson.sequence}" maxlength="255"
-                 aria-label="Title for lesson ${lesson.sequence}" value="${escapeHtml(lesson.title)}">
-        </td>
-        <td class="preview-pages">${lesson.start_page}–${lesson.end_page}</td>
-        <td class="preview-date">${escapeHtml(MEDIUM_DATE.format(parseISODate(lesson.scheduled_date)))}</td>
-      </tr>`
-    )
-    .join("");
-}
-
-function editedLessons(data) {
-  const titles = new Map(
-    [...$("pacing-rows").querySelectorAll(".preview-title")].map((input) => [
-      Number(input.dataset.sequence),
-      input.value.trim(),
-    ])
-  );
-  // Only the fields the commit schema declares are sent; it forbids extras, and
-  // page_count is the API's to compute.
-  return data.lessons.map((lesson) => ({
-    sequence: lesson.sequence,
-    title: titles.get(lesson.sequence) || lesson.title,
-    start_page: lesson.start_page,
-    end_page: lesson.end_page,
-    scheduled_date: lesson.scheduled_date,
-  }));
-}
-
-async function commitPacing() {
-  const data = pacing.preview;
-  if (!data || !pacing.resources) return;
-
-  pacingError("");
-  const courseTitle = $("pacing-course-title").value.trim();
-  if (!courseTitle) {
-    pacingError("Name the course before committing.");
-    $("pacing-course-title").focus();
-    return;
-  }
-
-  const studentIds = selectedPacingStudentIds();
-  if (!studentIds.length) {
-    pacingError("Pick at least one student.");
-    return;
-  }
-
-  const button = $("pacing-actions").querySelector('[data-action="commit-pacing"]');
-  button.disabled = true;
-  try {
-    const summary = await api("/pacing/commit", {
-      method: "POST",
-      body: JSON.stringify({
-        student_ids: studentIds,
-        curriculum_edition_id: pacing.resources.curriculum_edition_id,
-        book_id: data.book_id,
-        course_title: courseTitle,
-        start_page: numberOrNull(pacingField("start_page").value),
-        end_page: numberOrNull(pacingField("end_page").value),
-        lessons: editedLessons(data),
-      }),
-    });
-    closeAutoSchedule();
-    if (isOfflineQueued(summary)) return;
-    await showGeneratedSchedule(summary);
-  } catch (error) {
-    pacingError(error.message);
-  } finally {
-    button.disabled = false;
-  }
-}
-
-/** Land on the calendar showing the work that was just written. */
-async function showGeneratedSchedule(summary) {
-  const scheduledIds = summary.student_ids || [summary.student_id];
-  state.calendarStudentId = scheduledIds.length > 1 ? ALL_STUDENTS : scheduledIds[0];
-  // A syllabus usually runs for weeks, so the month view shows more of it than
-  // whichever week the parent happened to be looking at.
-  state.currentPeriod = "month";
-  state.currentAnchorDate = summary.first_scheduled_date;
-
-  // replaceState rather than assigning to the hash: hashchange clears the flash,
-  // and the confirmation is the whole reason for coming here.
-  if (routeName() !== "assignments") {
-    history.replaceState(null, "", "#/assignments");
-  }
-  try {
-    await refresh();
-  } catch (error) {
-    flash(error.message, true);
-  }
-  render();
-  const from = MEDIUM_DATE.format(parseISODate(summary.first_scheduled_date));
-  const to = MEDIUM_DATE.format(parseISODate(summary.last_scheduled_date));
-  flash(`${summary.assignments_created} lessons scheduled, ${from} to ${to}.`);
-}
-
-function handlePacingClick(event) {
-  const control = event.target.closest("[data-action]");
-  if (!control) return;
-
-  switch (control.dataset.action) {
-    case "close-pacing":
-      closeAutoSchedule();
-      break;
-    case "pacing-back":
-      pacingError("");
-      showPacingStep("form");
-      break;
-    case "commit-pacing":
-      commitPacing();
-      break;
-    case "pacing-method":
-      updatePacingMethodUI(control.dataset.method);
-      break;
-    default:
-      break;
-  }
-}
-
-function handlePacingChange(event) {
-  const field = event.target;
-  if (field.name === "curriculum_id") {
-    loadPacingBooks(Number(field.value));
-  } else if (field.name === "book_id") {
-    applyBookPages();
   }
 }
 
@@ -7174,7 +6663,6 @@ function closeEmailEvaluator() {
   modal.hidden = true;
   if (
     $("detail-modal").hidden &&
-    $("pacing-modal").hidden &&
     (!$("onboarding-wizard") || $("onboarding-wizard").hidden)
   ) {
     document.body.classList.remove("modal-open");
@@ -7481,7 +6969,6 @@ function scheduleSchoolYearSave() {
 async function openSchoolYearSettings() {
   closeUserMenu();
   closeModal();
-  closeAutoSchedule();
   closeEmailEvaluator();
   if (typeof closeLessonBuilder === "function") closeLessonBuilder();
   if (typeof closeApplyPlan === "function") closeApplyPlan();
@@ -8140,11 +7627,6 @@ async function handleClick(event) {
       break;
     case "toggle-assignment-form":
       toggleAssignmentForm();
-      break;
-    case "auto-schedule":
-      openAutoSchedule(
-        control.dataset.curriculumId ? Number(control.dataset.curriculumId) : undefined
-      );
       break;
     case "open-recalibrate":
       await openRecalibrate(control.dataset.studentId || selectedStudentId());
@@ -9023,7 +8505,6 @@ function resetStudentLoginForms() {
 
 function openLoginModal() {
   closeModal();
-  closeAutoSchedule();
   closeLessonBuilder();
   closeApplyPlan();
   closeRecalibrate();
@@ -9673,7 +9154,6 @@ async function logout() {
   clearAuthToken();
   syncSessionChrome();
   closeModal();
-  closeAutoSchedule();
   closeLessonBuilder();
   closeApplyPlan();
   closeRecalibrate();
@@ -9723,13 +9203,6 @@ async function boot() {
     if (!event.target.closest('form[data-form="assignment-edit"]')) return;
     event.preventDefault();
     saveAssignment();
-  });
-  $("pacing-modal").addEventListener("click", handlePacingClick);
-  $("pacing-modal").addEventListener("change", handlePacingChange);
-  $("pacing-modal").addEventListener("submit", (event) => {
-    if (!event.target.closest('form[data-form="pacing-preview"]')) return;
-    event.preventDefault();
-    generatePacingPreview();
   });
   $("lesson-plan-modal").addEventListener("click", handleLessonBuilderClick);
   $("lesson-plan-modal").addEventListener("change", handleLessonBuilderChange);
@@ -9787,8 +9260,6 @@ async function boot() {
       closeNotifications();
     } else if (isSchoolYearOpen()) {
       closeSchoolYearSettings();
-    } else if (!$("pacing-modal").hidden) {
-      closeAutoSchedule();
     } else if (isLessonBuilderOpen()) {
       closeLessonBuilder();
     } else if (isApplyPlanOpen()) {
@@ -9805,7 +9276,6 @@ async function boot() {
     if (isLoginOpen()) return;
     flash("");
     closeModal();
-    closeAutoSchedule();
     closeLessonBuilder();
     closeApplyPlan();
     closeRecalibrate();

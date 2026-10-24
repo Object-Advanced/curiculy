@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curiculy</title>
-    <script src="/static/js/theme-boot.js?v=20261016-attendance"></script>
-    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261016-attendance">
-    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261016-attendance">
-    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261016-attendance" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="/static/css/tokens.css?v=20261016-attendance">
-    <link rel="stylesheet" href="/static/css/app.css?v=20261016-attendance">
+    <script src="/static/js/theme-boot.js?v=20261023-planner-link"></script>
+    <link rel="icon" type="image/png" href="/static/curiculy-logo.png?v=20261023-planner-link">
+    <link rel="apple-touch-icon" href="/static/curiculy-logo.png?v=20261023-planner-link">
+    <link rel="preload" href="/static/fonts/figtree-latin-wght.woff2?v=20261023-planner-link" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/css/tokens.css?v=20261023-planner-link">
+    <link rel="stylesheet" href="/static/css/app.css?v=20261023-planner-link">
 </head>
 <body>
     <div id="auth-page">
         <section class="auth-card" aria-labelledby="auth-title-signin">
             <header class="auth-brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261016-attendance" alt="" width="72" height="72" aria-hidden="true">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261023-planner-link" alt="" width="72" height="72" aria-hidden="true">
                 <p class="auth-product">Curiculy</p>
             </header>
             <p id="login-error" class="banner error" hidden></p>
@@ -108,7 +108,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="brand">
-                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261016-attendance" alt="" width="40" height="40">
+                <img class="brand-mark" src="/static/curiculy-logo.png?v=20261023-planner-link" alt="" width="40" height="40">
                 <div>
                     <strong>Curiculy</strong>
                     <p>Homeschool planner</p>
@@ -203,114 +203,6 @@
             </header>
             <div id="detail-body" class="modal-body"></div>
             <footer id="detail-actions" class="modal-actions" hidden></footer>
-        </section>
-    </div>
-
-    <!-- Auto-schedule runs in two steps in one dialog: configure, then approve the
-         generated syllabus. Both panels stay in the DOM so going back to change a
-         setting does not lose what was typed. -->
-    <div id="pacing-modal" class="modal" hidden>
-        <div class="modal-backdrop" data-action="close-pacing"></div>
-        <section class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="pacing-title">
-            <header class="modal-head">
-                <div>
-                    <p class="meta">Auto-schedule</p>
-                    <h2 id="pacing-title">Schedule a book</h2>
-                </div>
-                <button type="button" class="icon-button" data-action="close-pacing" aria-label="Close auto-schedule">&times;</button>
-            </header>
-
-            <div class="modal-body">
-                <!-- The page flash sits behind the backdrop, so this dialog reports
-                     its own errors where they can actually be read. -->
-                <p id="pacing-error" class="banner error" hidden></p>
-
-                <form id="pacing-form" class="pacing-form" data-form="pacing-preview">
-                    <fieldset class="detail-fieldset">
-                        <legend>Students</legend>
-                        <div id="pacing-students" class="weekday-row"></div>
-                    </fieldset>
-                    <label>Curriculum<select name="curriculum_id" required></select></label>
-                    <label>Book<select name="book_id" required disabled></select></label>
-                    <p id="pacing-edition" class="meta"></p>
-                    <div class="field-row">
-                        <label>Start page<input name="start_page" type="number" min="1" step="1" required value="1"></label>
-                        <label>End page<input name="end_page" type="number" min="1" step="1" required></label>
-                    </div>
-                    <p class="muted">This defaults to the book's total page count. Please adjust the start and end pages to exclude non-lesson material like table of contents, glossaries, or appendices to ensure accurate pacing.</p>
-                    <fieldset class="detail-fieldset">
-                        <legend>Pacing method</legend>
-                        <input type="hidden" name="pacing_method" value="deadline">
-                        <div class="segmented" role="group" aria-label="Pacing method">
-                            <button type="button" class="active" data-action="pacing-method" data-method="deadline" aria-pressed="true">By Deadline</button>
-                            <button type="button" data-action="pacing-method" data-method="pace" aria-pressed="false">By Pace</button>
-                        </div>
-                    </fieldset>
-                    <div class="field-row">
-                        <label>First school day<input name="start_date" type="date" required></label>
-                        <div id="deadline-fields">
-                            <label>Finish by<input name="target_completion_date" type="date" required></label>
-                            <label>Lessons
-                                <select name="target_lessons">
-                                    <option value="">One a day</option>
-                                    <option value="2">2 per day</option>
-                                    <option value="3">3 per day</option>
-                                    <option value="4">4 per day</option>
-                                    <option value="5">5 per day</option>
-                                    <option value="6">6 per day</option>
-                                    <option value="7">7 per day</option>
-                                    <option value="8">8 per day</option>
-                                    <option value="9">9 per day</option>
-                                    <option value="10">10 per day</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div id="pace-fields" hidden>
-                            <label>Pages per day
-                                <input name="pages_per_day" type="number" min="1" step="1" value="10">
-                            </label>
-                        </div>
-                    </div>
-                    <fieldset class="detail-fieldset">
-                        <legend>School days</legend>
-                        <div id="pacing-weekdays" class="weekday-row">
-                            <label class="weekday-toggle"><input type="checkbox" value="0" checked>Mon</label>
-                            <label class="weekday-toggle"><input type="checkbox" value="1" checked>Tue</label>
-                            <label class="weekday-toggle"><input type="checkbox" value="2" checked>Wed</label>
-                            <label class="weekday-toggle"><input type="checkbox" value="3" checked>Thu</label>
-                            <label class="weekday-toggle"><input type="checkbox" value="4" checked>Fri</label>
-                            <label class="weekday-toggle"><input type="checkbox" value="5">Sat</label>
-                            <label class="weekday-toggle"><input type="checkbox" value="6">Sun</label>
-                        </div>
-                        <p id="pacing-weekdays-help" class="muted">One a day places a lesson on every school day. Higher counts stack extra lessons on each of those days.</p>
-                    </fieldset>
-                    <div class="form-actions">
-                        <button type="submit">Generate preview</button>
-                        <button type="button" class="ghost" data-action="close-pacing">Cancel</button>
-                    </div>
-                </form>
-
-                <div id="pacing-preview" class="pacing-preview" hidden>
-                    <p id="pacing-warning" class="banner warn" role="alert" hidden></p>
-                    <dl id="pacing-math" class="detail-grid"></dl>
-                    <p id="pacing-calculated-finish" class="muted" hidden></p>
-                    <label>Course name<input id="pacing-course-title" maxlength="255" required></label>
-                    <div class="preview-scroll">
-                        <table class="preview-table">
-                            <thead>
-                                <tr><th class="preview-seq">#</th><th>Lesson title</th><th>Pages</th><th>Scheduled</th></tr>
-                            </thead>
-                            <tbody id="pacing-rows"></tbody>
-                        </table>
-                    </div>
-                    <p class="muted">Edit any title before committing. Nothing is written until you commit.</p>
-                </div>
-            </div>
-
-            <footer id="pacing-actions" class="modal-actions" hidden>
-                <button type="button" class="ghost" data-action="pacing-back">Change settings</button>
-                <button type="button" data-action="commit-pacing">Commit to schedule</button>
-            </footer>
         </section>
     </div>
 
@@ -693,7 +585,7 @@
     <input type="file" id="curriculum-pdf-input" accept="application/pdf" hidden>
     <input type="file" id="paper-import-input" accept="image/*" capture="environment" style="display: none;">
     <div id="toast-container" aria-live="polite" aria-relevant="additions text"></div>
-    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261016-attendance"></script>
-    <script src="/static/js/app.js?v=20261016-attendance"></script>
+    <script src="/static/vendor/chartjs-4.5.1/chart.umd.min.js?v=20261023-planner-link"></script>
+    <script src="/static/js/app.js?v=20261023-planner-link"></script>
 </body>
 </html>

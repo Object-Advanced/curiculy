@@ -14,6 +14,7 @@ Everything about Curiculy for people to read: what it is, how each part works, h
 | Deploy, roll back, back up, or check on the site | [Operations](#4-operations) |
 | Work on the code | [Engineering](#5-engineering) |
 | See the plan and past decisions | [Roadmap](6-planning/roadmap.md) · [Decisions](6-planning/decisions.md) |
+| See the sequenced debt work | [Technical debt](6-planning/technical-debt.md) |
 
 ## What's in this folder
 
@@ -57,6 +58,7 @@ Everything about Curiculy for people to read: what it is, how each part works, h
 - [Roadmap](6-planning/roadmap.md): phases, milestones, status
 - [Decisions](6-planning/decisions.md): the decision log
 - [Open issues](6-planning/open-issues.md): every problem the reviews found, prioritized
+- [Technical debt](6-planning/technical-debt.md): the 2026-10-23 review, as eight pull requests in order
 - [Product spine](6-planning/product-spine.md): the core loop, the words, and what each feature is for (agreed 2026-10-11)
 - [Decision records](6-planning/decision-records/data-tier.md): the data tier (SQLite per family, or Postgres), with options and a recommendation
 - [State requirements](6-planning/state-requirements/README.md): how a state's law becomes a requirement pack, without forcing a fit; [Pennsylvania worksheet](6-planning/state-requirements/pennsylvania.md)

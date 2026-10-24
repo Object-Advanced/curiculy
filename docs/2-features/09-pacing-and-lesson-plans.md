@@ -1,19 +1,23 @@
 # Pacing and lesson plans
 
-Turning a book or a pacing guide into dated lessons on a child's calendar. There are two ways.
+Turning a pacing guide into dated lessons on a child's calendar. A book used to be scheduled from this page too; that dialog is gone, and the API underneath it remains.
 
 | | |
 |---|---|
 | **Who uses it** | Parents |
-| **Where** | "Auto-schedule a book" (Catalog and Calendar); the **Lesson plans** list in the Catalog (import, builder, Apply) |
+| **Where** | The **Lesson plans** list in the old catalog (`#/curricula`, import, builder, Apply). The calendar links to the [Curriculum planner](22-curriculum-planner.md) instead of scheduling a book here. |
 | **Health** | **Works and well tested.** The PDF and photo imports depend on the local AI and are the least predictable part. |
 
 > **Replacing this page (core loop, 2026-10-12):** scheduling follows each kind of book's structure: a textbook's full lesson list (one lesson a course day), a workbook's chapters and total pages (never the answer key), an online site's days a week, a book's pages. A curriculum is scheduled from the **Curriculum planner**, with a preview first; "Auto-schedule" and "Apply" become one verb, **Schedule**. Built: see [Curriculum planner](22-curriculum-planner.md). See [Curriculum planner](../6-planning/product-spine.md#curriculum-planner-a-textbook-and-what-goes-with-it).
 
 ## Scope
 
-### 1. Auto-schedule a book (pacing)
-- The parent picks a book, a child, a page range, and either a **finish-by date** or **pages per day**.
+### 1. Auto-schedule a book (pacing API only)
+The dialog and the "Auto-schedule a book" buttons were removed on 2026-10-23. `POST /api/pacing/generate-preview` and `POST /api/pacing/commit` stay, so a request already in flight and the test suite still have the engine. Nothing in the app opens them.
+
+When the dialog was on screen it worked like this:
+
+- The parent picked a book, a child, a page range, and either a **finish-by date** or **pages per day**.
 - **Preview:** the page range is split into near-equal lessons over the child's school days. Weekends, unticked weekdays and days off are skipped.
 - If the schedule needs more than one lesson a day, it's **flagged as "rigorous" rather than refused**.
 - **Commit:** writes the lessons and the book structure, and **enrolls the child**, all in one save.
@@ -68,7 +72,7 @@ The family's own rows (walled off by row-level security) are in `curriculum_plan
 - **Background AI jobs run inside the web process** (FastAPI `BackgroundTasks`). A restart loses the job; it's marked failed, but not retried. There's no queue, retry, or second worker.
 - **The PDF and handwriting results depend on the local Ollama model and the GPU.** Quality varies, and there's no side-by-side check.
 - **The file name `ai_generator.py` is misleading.** It does arithmetic; rename it `pacing_math.py`.
-- **"Auto-schedule" (books) and "Apply" (plans)** are different verbs for the same result.
+- **"Apply" is still the verb on a pacing guide.** The book dialog that said "Auto-schedule" is gone. New book schedules start in the Curriculum planner.
 
 ### Tests
 - `test_pacing.py` (75 tests), `test_curriculum_plans.py` (25), `test_curriculum_pdf_import.py` (33)

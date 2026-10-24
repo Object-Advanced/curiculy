@@ -40,7 +40,7 @@ Since Phase 2b, the kid-voice header ("Hey Sam — let's have a good day") and t
 ### Problems and risks
 - **Three names for one page:** the menu says "Kids", the title says "Sam's day", and the code says `students` and "My day".
 - **The tabs use `role="tab"`** but have no matching tab panel or arrow-key movement.
-- **"Books in motion"** shows only books scheduled with Auto-schedule. Older lesson plans don't link to a book.
+- **"Books in motion"** counts lessons that carry the old catalog's `curriculum_id`. The planner's courses (and the calendar link that opens it) do not appear there yet. Pacing-guide Apply still does, because those lessons set `curriculum_id`.
 
 ### Tests
 - e2e: `smoke.spec.ts` checks the calm layout (a "Today" heading, "Ask …", and no puzzle) and checking a lesson off; `visual.spec.ts` snapshots this page; the a11y scan reports 0 serious issues.

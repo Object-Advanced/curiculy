@@ -168,7 +168,7 @@ A live preview shows the result as lessons go in: "170 lessons, 5 a week = 34 we
 **The link opens from wherever the work shows up:** the lesson on the calendar, the parent's Today and Tasks, and an **Open IXL** button on the kid's trail stop. A screenshot of the score (the Chrome extension) becomes the work sample.
 
 ### Scheduling, by kind
-**"Auto-schedule a book" goes away.** A textbook is scheduled through its **curriculum** (below), with whatever goes with it. A book, workbook or online site on its own has **Schedule it** in the Library (**built**, October 2026; later also **Schedule from library** on the calendar):
+**"Auto-schedule a book" goes away.** A textbook is scheduled through its **curriculum** (below), with whatever goes with it. A book, workbook or online site on its own has **Schedule it** in the Library (**built**, October 2026). The calendar toolbar links to the Curriculum planner (**built** 2026-10-23). Scheduling a book without leaving the calendar is still later:
 - **Book:** pages or chapters a day, or a finish-by date (minutes a day: later)
 - **Workbook:** pages a day inside chapter boundaries; never the answer key
 - **Online site:** lessons or minutes, on its days a week, with the link
