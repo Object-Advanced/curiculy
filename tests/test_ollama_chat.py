@@ -48,6 +48,22 @@ class TestChatWithModelFallback:
         assert kwargs["options"] == {"temperature": 0.0}
         assert kwargs["messages"] == [{"role": "user", "content": "hi"}]
 
+    async def test_forwards_a_caller_timeout_and_defaults_to_none(self) -> None:
+        chat = AsyncMock(return_value={"message": {"content": "ok"}})
+        with patch(
+            "app.services.ollama_chat.ollama.AsyncClient",
+            return_value=_client(chat),
+        ) as client_factory:
+            await chat_with_model_fallback(
+                messages=[{"role": "user", "content": "hi"}],
+            )
+            await chat_with_model_fallback(
+                messages=[{"role": "user", "content": "hi"}],
+                timeout=12.5,
+            )
+        assert client_factory.call_args_list[0].kwargs["timeout"] is None
+        assert client_factory.call_args_list[1].kwargs["timeout"] == 12.5
+
     async def test_missing_primary_retries_mistral(self) -> None:
         chat = AsyncMock(
             side_effect=[

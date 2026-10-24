@@ -69,7 +69,7 @@ The family's own rows (walled off by row-level security) are in `curriculum_plan
 - **A restart can't leave a plan stuck in "processing".** Since Phase 1, interrupted plans are marked failed when the app starts.
 
 ### Problems and risks
-- **Background AI jobs run inside the web process** (FastAPI `BackgroundTasks`). A restart loses the job; it's marked failed, but not retried. There's no queue, retry, or second worker.
+- **Background AI jobs run inside the web process** (FastAPI `BackgroundTasks`). A restart loses the job; it's marked failed, but not retried. There's no queue, retry, or second worker. PDF text extraction runs on a worker thread, and that chat gives up if the connection is not open in 10 seconds or the model has not answered in 10 minutes. The paper worker's 120 second cell limit is shorter on purpose.
 - **The PDF and handwriting results depend on the local Ollama model and the GPU.** Quality varies, and there's no side-by-side check.
 - **The file name `ai_generator.py` is misleading.** It does arithmetic; rename it `pacing_math.py`.
 - **"Apply" is still the verb on a pacing guide.** The book dialog that said "Auto-schedule" is gone. New book schedules start in the Curriculum planner.

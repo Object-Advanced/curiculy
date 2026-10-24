@@ -3,6 +3,7 @@
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pymupdf as fitz
 import pytest
 from fastapi.testclient import TestClient
@@ -497,6 +498,61 @@ class TestImportCurriculumPdf:
         assert plan.status == "failed"
         _assert_one_plan_notification(db, ready=False, plan_title="bad-ai")
 
+    def test_chat_timeout_marks_the_plan_failed(
+        self, client: TestClient, db: Session
+    ) -> None:
+        with patch(
+            "app.services.ai_curriculum_worker.parse_text_with_ollama",
+            new=AsyncMock(side_effect=httpx.ReadTimeout("the model did not answer")),
+        ):
+            response = client.post(
+                "/api/curriculum/import-pdf",
+                files={
+                    "file": ("slow.pdf", _pdf_bytes("Lesson 1"), "application/pdf")
+                },
+            )
+        assert response.status_code == 202
+        _see_worker_commit(db)
+        plan = db.get(CurriculumPlan, response.json()["plan_id"])
+        assert plan is not None
+        assert plan.status == "failed"
+        _assert_one_plan_notification(db, ready=False, plan_title="slow")
+
+    def test_worker_saves_lessons_from_the_extracted_text(
+        self, client: TestClient, db: Session
+    ) -> None:
+        parsed = AIParsedCurriculum(
+            lessons=[AIParsedLesson(day_number=1, title="From the extract")]
+        )
+        with (
+            patch(
+                "app.services.ai_curriculum_worker.extract_text_from_pdf",
+                return_value="Week 1 Day 1 From the extract",
+            ) as extract,
+            patch(
+                "app.services.ai_curriculum_worker.parse_text_with_ollama",
+                new=AsyncMock(return_value=parsed),
+            ) as parse,
+        ):
+            response = client.post(
+                "/api/curriculum/import-pdf",
+                files={"file": ("guide.pdf", _pdf_bytes("ignored"), "application/pdf")},
+            )
+        assert response.status_code == 202
+        extract.assert_called_once()
+        assert extract.call_args.args[0][:4] == b"%PDF"
+        parse.assert_awaited_once_with("Week 1 Day 1 From the extract")
+        _see_worker_commit(db)
+        plan_id = response.json()["plan_id"]
+        plan = db.get(CurriculumPlan, plan_id)
+        assert plan is not None
+        assert plan.status == "ready"
+        titles = [
+            lesson.title
+            for lesson in db.query(CurriculumLesson).filter_by(plan_id=plan_id)
+        ]
+        assert titles == ["From the extract"]
+
     def test_corrupt_pdf_does_not_fail_the_request(
         self, client: TestClient, db: Session
     ) -> None:
@@ -753,10 +809,14 @@ class TestParseTextWithOllama:
         with patch(
             "app.services.ollama_chat.ollama.AsyncClient",
             return_value=mock_client,
-        ):
+        ) as client_factory:
             result = await parse_text_with_ollama(
                 "Week 1 - Early America\nDay 1: Read Chapter 1 (Pages 4-10)"
             )
+
+        timeout = client_factory.call_args.kwargs["timeout"]
+        assert timeout.connect == 10
+        assert timeout.read == 600
 
         mock_client.chat.assert_awaited_once()
         kwargs = mock_client.chat.await_args.kwargs

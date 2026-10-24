@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import logging
 
+import httpx
+from anyio import to_thread
 from sqlalchemy.orm import Session
 
 from app.db import open_tenant_session
@@ -24,6 +26,11 @@ from app.services.ollama_chat import chat_with_model_fallback
 from app.services.pdf_parser import extract_text_from_pdf, is_sparse_curriculum_text
 
 logger = logging.getLogger(__name__)
+
+# A whole guide on the home server's CPU can take minutes. 120s is the paper
+# worker's per-cell limit and would fail a real PDF. Give up if the connection
+# is not open in 10s, or the model has not answered in 10 minutes.
+PDF_CHAT_TIMEOUT = httpx.Timeout(600.0, connect=10.0)
 
 SYSTEM_PROMPT = """
 You are an expert data entry assistant for a homeschool curriculum app.
@@ -105,6 +112,7 @@ async def parse_text_with_ollama(raw_text: str) -> AIParsedCurriculum:
         ],
         format=AIParsedCurriculum.model_json_schema(),
         options={"temperature": 0.0},
+        timeout=PDF_CHAT_TIMEOUT,
     )
     return AIParsedCurriculum.model_validate_json(content)
 
@@ -205,7 +213,7 @@ async def process_pdf_curriculum_background(
     db_session = open_tenant_session(tenant_uuid, demo_key)
     try:
         try:
-            raw_text = extract_text_from_pdf(file_bytes)
+            raw_text = await to_thread.run_sync(extract_text_from_pdf, file_bytes)
             logger.info(
                 "Extracted %s characters from curriculum PDF for plan %s",
                 len(raw_text),

@@ -44,12 +44,15 @@ async def chat_with_model_fallback(
     messages: list[dict[str, Any]],
     format: object | None = None,
     options: dict[str, Any] | None = None,
+    timeout: Any = None,
 ) -> str:
     """Return ``message.content``. Raises immediately on non-missing-model errors.
 
     If every candidate is missing, raises the last missing-model error.
+    ``timeout`` is passed to the Ollama client. ``None`` keeps today's wait:
+    no deadline. A caller that must give up passes an ``httpx.Timeout``.
     """
-    client = ollama.AsyncClient(host=settings.ollama_host)
+    client = ollama.AsyncClient(host=settings.ollama_host, timeout=timeout)
     last_error: BaseException | None = None
     for model in _models_to_try():
         try:

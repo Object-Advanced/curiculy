@@ -142,20 +142,14 @@ The plain foreign key is not enough. `curriculum_plans` and `curricula` are both
 
 **Depends on:** pull request 3, only so the two importer fixes are not one diff. The code does not require it.
 
-**Why:** `import_curriculum_pdf` in `app/routers/curriculum_plans.py` returns 202 and registers `process_pdf_curriculum_background`. That function is `async`. It calls synchronous `extract_text_from_pdf` (`app/services/pdf_parser.py`: PyMuPDF, then Tesseract, up to `MAX_OCR_PAGES = 20`) directly, so the work runs on the API event loop. It then `await`s `parse_text_with_ollama`, which calls `chat_with_model_fallback` (`app/services/ollama_chat.py`) with no timeout. The paper worker's HTTP calls use `timeout=120`. One PDF can stall every other request on the process. [Open issue 8](open-issues.md) is a jobs table at phase 8. This pull request is the smaller fix the live path needs.
+**Why:** `process_pdf_curriculum_background` is async and called `extract_text_from_pdf` directly, so PyMuPDF and Tesseract ran on the API event loop. The following Ollama chat had no deadline.
 
-**Done when:** Text extraction runs in a worker thread. The Ollama chat for this import gives up after a bounded wait, the plan is marked failed, and the failed notification is sent. The route still returns 202 before that work starts.
+**Done when (landed 2026-10-23):** Text extraction runs in a worker thread. The route still returns 202 before that work starts. The PDF chat gives up if the connection is not open in 10 seconds or the model has not answered in 10 minutes, and the plan is marked failed. Other callers of `chat_with_model_fallback` still pass no timeout. 120 seconds, the paper worker's per-cell limit, would fail a whole guide read on the CPU.
 
-### Commits
+### What changed
 
-1. `PDF text extraction runs off the event loop.`
-   - In `process_pdf_curriculum_background`, call `extract_text_from_pdf` through `asyncio.to_thread` (Starlette's `anyio.to_thread.run_sync` is the same idea; match whichever the file's neighbors use).
-   - Do not mark the route `def` and do the extraction before the 202. The parse of the upload bytes (`await file.read()`) stays on the request. The OCR does not.
-
-2. `The curriculum PDF chat has a timeout.`
-   - `ollama==0.6.2` builds an `AsyncClient`. Give the client used by this import a finite timeout (120 seconds matches the paper worker). Prefer a parameter on `chat_with_model_fallback` so homework-help and other callers keep their current wait unless they opt in. This commit opts in only the PDF worker.
-   - On timeout, the existing `except Exception` in `process_pdf_curriculum_background` already sets `failed` and calls `_mark_plan_failed`. Confirm a timeout is an exception that path sees, and add a test that a raised timeout marks the plan `failed`.
-   - `tests/test_curriculum_pdf_import.py` patches `parse_text_with_ollama`, so it never proves the thread hop. Add one test that patches `extract_text_from_pdf` and asserts the worker still persists lessons. Patching the function is enough. A test that inspects the running loop is brittle; do not add one.
+- `process_pdf_curriculum_background` calls `extract_text_from_pdf` through `anyio.to_thread.run_sync`.
+- `chat_with_model_fallback` takes an optional `timeout`. The PDF worker passes `httpx.Timeout(600.0, connect=10.0)`.
 
 ### Leave for later
 
