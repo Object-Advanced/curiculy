@@ -152,19 +152,23 @@ def _persist_lessons(
     if plan is None:
         logger.warning("Curriculum plan %s disappeared before paper lessons were saved", plan_id)
         return
-    if lessons:
-        db_session.add_all(lessons)
-        frequency_days, total_weeks = plan_dimensions_from_rows(
-            [
-                {
-                    "week_number": lesson.week_number,
-                    "day_number": lesson.day_number,
-                }
-                for lesson in lessons
-            ]
-        )
-        plan.frequency_days = frequency_days
-        plan.total_weeks = total_weeks
+    if not lessons:
+        plan.status = CurriculumPlanStatus.FAILED
+        notify_curriculum_plan_processed(db_session, title=plan.title, ready=False)
+        db_session.commit()
+        return
+    db_session.add_all(lessons)
+    frequency_days, total_weeks = plan_dimensions_from_rows(
+        [
+            {
+                "week_number": lesson.week_number,
+                "day_number": lesson.day_number,
+            }
+            for lesson in lessons
+        ]
+    )
+    plan.frequency_days = frequency_days
+    plan.total_weeks = total_weeks
     plan.status = CurriculumPlanStatus.READY
     notify_curriculum_plan_processed(db_session, title=plan.title, ready=True)
     db_session.commit()

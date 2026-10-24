@@ -122,27 +122,19 @@ The plain foreign key is not enough. `curriculum_plans` and `curricula` are both
 
 **Depends on:** nothing in the chain above. Can be reviewed in parallel with pull requests 1–2.
 
-**Why:** [Open issue 3a](open-issues.md) already decided not to install the vision model, and to retire handwriting import when the old catalog page goes. The page is still reachable, and the buttons still call the API. Worse, a sheet that yields no lessons is stored as ready. `paper_vision_worker._persist_lessons` sets `CurriculumPlanStatus.READY` and notifies with `ready=True` after the `if lessons` block, so an empty list takes the same path. `ai_curriculum_worker` sets `FAILED` when no titled rows come back. The two importers disagree.
+**Why:** [Open issue 3a](open-issues.md) already decided not to install the vision model, and to retire handwriting import when the old catalog page goes. A sheet that yielded no lessons was stored as ready. The PDF worker marks that case failed.
 
-**Done when:** The old catalog no longer offers "photograph a paper template" or the template download. A paper job that persists zero lessons marks the plan failed and sends the failed notification. The HTTP routes stay, so a request already sent still finishes, and it can no longer report success with an empty guide.
+**Done when (landed 2026-10-23):** The old catalog no longer offers "photograph a paper template" or the template download. A paper job that persists zero lessons marks the plan failed and sends the failed notification. The HTTP routes stay, so a request already sent can finish, and it can no longer report success with an empty guide. Plans already titled "Paper Import" still say so in the list. The general plan-status poll covers a job started through the route, so the paper-only poller is gone with the buttons.
 
-### Commits
+### What changed
 
-1. `An empty paper read marks the plan failed.`
-   - In `_persist_lessons` (`app/services/paper_vision_worker.py`), when `lessons` is empty, set `FAILED`, call `notify_curriculum_plan_processed(..., ready=False)`, commit, and return. Do not set `total_weeks`.
-   - The non-empty path stays `READY`.
-   - `_mark_plan_failed` already swallows its own failure and logs it. Leave that. A database that cannot record failure has nothing more honest to show.
+- `_persist_lessons` returns `failed` and does not change `total_weeks` when no lesson titles come back.
+- The catalog heading keeps Create, CSV, and PDF. The paper buttons, the hidden file input, and the paper poller are gone.
+- A failed plan titled "Paper Import" says to edit it by hand or delete it. It does not offer another photo.
 
-2. `The catalog no longer offers the paper week sheet.`
-   - `static/js/app.js`: the empty-state sentence that says "or photograph a paper template"; the buttons `btn-download-paper-template` and `btn-import-paper`; the action cases `download-paper-template` and `import-paper`; the helpers those cases call (`/api/curriculum/paper-template` and `/api/curriculum/import-paper`).
-   - Leave `parse_paper_upload` on the request path for now. It still runs inside `import_paper` before the 202, which is the blocking call this pull request does not take on. Removing the buttons means a parent cannot hit it.
+### Leave for later
 
-### Tests and docs
-
-- Extend `tests/test_paper_vision_worker.py`. The success test and the connection-error test stay. Add a worker run whose cell text is empty and assert status `failed`, zero `CurriculumLesson` rows, and a `curriculum_plan_failed` notification.
-- `tests/test_paper_template.py` and the import-paper API tests stay green, because the routes stay.
-- [Pacing and lesson plans](../2-features/09-pacing-and-lesson-plans.md) and [AI features](../2-features/17-ai-features.md): the paper buttons are gone; the routes remain until the deletion pull request in [Later, on purpose](#later-on-purpose).
-- Bump `SHELL_VERSION` again if this branch does not already contain pull request 1's bump. `tests/test_shell.py` is the check.
+- Deleting `GET /api/curriculum/paper-template`, `POST /api/curriculum/import-paper`, and the parser, template, and worker. See [Later, on purpose](#later-on-purpose).
 
 ## 4. PDF reading leaves the request event loop
 

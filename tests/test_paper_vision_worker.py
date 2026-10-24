@@ -161,6 +161,43 @@ class TestExtractHandwritingFromSlices:
         finally:
             verify.close()
 
+    def test_blank_sheet_marks_failed_without_lessons(
+        self, engine: Engine, db: Session
+    ) -> None:
+        plan_id = _seed_processing_plan(db)
+        opener, _opened, _close_calls, factory = _tracked_opener(
+            engine, "household-a", "jti-a"
+        )
+        blank = _ollama_response({"message": {"content": '{"text": ""}'}})
+
+        with (
+            patch(
+                "app.services.paper_vision_worker.open_tenant_session",
+                side_effect=opener,
+            ),
+            patch(
+                "app.services.paper_vision_worker.httpx.post",
+                return_value=blank,
+            ),
+        ):
+            extract_handwriting_from_slices(
+                DUMMY_SLICES, plan_id, "household-a", "jti-a"
+            )
+
+        verify = factory()
+        try:
+            saved = verify.get(CurriculumPlan, plan_id)
+            assert saved is not None
+            assert saved.status == CurriculumPlanStatus.FAILED
+            assert saved.total_weeks == 36
+            assert saved.frequency_days == 5
+            assert verify.query(CurriculumLesson).filter_by(plan_id=plan_id).count() == 0
+            _assert_one_plan_notification(
+                verify, ready=False, plan_title="Paper Import"
+            )
+        finally:
+            verify.close()
+
     def test_failure_marks_failed_on_a_fresh_session(
         self, engine: Engine, db: Session
     ) -> None:

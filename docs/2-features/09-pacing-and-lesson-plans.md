@@ -27,7 +27,7 @@ When the dialog was on screen it worked like this:
 A "plan" is a Week/Day guide made of lessons, with optional time slots. It can come from:
 - **CSV** with columns Unit, Week, Day and Title. One bad row rejects the whole file, so you never get half a guide.
 - **PDF:** the text is extracted (tables, reading order, and OCR for scanned pages), then the **local AI** turns it into lessons in the background. The plan shows "processing", then "ready" or "failed", and the parent is notified.
-- **Paper:** print a week sheet with corner markers and a QR code, fill it in by hand, then photograph it. The photo is straightened and cut into cells, and the **local vision AI** reads each cell's handwriting in the background.
+- **Paper:** the catalog no longer offers a week sheet or a photo import (2026-10-23). `GET /api/curriculum/paper-template` and `POST /api/curriculum/import-paper` stay, so a request already sent can finish. A sheet that yields no lessons is marked failed, the same as a PDF that yields none. The vision model is not installed.
 - **Builder:** type lessons in by hand.
 
 **Apply** a plan to a child from a start date. Each Week/Day slot takes the next school day, skipping weekends, unticked weekdays and days off. Applying also **enrolls the child** against a catalog row that belongs to that guide. The first apply creates the row and the guide remembers it. A second guide with the same title gets its own row. A book already in the old catalog with that title is left alone.
@@ -76,7 +76,7 @@ The family's own rows (walled off by row-level security) are in `curriculum_plan
 
 ### Tests
 - `test_pacing.py` (75 tests), `test_curriculum_plans.py` (25), `test_curriculum_pdf_import.py` (33)
-- `test_paper_template.py` (10), `test_paper_parser.py` (6), `test_paper_vision_worker.py` (5)
+- `test_paper_template.py` (10), `test_paper_parser.py` (6), `test_paper_vision_worker.py` (6)
 - `test_plan_recovery.py` (2)
 - e2e: "a CSV pacing guide imports and applies to the calendar"
 

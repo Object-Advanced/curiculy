@@ -1173,13 +1173,7 @@ async function loadStudents() {
 
 let planStatusPollTimer = 0;
 let pdfImportBusy = false;
-let paperTemplateBusy = false;
-let paperImportBusy = false;
-let paperImportPhase = "";
-let paperImportPlanId = 0;
-let paperImportPollTimer = 0;
 const PLAN_STATUS_POLL_MS = 4000;
-const PAPER_IMPORT_POLL_MS = 2500;
 
 function stopPlanStatusPolling() {
   if (planStatusPollTimer) {
@@ -1201,12 +1195,12 @@ function planStatusSnapshot(plans) {
 function notifyPlanStatusChanges(previousPlans, nextPlans) {
   const previous = new Map((previousPlans || []).map((plan) => [plan.id, plan.status]));
   for (const plan of nextPlans || []) {
-    if (plan.id === paperImportPlanId) continue;
     if (previous.get(plan.id) !== "processing") continue;
     if (plan.status === "ready") {
       const count = Number(plan.lesson_count) || 0;
       const lessonLabel = count === 1 ? "1 lesson" : `${count} lessons`;
-      showToast("success", `${plan.title} is ready`, `${lessonLabel} parsed from the PDF.`);
+      const source = plan.title === "Paper Import" ? "the photographed sheet" : "the PDF";
+      showToast("success", `${plan.title} is ready`, `${lessonLabel} parsed from ${source}.`);
     } else if (plan.status === "failed") {
       showToast("error", `${plan.title} could not be parsed`);
     }
@@ -2999,7 +2993,7 @@ function renderCatalogKindTabs() {
 
 function pacingPlanStatusBadge(item) {
   if (item.status === "processing") {
-    const paper = item.title === "Paper Import" || item.id === paperImportPlanId;
+    const paper = item.title === "Paper Import";
     return `<span class="tag plan-processing" aria-live="polite">
       <span class="plan-spinner" aria-hidden="true"></span>
       ${paper ? "Transcribing handwriting" : "Parsing with AI"}
@@ -3027,7 +3021,7 @@ function pacingPlanCard(item) {
   const weeks = Number(item.total_weeks) || 36;
   const processing = item.status === "processing";
   const failed = item.status === "failed";
-  const paper = item.title === "Paper Import" || item.id === paperImportPlanId;
+  const paper = item.title === "Paper Import";
   const disabledAttrs = processing
     ? ' disabled aria-disabled="true" title="Wait for AI processing to finish"'
     : "";
@@ -3037,7 +3031,7 @@ function pacingPlanCard(item) {
       : "The AI is reading this PDF. Edit and Apply unlock when it finishes."
     : failed
       ? paper
-        ? "Handwriting extraction failed. You can edit the plan by hand or try another photo."
+        ? "Handwriting extraction failed. You can edit the plan by hand or delete it."
         : "Parsing did not find lessons. You can edit the plan by hand or delete it."
       : `${publisher} · ${subject} · ${grade} · ${lessonLabel} · ${days} day${days === 1 ? "" : "s"}/week · ${weeks} week${weeks === 1 ? "" : "s"}`;
   const rowClass = processing ? " is-processing" : failed ? " is-failed" : "";
@@ -3071,27 +3065,13 @@ function pendingPdfImportCard() {
     </div>`;
 }
 
-function pendingPaperImportCard() {
-  const scanning = paperImportPhase === "scanning";
-  return `
-    <div class="list-row is-processing">
-      <span class="tag plan-processing" aria-live="polite">
-        <span class="plan-spinner" aria-hidden="true"></span>
-        ${scanning ? "Scanning page" : "Reading handwriting"}
-      </span>
-      <strong>Paper import</strong>
-      <p class="meta">${scanning ? "Scanning page geometry..." : "Transcribing handwriting with Ollama..."}</p>
-    </div>`;
-}
-
 function renderPacingGuidesCatalog() {
   const plans = state.curriculumPlans || [];
   const showPendingPdf = pdfImportBusy;
-  const showPendingPaper = paperImportBusy && paperImportPhase === "scanning";
   const listHtml =
-    plans.length || showPendingPdf || showPendingPaper
-      ? `<div class="list">${showPendingPdf ? pendingPdfImportCard() : ""}${showPendingPaper ? pendingPaperImportCard() : ""}${plans.map(pacingPlanCard).join("")}</div>`
-      : `<p class="empty">No pacing guides yet. Create a lesson plan, import a CSV, import a PDF, or photograph a paper template.</p>`;
+    plans.length || showPendingPdf
+      ? `<div class="list">${showPendingPdf ? pendingPdfImportCard() : ""}${plans.map(pacingPlanCard).join("")}</div>`
+      : `<p class="empty">No pacing guides yet. Create a lesson plan, import a CSV, or import a PDF.</p>`;
   return `
     <section class="card">
       <div class="card-heading">
@@ -3106,14 +3086,6 @@ function renderPacingGuidesCatalog() {
           <button type="button" class="ghost small" data-action="import-curriculum-pdf"
                   ${pdfImportBusy ? "disabled" : ""}>
             ${pdfImportBusy ? "Uploading PDF…" : "Import PDF (AI)"}
-          </button>
-          <button type="button" id="btn-download-paper-template" class="ghost small btn btn-secondary"
-                  data-action="download-paper-template" ${paperTemplateBusy ? "disabled" : ""}>
-            Download Paper Template
-          </button>
-          <button type="button" id="btn-import-paper" class="small btn btn-primary"
-                  data-action="import-paper" ${paperImportBusy ? "disabled" : ""}>
-            ${paperImportBusy ? "Importing paper…" : "Import from Paper"}
           </button>
         </div>
       </div>
@@ -6111,135 +6083,6 @@ function importCurriculumPdf(event) {
     });
 }
 
-function stopPaperImportPolling() {
-  if (paperImportPollTimer) {
-    window.clearTimeout(paperImportPollTimer);
-    paperImportPollTimer = 0;
-  }
-}
-
-function finishPaperImportUi() {
-  stopPaperImportPolling();
-  paperImportBusy = false;
-  paperImportPhase = "";
-  paperImportPlanId = 0;
-}
-
-function pollPaperImportPlan(planId) {
-  stopPaperImportPolling();
-  paperImportPollTimer = window.setTimeout(async () => {
-    paperImportPollTimer = 0;
-    if (paperImportPlanId !== planId) return;
-    try {
-      const plan = await api(`/curriculum/plans/${planId}`);
-      if (plan.status === "ready") {
-        finishPaperImportUi();
-        flash("");
-        try {
-          state.curriculumPlans = await api("/curriculum/plans");
-        } catch {
-          /* catalog refresh is best-effort */
-        }
-        if (catalogKind() === "plans") render();
-        showToast("success", "Paper import is ready", "Review the lessons before applying them.");
-        await openLessonBuilderEdit(planId);
-        return;
-      }
-      if (plan.status === "failed") {
-        finishPaperImportUi();
-        flash("Handwriting extraction failed. You can edit the plan by hand or try another photo.", true);
-        try {
-          state.curriculumPlans = await api("/curriculum/plans");
-        } catch {
-          /* catalog refresh is best-effort */
-        }
-        if (catalogKind() === "plans") render();
-        showToast("error", "Handwriting extraction failed");
-        return;
-      }
-    } catch {
-      // Keep polling; the plan may still be processing.
-    }
-    if (paperImportPlanId === planId) pollPaperImportPlan(planId);
-  }, PAPER_IMPORT_POLL_MS);
-}
-
-async function downloadPaperTemplate() {
-  if (paperTemplateBusy) return;
-  paperTemplateBusy = true;
-  if (catalogKind() === "plans") render();
-  const token = getAuthToken();
-  const headers = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
-  try {
-    const res = await fetch("/api/curriculum/paper-template", { headers });
-    if (!res.ok) {
-      if (res.status === 401) handleUnauthorized();
-      let message = `Request failed (${res.status})`;
-      try {
-        const body = await res.json();
-        if (typeof body.detail === "string") message = body.detail;
-      } catch {
-        /* not JSON */
-      }
-      throw new Error(message);
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "curiculy_template.pdf";
-    link.rel = "noopener";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } catch (error) {
-    flash(error.message || "Could not download the paper template.", true);
-  } finally {
-    paperTemplateBusy = false;
-    if (catalogKind() === "plans") render();
-  }
-}
-
-function importPaperSheet(event) {
-  const input = event.target;
-  const file = input.files && input.files[0];
-  input.value = "";
-  if (!file) return;
-
-  const payload = new FormData();
-  payload.append("file", file);
-  paperImportBusy = true;
-  paperImportPhase = "scanning";
-  flash("Scanning page geometry...");
-  if (catalogKind() === "plans") render();
-  api("/curriculum/import-paper", { method: "POST", body: payload, skipOutbox: true })
-    .then(async (result) => {
-      if (isOfflineQueued(result)) {
-        finishPaperImportUi();
-        flash("");
-        return;
-      }
-      const planId = Number(result && result.id);
-      paperImportPhase = "transcribing";
-      paperImportPlanId = planId;
-      flash("Transcribing handwriting with Ollama...");
-      try {
-        state.curriculumPlans = await api("/curriculum/plans");
-      } catch {
-        /* the photo is already accepted */
-      }
-      if (catalogKind() === "plans") render();
-      pollPaperImportPlan(planId);
-    })
-    .catch((error) => {
-      finishPaperImportUi();
-      flash(error.message || "Could not scan the page. Check that all four corners are visible.", true);
-      if (catalogKind() === "plans") render();
-    });
-}
-
 function queueEvidenceUpload({ assignmentId, previous, payload, query }) {
   beginBackgroundJob("upload");
 
@@ -7672,12 +7515,6 @@ async function handleClick(event) {
     case "import-curriculum-pdf":
       if (catalogKind() !== "plans") break;
       $("curriculum-pdf-input")?.click();
-      break;
-    case "download-paper-template":
-      await downloadPaperTemplate();
-      break;
-    case "import-paper":
-      $("paper-import-input")?.click();
       break;
     case "settings-panel":
       window.location.hash = `#/settings/${control.dataset.panel}`;
@@ -9198,7 +9035,6 @@ async function boot() {
   $("evidence-upload-input").addEventListener("change", uploadEvidence);
   $("curriculum-csv-input").addEventListener("change", importCurriculumCsv);
   $("curriculum-pdf-input")?.addEventListener("change", importCurriculumPdf);
-  $("paper-import-input")?.addEventListener("change", importPaperSheet);
   $("detail-modal").addEventListener("submit", (event) => {
     if (!event.target.closest('form[data-form="assignment-edit"]')) return;
     event.preventDefault();

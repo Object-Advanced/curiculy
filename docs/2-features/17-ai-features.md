@@ -13,7 +13,7 @@ Where Curiculy uses AI, what it sends, and the safety rules. Today all AI runs o
 | Feature | What the AI does | Model | Who sees it | Without the AI |
 |---|---|---|---|---|
 | [PDF lesson plans](09-pacing-and-lesson-plans.md) | Turns extracted PDF text into Week/Day lessons | Text model | The parent (the new plan) | The plan is marked "failed"; use CSV or the builder |
-| [Paper lesson plans](09-pacing-and-lesson-plans.md) | Reads handwriting in each cell of a photographed week sheet | Vision model (`llama3.2-vision`): **not installed on the production server as of 2026-10-13**, so this fails there ([open issue 3a](../6-planning/open-issues.md)) | The parent | The plan is marked "failed" |
+| [Paper lesson plans](09-pacing-and-lesson-plans.md) | The catalog no longer offers a photographed week sheet. A blank sheet is marked failed. The routes remain. | Vision model (`llama3.2-vision`): **not installed** ([open issue 3a](../6-planning/open-issues.md)) | Only a caller of the route | The plan is marked "failed" |
 
 **Not AI:**
 - **"Stuck?" nudges:** built from the lesson's book, pages and the parent's note. A test trips if the flow reaches a model.
@@ -40,7 +40,7 @@ Where Curiculy uses AI, what it sends, and the safety rules. Today all AI runs o
 
 ### Tests
 - `test_homework_help.py` (no AI: includes a tripwire that fails if the flow reaches a model), `test_ollama_chat.py` (6)
-- `test_curriculum_pdf_import.py` (33), `test_paper_vision_worker.py` (5)
+- `test_curriculum_pdf_import.py` (33), `test_paper_vision_worker.py` (6)
 
 All of them mock the AI.
 
