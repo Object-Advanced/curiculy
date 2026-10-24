@@ -30,7 +30,7 @@ A "plan" is a Week/Day guide made of lessons, with optional time slots. It can c
 - **Paper:** print a week sheet with corner markers and a QR code, fill it in by hand, then photograph it. The photo is straightened and cut into cells, and the **local vision AI** reads each cell's handwriting in the background.
 - **Builder:** type lessons in by hand.
 
-**Apply** a plan to a child from a start date. Each Week/Day slot takes the next school day, skipping weekends, unticked weekdays and days off. Applying also **enrolls the child**.
+**Apply** a plan to a child from a start date. Each Week/Day slot takes the next school day, skipping weekends, unticked weekdays and days off. Applying also **enrolls the child** against a catalog row that belongs to that guide. The first apply creates the row and the guide remembers it. A second guide with the same title gets its own row. A book already in the old catalog with that title is left alone.
 
 ### Out of scope today
 - Editing the AI's PDF output side by side with the original.
@@ -51,7 +51,7 @@ A "plan" is a Week/Day guide made of lessons, with optional time slots. It can c
 | POST | `/api/curriculum/import-paper` | parent | Photo of the sheet → plan (vision AI, runs in the background) |
 
 ### Data
-The family's own rows (walled off by row-level security) are in `curriculum_plans` (status: processing, ready or failed) and `curriculum_lessons`, plus the assignments and enrollments they create.
+The family's own rows (walled off by row-level security) are in `curriculum_plans` (status: processing, ready or failed) and `curriculum_lessons`, plus the assignments and enrollments they create. `curriculum_plans.curriculum_id` points at the old catalog row Apply enrolls against. Deleting that row clears the pointer and leaves the lessons.
 
 ### Code
 - `app/routers/pacing.py`, `app/routers/curriculum_plans.py`

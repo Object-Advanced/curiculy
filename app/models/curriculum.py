@@ -434,6 +434,11 @@ class CurriculumPlan(TimestampMixin, TenantBase):
     Households import these from a CSV of units, weeks, and daily lessons, or
     author them in the lesson-plan builder. They do not participate in
     Auto-schedule; that path still uses CurriculumUnit.
+
+    ``curriculum_id`` is the catalog row Apply enrolls against. It is set on
+    the first apply and reused after that. Two guides with the same title do
+    not share a row. Null means this guide has not been applied since the
+    column existed.
     """
 
     __tablename__ = "curriculum_plans"
@@ -464,6 +469,12 @@ class CurriculumPlan(TimestampMixin, TenantBase):
         default=CurriculumPlanStatus.READY,
         server_default=CurriculumPlanStatus.READY.value,
         nullable=False,
+    )
+    # The old catalog row this guide enrolls against. Not planned_curricula.
+    curriculum_id: Mapped[int | None] = mapped_column(
+        ForeignKey("curricula.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     lessons: Mapped[list["CurriculumLesson"]] = relationship(

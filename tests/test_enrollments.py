@@ -4,7 +4,14 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Assignment, Curriculum, CurriculumEdition, Enrollment, Student
+from app.models import (
+    Assignment,
+    Curriculum,
+    CurriculumEdition,
+    CurriculumPlan,
+    Enrollment,
+    Student,
+)
 from app.services import curriculum_plan_apply as plan_apply_service
 from app.services import pacing as pacing_service
 from tests.test_curriculum_plans import _create_plan
@@ -329,16 +336,19 @@ class TestPlanApplyEnrolls:
         assert second.status_code == 201
         assert db.query(Enrollment).count() == 1
         assert db.query(Curriculum).filter(Curriculum.title == "Abeka Arithmetic 3").count() == 1
+        stored = db.get(CurriculumPlan, plan["id"])
+        assert stored is not None
+        assert stored.curriculum_id == db.query(Enrollment).one().curriculum_id
 
-    def test_reuses_library_curriculum_with_the_same_title(
+    def test_apply_does_not_reuse_a_catalog_book_with_the_same_title(
         self, client: TestClient, db: Session
     ) -> None:
         student = seed_student(db)
         edition = seed_curriculum_edition(db, title="Saxon Math 3")
-        year = _year(client, "2026-2027", "2026-08-01", "2027-06-30")
-        plan = _create_plan(client, {"title": "Saxon Math 3"})
+        _year(client, "2026-2027", "2026-08-01", "2027-06-30")
+        plan = _create_plan(client, {"title": "Saxon Math 3", "publisher": "Saxon"})
 
-        client.post(
+        response = client.post(
             f"/api/curriculum/plans/{plan['id']}/apply",
             json={
                 "student_id": student.id,
@@ -346,11 +356,91 @@ class TestPlanApplyEnrolls:
                 "target_days": [0, 1, 2, 3, 4],
             },
         )
+        assert response.status_code == 201, response.text
 
+        titles = db.query(Curriculum).filter(Curriculum.title == "Saxon Math 3").all()
+        assert len(titles) == 2
         row = db.query(Enrollment).one()
-        assert row.curriculum_id == edition.curriculum_id
-        assert row.school_year_id == year["id"]
-        assert db.query(Curriculum).filter(Curriculum.title == "Saxon Math 3").count() == 1
+        assert row.curriculum_id != edition.curriculum_id
+        created = db.get(Curriculum, row.curriculum_id)
+        assert created is not None
+        assert created.publisher_name == "Saxon"
+        assert created.subject == "Math"
+        guide = db.get(CurriculumPlan, plan["id"])
+        assert guide is not None
+        assert guide.curriculum_id == created.id
+
+    def test_two_plans_with_the_same_title_get_two_curricula(
+        self, client: TestClient, db: Session
+    ) -> None:
+        student = seed_student(db)
+        _year(client, "2026-2027", "2026-08-01", "2027-06-30")
+        first = _create_plan(client, {"title": "Math"})
+        second = _create_plan(client, {"title": "Math"})
+        payload = {
+            "start_date": "2026-08-31",
+            "target_days": [0, 1, 2, 3, 4],
+        }
+        for plan in (first, second):
+            response = client.post(
+                f"/api/curriculum/plans/{plan['id']}/apply",
+                json={**payload, "student_id": student.id},
+            )
+            assert response.status_code == 201, response.text
+
+        curricula = db.query(Curriculum).filter(Curriculum.title == "Math").all()
+        assert len(curricula) == 2
+        enrollments = db.query(Enrollment).all()
+        assert len(enrollments) == 2
+        assert {row.curriculum_id for row in enrollments} == {item.id for item in curricula}
+        guides = db.query(CurriculumPlan).filter(CurriculumPlan.title == "Math").all()
+        assert {guide.curriculum_id for guide in guides} == {item.id for item in curricula}
+
+    def test_deleting_the_curriculum_clears_the_guide_and_keeps_its_lessons(
+        self, client: TestClient, db: Session
+    ) -> None:
+        student = seed_student(db)
+        _year(client, "2026-2027", "2026-08-01", "2027-06-30")
+        plan = _create_plan(client, {"title": "Nature Study"})
+        payload = {
+            "student_id": student.id,
+            "start_date": "2026-08-31",
+            "target_days": [0, 1, 2, 3, 4],
+        }
+        first = client.post(f"/api/curriculum/plans/{plan['id']}/apply", json=payload)
+        assert first.status_code == 201, first.text
+        original = db.query(Assignment).filter_by(student_id=student.id).all()
+        original_ids = [item.id for item in original]
+        original_curriculum_id = original[0].curriculum_id
+
+        deleted = client.delete(f"/api/curricula/{original_curriculum_id}")
+        assert deleted.status_code == 204, deleted.text
+        db.expire_all()
+        guide = db.get(CurriculumPlan, plan["id"])
+        assert guide is not None
+        assert guide.curriculum_id is None
+        kept = db.query(Assignment).filter(Assignment.id.in_(original_ids)).all()
+        assert {item.curriculum_id for item in kept} == {original_curriculum_id}
+
+        second = client.post(f"/api/curriculum/plans/{plan['id']}/apply", json=payload)
+        assert second.status_code == 201, second.text
+        db.expire_all()
+        guide = db.get(CurriculumPlan, plan["id"])
+        assert guide is not None
+        assert guide.curriculum_id is not None
+        assert guide.curriculum_id != original_curriculum_id
+        still = db.query(Assignment).filter(Assignment.id.in_(original_ids)).all()
+        assert {item.curriculum_id for item in still} == {original_curriculum_id}
+        added = (
+            db.query(Assignment)
+            .filter(
+                Assignment.student_id == student.id,
+                Assignment.id.notin_(original_ids),
+            )
+            .all()
+        )
+        assert added
+        assert {item.curriculum_id for item in added} == {guide.curriculum_id}
 
     def test_different_student_creates_separate_enrollment(
         self, client: TestClient, db: Session

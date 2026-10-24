@@ -5,7 +5,6 @@ still POST one by hand. Pacing commit and plan-apply call ``ensure_enrollment``
 in the same transaction as the assignments they write.
 """
 
-from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -78,20 +77,22 @@ def enroll_students(
 
 
 def curriculum_for_plan(db: Session, plan: CurriculumPlan) -> Curriculum:
-    """Household library row that a pacing guide enrolls against.
+    """The catalog row this pacing guide enrolls against.
 
-    Plans have no curriculum_id. Reuse a library title that already matches;
-    otherwise create one from the plan title so the reading list has a book.
+    The guide remembers that row after the first apply. A second guide with
+    the same title gets its own row, so two plans named "Math" do not share
+    an enrollment or a delete target. A book already in the catalog with
+    that title is left alone: reading lists live on library items, not on
+    this title match.
+
+    A null id means the guide has not been applied since the column existed.
+    That apply creates a fresh row. It does not search by title.
     """
+    if plan.curriculum_id is not None:
+        existing = db.get(Curriculum, plan.curriculum_id)
+        if existing is not None:
+            return existing
     title = (plan.title or "").strip() or "Untitled plan"
-    existing = (
-        db.query(Curriculum)
-        .filter(func.lower(Curriculum.title) == title.lower())
-        .order_by(Curriculum.id.asc())
-        .first()
-    )
-    if existing is not None:
-        return existing
     curriculum = Curriculum(
         title=title[:255],
         publisher_name=(plan.publisher or None),
@@ -100,4 +101,5 @@ def curriculum_for_plan(db: Session, plan: CurriculumPlan) -> Curriculum:
     )
     db.add(curriculum)
     db.flush()
+    plan.curriculum_id = curriculum.id
     return curriculum

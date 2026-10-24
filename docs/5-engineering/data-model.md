@@ -106,7 +106,7 @@ erDiagram
 | `evidence_staging` | The unsorted inbox (captures not yet filed) |
 | `attendance` | One row per child per day: status (Present, Field trip, Sick, Absent, Vacation), `source` (`parent`, or `suggestion` when the parent confirmed what the day's work suggested), and `minutes` when the parent set the day's school time |
 | `curricula`, `curriculum_editions`, `curriculum_units`, `curriculum_resources`, `curriculum_page_mappings` | The older "Curriculum catalog": books and programs and their structure (replaced by the Library and the Curriculum planner as the new screens arrive) |
-| `curriculum_plans`, `curriculum_lessons` | Lesson plans (Week/Day guides) and their lessons |
+| `curriculum_plans`, `curriculum_lessons` | Lesson plans (Week/Day guides) and their lessons. A plan's `curriculum_id` is the old catalog row Apply enrolls against, matched to the same family; two plans with one title do not share it |
 | `enrollments` | The older child + book + school year link (replaced by `courses`) |
 | `homework_help_sessions`, `homework_help_messages` | Stuck? nudges |
 | `parent_notifications` | The bell's messages |

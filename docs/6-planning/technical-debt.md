@@ -50,13 +50,13 @@ Lessons are dated by three writers. They do not share an identity.
 |---|---|---|
 | Curriculum planner | `POST /api/planner/.../schedule` in `app/services/planner.py` `schedule` | `Assignment.course_id` → `courses` → `planned_curricula`, plus `library_item_id` |
 | Auto-schedule | `POST /api/pacing/commit` in `app/services/pacing.py` `SyllabusCommitter._write` | `Assignment.curriculum_id` plus a resource and a unit on the old `curricula` tables |
-| Apply a pacing guide | `app/services/curriculum_plan_apply.py` `apply_curriculum_plan` | `Assignment.curriculum_id` only. The curriculum row comes from `curriculum_for_plan` in `app/services/enrollments.py`, which reuses a `curricula` row with the same title |
+| Apply a pacing guide | `app/services/curriculum_plan_apply.py` `apply_curriculum_plan` | `Assignment.curriculum_id` only. The guide stores its own `curricula` row (`curriculum_plans.curriculum_id`); it does not match by title |
 
 `Course.curriculum_id` points at `planned_curricula`. `Assignment.curriculum_id` and `Enrollment.curriculum_id` point at `curricula`. The columns share a name and do not share a table. A later foreign key has to pick one of those meanings. Pull request 2 does not try to.
 
 Consequences that are live today:
 
-- Two pacing guides titled "Math" share one `curricula` row and one enrollment.
+- Two pacing guides titled "Math" used to share one `curricula` row. As of 2026-10-23 each guide keeps its own. Lessons from a deleted catalog row still hold the old id, because `assignments.curriculum_id` has no foreign key.
 - Deleting an old curriculum looks for resource and unit ids (`_scheduled_curriculum_ids` in `app/routers/curricula.py`). A guide that was applied sets only `curriculum_id`, so that curriculum looks unscheduled and can be deleted while its lessons remain. There is no foreign key to stop the dangling id.
 - A portfolio book is grouped with `Assignment.resolved_curriculum_id()` (`app/models/education.py`). Planner lessons have `course_id` and no `curriculum_id`, so they do not appear as books. That wait is [Later, on purpose](#later-on-purpose), because the portfolio should follow the planner's course once the calendar moves.
 
@@ -99,38 +99,17 @@ Screens, as of this review:
 
 **Depends on:** pull request 1 merged, so new Auto-schedule rows are no longer arriving while this migration is reviewed. Apply is still on `#/curricula`, and this is the bug Apply still has.
 
-**Why:** `curriculum_for_plan` (`app/services/enrollments.py`) does `filter(func.lower(Curriculum.title) == title.lower())` and returns the oldest row. Two guides named "Math" share a curriculum, an enrollment, and a delete target.
+**Why:** `curriculum_for_plan` (`app/services/enrollments.py`) used to reuse the oldest `curricula` row with the same title. Two guides named "Math" shared a curriculum, an enrollment, and a delete target.
 
-**Done when:** Applying a guide creates a `curricula` row once, stores that id on the plan, and reuses it on the next apply. A second guide with the same title gets its own row. Existing rows that already collided are left as they are. There is no backfill that splits them. No families are on the server, and a guess about which lessons belonged to which guide would be worse than leaving the shared row.
+**Done when (landed 2026-10-23):** Applying a guide creates a `curricula` row once, stores that id on the plan, and reuses it on the next apply. A second guide with the same title gets its own row. A catalog book that already has that title is left alone. Existing collisions are not split. There is no backfill.
 
-### Commits
+The plain foreign key is not enough. `curriculum_plans` and `curricula` are both family tables, and `app/db_safety.py` refuses a family-to-family reference that can point at another family's row. The migration also adds `fk_tenant_curriculum_plans_curriculum_id` on `(tenant_id, curriculum_id)`. `ON DELETE SET NULL` clears `curriculum_id` only.
 
-1. `A pacing guide remembers the curriculum it enrolls against.`
-   - Alembic revision under `migrations/versions/`, the next number after the latest file there (the series is `20261016_0009_attendance_suggestions` as of this writing).
-   - Nullable `curriculum_plans.curriculum_id`, integer, foreign key to `curricula.id` with `ON DELETE SET NULL`. Same-database tenant table, so row-level security does not need a new policy. `migrations/tenancy.py` and `app/db_safety.py` care about new family tables and missing policies, not a nullable column on a table that already has them. Confirm that with the safety check the migration tests already run.
-   - `CurriculumPlan.curriculum_id` on the model in `app/models/curriculum.py`.
+### What changed
 
-2. `Applying a guide reuses its curriculum instead of matching the title.`
-   - Rewrite `curriculum_for_plan` so it:
-     1. Returns the curriculum at `plan.curriculum_id` when that row still exists.
-     2. Otherwise inserts a new `Curriculum` from the plan's title, publisher, and subject, flushes, stores the id on the plan, and returns it.
-   - Delete the title query. Do not fall back to it when the stored id is null. A null id means "this guide has not been applied since the migration", and the next apply creates a fresh row.
-   - `apply_curriculum_plan` already sets `Assignment.curriculum_id` and calls `ensure_enrollment`. Keep that. It now receives the plan's own curriculum.
-
-### Tests
-
-Add to `tests/test_curriculum_plans.py`, beside the test that one apply creates one curriculum (around the assertion that a plan creates a `Curriculum` by title):
-
-- Apply two ready plans that share a title. Expect two `curricula` rows and two enrollments.
-- Apply the same plan twice (the second apply needs a distinct child, or the test should assert the curriculum count stays at one if a second apply for the same child is rejected). The curriculum count for that plan stays one, and `plan.curriculum_id` is that row.
-- Delete the curriculum row (the old delete path will still allow it, because these lessons have no unit id). The plan's `curriculum_id` becomes null because of `ON DELETE SET NULL`. The next apply creates a new curriculum. Assert the lessons from the first apply are untouched. That locks in the dangling-id behavior so the later calendar rebuild has a test to replace, and so this pull request does not pretend delete is fixed.
-
-`tests/test_database.py` will compare metadata. The model and the migration have to land in the same commit, or in two commits where the second is the one CI runs. Prefer one commit for the column plus the model, then the behavior commit, and run the metadata test on the branch tip.
-
-### Docs
-
-- [Pacing and lesson plans](../2-features/09-pacing-and-lesson-plans.md): Apply enrolls against the guide's own curriculum row.
-- [Data model](../5-engineering/data-model.md): one sentence on `curriculum_plans.curriculum_id`.
+- Migration `20261023_0010_plan_owns_curriculum`: nullable `curriculum_plans.curriculum_id`, the plain foreign key, and the family-matching twin.
+- `curriculum_for_plan` returns the stored row, or creates one and stores its id. No title search.
+- Tests in `tests/test_enrollments.py`: a same-titled catalog book is not reused, two "Math" plans get two rows, a second apply reuses the stored id, and deleting the curriculum clears the pointer while the first apply's lessons keep the old id.
 
 ### Leave for later
 
